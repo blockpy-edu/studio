@@ -16,7 +16,16 @@
   "dependencies": {
     "@blockpy/blocks": "workspace:*",
     "@blockpy/engine": "workspace:*",
-    "@blockpy/vfs": "workspace:*"
+    "@blockpy/vfs": "workspace:*",
+    "@codemirror/autocomplete": "^6.18.0",
+    "@codemirror/commands": "^6.8.0",
+    "@codemirror/lang-python": "^6.1.7",
+    "@codemirror/language": "^6.10.0",
+    "@codemirror/lint": "^6.8.0",
+    "@codemirror/merge": "^6.7.0",
+    "@codemirror/search": "^6.5.0",
+    "@codemirror/state": "^6.5.0",
+    "@codemirror/view": "^6.36.0"
   },
   "peerDependencies": {
     "react": "^18.3.0"

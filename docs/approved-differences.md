@@ -98,3 +98,27 @@ Replicate decisions (D4, D6) produce no entries — they are legacy parity.
   `process_quiz` tolerates extra answer keys (expected per A3). If not,
   revert to legacy behavior and mark this entry rejected.
 - **Wire impact:** same JSON shape with more keys.
+
+## LD-8 — Multi-dim all-index subscripts round-trip losslessly (Milestone 1.4)
+
+- **Legacy:** Skulpt parses `df[1, 2, 3, 4]` as `Index(Tuple)` (CPython ≤3.8
+  shape); BlockMirror's tuple block always parenthesizes, so blocks→text
+  re-rendered it as `df[(1, 2, 3, 4)]`. BlockMirror's own round-trip corpus
+  (simple.html #42) asserts the unparenthesized form — the legacy suite used
+  a silent `console.assert` + `break`, which masked the failure.
+- **Studio:** the CST→IR converter emits `ExtSlice([Index, …])` for every
+  multi-dim subscript, so `df[1, 2, 3, 4]` survives text→blocks→text
+  byte-exact. Semantically identical Python is generated.
+- **Wire impact:** none (client-side rendering only). §16.1.2 conformance:
+  corpus #42 passes as written.
+
+## LD-9 — Bare hidden imports still vanish (legacy parity, Milestone 1.4)
+
+- **Not a difference — recorded to explain a corpus deviation.** `plt` is in
+  `hiddenImports`: text→blocks suppresses the `import matplotlib.pyplot as
+  plt` block (legacy UX hides plotting boilerplate; the generator re-emits
+  the import whenever a `plt.*` call block exists). A bare, *unused* plt
+  import therefore does not survive the round trip — in legacy or Studio.
+  Corpus #73 asserts otherwise and cannot pass in legacy either (same silent
+  console.assert masking); Studio pins the legacy behavior as a documented
+  known-delta in the §16.1.2 suite.

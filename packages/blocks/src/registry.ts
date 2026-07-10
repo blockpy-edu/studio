@@ -1,0 +1,51 @@
+/**
+ * Registration points for the per-AST-node block modules (`src/ast/*`).
+ *
+ * Each ported module registers, at import time:
+ *  - its Blockly block definition(s) (JSON via `defineBlocks` and/or
+ *    imperative `Blockly.Blocks[...] = {...}`),
+ *  - its python generator (`generator.forBlock[...]`),
+ *  - its IR→XML converter (`registerConverter`), dispatched by `_astname`
+ *    from `TextToBlocksConverter.convert`.
+ */
+import * as Blockly from 'blockly/core';
+// Standard block library — registers the extensions the ported blocks apply
+// (e.g. `contextMenu_variableSetterGetter`), exactly as the legacy bundle
+// always had them loaded.
+import 'blockly/blocks';
+import { installGeneratorShims } from './generator';
+import type { TextToBlocksConverter } from './text-to-blocks';
+
+export type ConverterResult = Element | Element[] | null;
+export type Converter = (
+  this: TextToBlocksConverter,
+  node: any,
+  parent: any,
+) => ConverterResult;
+
+const converters = new Map<string, Converter>();
+
+export function registerConverter(astname: string, fn: Converter): void {
+  converters.set(astname, fn);
+}
+
+export function getConverter(astname: string): Converter | undefined {
+  return converters.get(astname);
+}
+
+/** Define Blockly blocks from JSON, installing the generator shims first. */
+export function defineBlocks(...jsonDefs: object[]): void {
+  installGeneratorShims();
+  Blockly.common.defineBlocksWithJsonArray(jsonDefs);
+}
+
+/** Access point for imperative block definitions (legacy `Blockly.Blocks`). */
+export function defineBlock(
+  type: string,
+  // Loose on purpose: legacy definitions type `this` as their own augmented
+  // block shape, which is narrower than Blockly.Block.
+  definition: Record<string, unknown>,
+): void {
+  installGeneratorShims();
+  Blockly.Blocks[type] = definition as unknown as (typeof Blockly.Blocks)[string];
+}
