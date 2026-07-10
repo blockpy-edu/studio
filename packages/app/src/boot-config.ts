@@ -80,8 +80,14 @@ export interface BootConfig {
     emojiProxy: string;
     pyodideIndexURL: string;
   };
-  /** Parsed `settings-*` query params, prefix stripped (spec §15.2). */
-  settings: Record<string, unknown>;
+  /**
+   * `settings-*` query params, prefix stripped (spec §15.2). Values are RAW
+   * STRINGS, not parsed JSON: the legacy Jinja loop passes each query value
+   * through verbatim and the client coerces per key (e.g. `"" + v === "true"`).
+   * Parsing them as JSON here would change behavior — see
+   * docs/appendices/A4-settings-inventory.md.
+   */
+  settings: Record<string, string>;
   /** urls.importDatasets (spec §10.4). */
   corgisUrl: string;
 }

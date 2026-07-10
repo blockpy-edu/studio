@@ -66,19 +66,19 @@ This rewrite collapses both into one React application ("**the client**") with t
 
 ## 4. Technology Stack
 
-| Layer         | Choice                                                                                                                                                               | Notes                                                                                         |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Language      | TypeScript ≥ 5.x, `strict`                                                                                                                                           | All packages                                                                                  |
-| UI            | React 18+ (function components + hooks)                                                                                                                              | No class components                                                                           |
-| State         | Zustand stores per domain (editor, engine, submission, navigation) + React context for dependency injection                                                          | Mirrors current Knockout observables with subscribable stores; avoids Redux ceremony          |
-| Build         | Vite; library mode for embeddable bundles                                                                                                                            | Outputs: full app bundle, embeddable `blockpy.iife.js` for third-party pages, per-package ESM |
-| Text editor   | CodeMirror 6 (`@codemirror/lang-python`, lint, autocomplete, merge for history diffs)                                                                                |                                                                                               |
-| Blocks        | Blockly (current npm releases), custom Python block set + generators                                                                                                 | Replaces the BlockMirror Blockly fork                                                         |
-| Python engine | Pyodide (pin latest stable; loaded in a dedicated Web Worker)                                                                                                        | `SharedArrayBuffer` interrupts where COOP/COEP available; fallback path required (§6.6)       |
-| Markdown      | unified/remark + rehype-sanitize, with the current instructions extensions (see §11.1)                                                                               |                                                                                               |
-| Styling       | CSS modules + design tokens; must be themable to match host LMS neutrality; Bootstrap-compatible class hooks kept on navigation elements for legacy CSS/tests (§9.6) |                                                                                               |
-| Testing       | Vitest + React Testing Library; Playwright for end-to-end; golden-transcript tests against a recorded legacy server (§16)                                            |                                                                                               |
-| Packaging     | pnpm monorepo: `packages/{engine,vfs,editor,blocks,reader,quizzer,textbook,navigation,api,lti-embed,legacy-shim,app}`                                                |                                                                                               |
+| Layer         | Choice                                                                                                                                                                         | Notes                                                                                         |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| Language      | TypeScript ≥ 5.x, `strict`                                                                                                                                                     | All packages                                                                                  |
+| UI            | React 18+ (function components + hooks)                                                                                                                                        | No class components                                                                           |
+| State         | Zustand stores per domain (editor, engine, submission, navigation) + React context for dependency injection                                                                    | Mirrors current Knockout observables with subscribable stores; avoids Redux ceremony          |
+| Build         | Vite; library mode for embeddable bundles                                                                                                                                      | Outputs: full app bundle, embeddable `blockpy.iife.js` for third-party pages, per-package ESM |
+| Text editor   | CodeMirror 6 (`@codemirror/lang-python`, lint, autocomplete, merge for history diffs)                                                                                          |                                                                                               |
+| Blocks        | Blockly (current npm releases), custom Python block set + generators                                                                                                           | Replaces the BlockMirror Blockly fork                                                         |
+| Python engine | Pyodide (pin latest stable; loaded in a dedicated Web Worker)                                                                                                                  | `SharedArrayBuffer` interrupts where COOP/COEP available; fallback path required (§6.6)       |
+| Markdown      | unified/remark with the current instructions extensions (see §11.1). **No sanitization** — legacy parity per decision D4 (docs/DECISIONS.md); instructor HTML renders verbatim |                                                                                               |
+| Styling       | CSS modules + design tokens; must be themable to match host LMS neutrality; Bootstrap-compatible class hooks kept on navigation elements for legacy CSS/tests (§9.6)           |                                                                                               |
+| Testing       | Vitest + React Testing Library; Playwright for end-to-end; golden-transcript tests against a recorded legacy server (§16)                                                      |                                                                                               |
+| Packaging     | pnpm monorepo: `packages/{engine,vfs,editor,blocks,reader,quizzer,textbook,navigation,api,lti-embed,legacy-shim,app}`                                                          |                                                                                               |
 
 ---
 
@@ -109,11 +109,11 @@ The server today renders `editor.html`, which (a) injects JSON constants, (b) in
 ```html
 <div id="blockpy-root"></div>
 <script type="application/json" id="blockpy-config">
-    { ...BootConfig... }
+  { ...BootConfig... }
 </script>
 <script src=".../blockpy-studio.iife.js"></script>
 <script>
-    BlockPyStudio.mount("#blockpy-root", "#blockpy-config");
+  BlockPyStudio.mount('#blockpy-root', '#blockpy-config');
 </script>
 ```
 
@@ -121,40 +121,40 @@ The server today renders `editor.html`, which (a) injects JSON constants, (b) in
 
 ```ts
 interface BootConfig {
-    urls: LegacyUrlMap; // §14.2 — exactly the keys of window.$blockPyUrls
-    user: {
-        id: number | null;
-        name?: string;
-        role: string;
-        courseId: number | null;
+  urls: LegacyUrlMap; // §14.2 — exactly the keys of window.$blockPyUrls
+  user: {
+    id: number | null;
+    name?: string;
+    role: string;
+    courseId: number | null;
+  };
+  accessToken?: string; // window.accessToken passthrough
+  assignment: {
+    currentAssignmentId: number | null;
+    assignmentGroupId: number | null;
+    assignmentData?: LegacyAssignmentPayload; // for editor.loadAssignmentData_ path
+    typeIndex: {
+      // replaces QUIZZES/READINGS/TEXTBOOKS/JAVAS/KETTLES/EXPLAINS/BLOCKPYS
+      quiz: number[];
+      reading: number[];
+      textbook: number[];
+      java: number[];
+      typescript: number[];
+      explain: number[];
+      blockpy: number[];
     };
-    accessToken?: string; // window.accessToken passthrough
-    assignment: {
-        currentAssignmentId: number | null;
-        assignmentGroupId: number | null;
-        assignmentData?: LegacyAssignmentPayload; // for editor.loadAssignmentData_ path
-        typeIndex: {
-            // replaces QUIZZES/READINGS/TEXTBOOKS/JAVAS/KETTLES/EXPLAINS/BLOCKPYS
-            quiz: number[];
-            reading: number[];
-            textbook: number[];
-            java: number[];
-            typescript: number[];
-            explain: number[];
-            blockpy: number[];
-        };
-    };
-    group?: GroupBootData; // §9.2 — replaces the Jinja-rendered header
-    display: { instructor: boolean; readOnly: boolean; embed: boolean };
-    passcodeProtected: boolean;
-    sessionStartTime: number | null; // epoch ms; drives the "time spent" clock
-    paths: {
-        blocklyMedia: string;
-        emojiProxy: string;
-        pyodideIndexURL: string;
-    };
-    settings: Record<string, unknown>; // parsed `settings-*` query params, prefix stripped (§15.2)
-    corgisUrl: string; // urls.importDatasets
+  };
+  group?: GroupBootData; // §9.2 — replaces the Jinja-rendered header
+  display: { instructor: boolean; readOnly: boolean; embed: boolean };
+  passcodeProtected: boolean;
+  sessionStartTime: number | null; // epoch ms; drives the "time spent" clock
+  paths: {
+    blocklyMedia: string;
+    emojiProxy: string;
+    pyodideIndexURL: string;
+  };
+  settings: Record<string, unknown>; // parsed `settings-*` query params, prefix stripped (§15.2)
+  corgisUrl: string; // urls.importDatasets
 }
 ```
 
@@ -206,27 +206,27 @@ EngineClient  ── postMessage ──►  JobRunner ─► Pyodide runtime
 
 ```ts
 type Phase =
-    | "student.run"
-    | "student.eval"
-    | "instructor.on_run"
-    | "instructor.on_change"
-    | "instructor.on_eval"
-    | "quiz.preprocess";
+  | 'student.run'
+  | 'student.eval'
+  | 'instructor.on_run'
+  | 'instructor.on_change'
+  | 'instructor.on_eval'
+  | 'quiz.preprocess';
 
 interface EngineJob {
-    id: string;
-    phase: Phase;
-    fsSnapshot: VfsSnapshotRef; // which VFS overlay to mount (§7.5)
-    entry: string; // e.g. 'answer.py' or synthesized runner
-    env: {
-        mockedModules: string[];
-        mockUrls: MockUrl[];
-        seed?: number;
-        args?: string[];
-    };
-    limits: { wallMs: number; traceSteps?: number };
-    trace: boolean;
-    inputsPrefill?: string[]; // scripted inputs (sample-input replay, Pedal)
+  id: string;
+  phase: Phase;
+  fsSnapshot: VfsSnapshotRef; // which VFS overlay to mount (§7.5)
+  entry: string; // e.g. 'answer.py' or synthesized runner
+  env: {
+    mockedModules: string[];
+    mockUrls: MockUrl[];
+    seed?: number;
+    args?: string[];
+  };
+  limits: { wallMs: number; traceSteps?: number };
+  trace: boolean;
+  inputsPrefill?: string[]; // scripted inputs (sample-input replay, Pedal)
 }
 ```
 
@@ -311,7 +311,7 @@ All server I/O and all instructor-facing UI labels use legacy names; all interna
 
 ### 7.5 Engine mounting
 
-Before each job, the engine worker materializes a snapshot of the resolved namespace into Pyodide's Emscripten FS under `/mnt/blockpy/`, applying visibility rules for the phase: student runs see student-visible files only; instructor phases additionally see `!` files; `^` starting files are never mounted (they are editor metadata). `open()` inside student code resolves against this mount. Mock URLs (§10.4) intercept network-ish access. After the job, files _created or modified by the run_ diff back into Layer 4 (transient) — and surface in the UI as run artifacts — unless the assignment settings opt specific patterns into Layer 3 persistence (matches current "student files written by programs" behavior; verify against legacy).
+Before each job, the engine worker materializes a snapshot of the resolved namespace into Pyodide's Emscripten FS under `/mnt/blockpy/`, applying visibility rules for the phase: student runs see student-visible files only; instructor phases additionally see `!` files; `^` starting files are never mounted (they are editor metadata). `open()` inside student code resolves against this mount. Mock URLs (§10.4) intercept network-ish access. After the job, files _created or modified by the run_ diff back into Layer 4, surface in the UI as run artifacts, and **persist to the backend as artifacts of the student's submission** (decision D3, docs/DECISIONS.md; ledger LD-3x). Verified 2026-07-10: legacy _discarded_ all program-written files (the `filewrite` hook was an unimplemented stub — appendix A1/A7), so this is an additive §17 extension shipped behind a flag, with the existing extra-files persistence path as the candidate mechanism.
 
 ---
 
@@ -327,10 +327,14 @@ Before each job, the engine worker materializes a snapshot of the resolved names
 
 ### 8.2 Parsing strategy
 
-BlockMirror currently uses Skulpt's parser to build the AST that drives block generation. The rewrite must not depend on Skulpt. Options, in order of preference:
+BlockMirror currently uses Skulpt's parser to build the AST that drives block generation. The rewrite must not depend on Skulpt.
 
-1. **In-worker CPython `ast`:** send text to the engine worker, parse with `ast`, return a compact JSON AST (line/col fidelity, `end_lineno`), version-matched to the runtime. Latency is fine for on-pause conversion; a small LRU keyed by source hash serves Split-mode re-renders. Parsing must not queue behind long student runs — the worker services parse requests between jobs, or a second lightweight "parser" worker is spawned when the engine is busy.
-2. Fallback for instant-feedback linting in CM6: Lezer's Python grammar (already powering CM6 highlighting) for error squiggles only — _not_ for block generation, avoiding dual-AST divergence.
+**Decision (2026-07-10):** block generation is driven by the **CodeMirror CST** — the Lezer Python parse tree already powering CM6 highlighting (`@codemirror/lang-python` / `@lezer/python`). One parser serves highlighting, diagnostics, and the text→blocks direction; conversion is synchronous, works before/without Pyodide loading, and never queues behind student runs.
+
+- The CST→workspace builder in `@blockpy/blocks` consumes Lezer trees directly (concrete tree: comments and token positions are preserved, aiding B2's comment policy).
+- Lezer's error tolerance is used for B3: any error node in the tree marks the source unparseable for block purposes (blocks/split disabled with the legacy affordance), rather than generating blocks from a recovered tree.
+- Divergence risk (Lezer grammar vs CPython) is managed by the round-trip conformance suite (§16.1.2) cross-checking Lezer parse success against CPython `ast` verdicts from the engine in tests.
+- The engine's CPython `ast` remains available for Pedal's analysis needs (§10.1) but is not in the editing loop.
 
 ### 8.3 Blocks package
 
@@ -363,16 +367,16 @@ Left to right, matching the legacy header:
 
 ```ts
 interface GroupBootData {
-    assignments: Array<{
-        id: number;
-        name: string;
-        url: string; // url = legacy URL_MAP[id] for full-page fallback
-        subordinate: boolean;
-        hidden: boolean;
-        correct: boolean; // from the paired submission
-    }>;
-    anySecretive: boolean; // OR of hidden — masks all statuses
-    currentAssignmentId: number;
+  assignments: Array<{
+    id: number;
+    name: string;
+    url: string; // url = legacy URL_MAP[id] for full-page fallback
+    subordinate: boolean;
+    hidden: boolean;
+    correct: boolean; // from the paired submission
+  }>;
+  anySecretive: boolean; // OR of hidden — masks all statuses
+  currentAssignmentId: number;
 }
 ```
 
@@ -408,7 +412,7 @@ Keep the class names `assignment-selector-div`, `assignment-selector`, `assignme
 - Pedal runs **inside Pyodide** as a normal package (its natural habitat is CPython; the Skulpt port's constraints disappear). Bundle `pedal`, `curriculum-ctvt`, `curriculum-sneks` as wheels in the deployment, importable by `!on_run.py` unchanged.
 - Provide the Pedal _sandbox_ execution of student code within the same job: instructor script drives `pedal.sandbox` against the mounted student files, with stdout/input scripting, mocked modules, and TIFA analysis. The integration layer implements Pedal's environment contract (equivalent to today's "blockpy environment" in Pedal) targeting the engine: capturing student ASTs (via `ast` on the real source), runtime results, and output.
 - The **final feedback object** (category, label, title, message HTML, score, correctness) flows back and renders in the feedback pane with the current category taxonomy and styling hooks. `success` triggers `markCorrect` + `update_submission` exactly as now.
-- Feedback messages may embed rich content (images, formatted tracebacks); sanitize with the same allowlist as instructions.
+- Feedback messages may embed rich content (images, formatted tracebacks). Do not sanitize.
 
 ### 10.2 matplotlib
 
@@ -437,7 +441,7 @@ The editor's AI-help affordances continue to call the server's `openaiProxy` end
 
 Feature-parity checklist against the current client (each item is a conformance test target):
 
-- Instructions pane rendering `!instructions.md` (markdown + sanitized HTML, LaTeX if currently supported, dynamic content placeholders — verify legacy extensions list from the client's instructions renderer and freeze it in an appendix).
+- Instructions pane rendering `!instructions.md` (markdown + HTML, LaTeX, dynamic content placeholders — verify legacy extensions list from the client's instructions renderer and freeze it in an appendix).
 - View toggles (Blocks/Split/Text), Run, Stop, Evaluate/console, Trace (state explorer with step slider, variable table, active-line highlight in both views), History (diff timeline), Reset-to-starting-code (from `^` files), file tabs per role, upload/download of data files, "quick task" compact mode if enabled in settings.
 - Feedback pane with Pedal categories, "full guidance vs. gentle hints" modes as configured, and instructor-only internals (raw feedback object, grading controls: force-mark-correct, regrade) behind `display.instructor`.
 - Settings surface: everything read from `!assignment_settings.blockpy` today keeps its key names and effects (toolbox level, `disable_timeout`/exec limits, hide files, start view, etc.). Unknown keys pass through untouched so old assignments never break.

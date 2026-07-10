@@ -32,21 +32,47 @@ Goal: eliminate specification ambiguity and stand up the monorepo. Everything he
 
 Each produces a checked-in fixture/appendix that becomes a conformance-test input:
 
-- [ ] **A1 — Verified filename-prefix table** from legacy `src/files.js` + editor source, including magic names (`!sample_submissions.blockpy`, `!tags.blockpy`, `?toolbox.blockpy`, `?mock_urls.blockpy`, image/summary files) and the `&` vs `?` shadowing rule (§7.1, §7.2).
-- [ ] **A2 — Event vocabulary** (`events.ts`): complete event-type × field enum extracted from both legacy codebases, incl. reader video events and quiz interaction events; confirm whether events batch today (§14.4). _Review-gate deliverable — research pipelines depend on it._
-- [ ] **A3 — Quiz schema fixtures**: real payload samples for every question type from `frontend/components/quizzes/`; generate frozen TS types from them (§11.3).
-- [ ] **A4 — Settings-key inventory**: every key read from `!assignment_settings.blockpy` and every `settings-*` query param (§11.1, §15.2).
-- [ ] **A5 — Golden transcripts**: record full HTTP traffic of a scripted legacy session (load group → navigate → edit → run → pass → quiz → reading) against a dev server (§16.2). Tooling: proxy recorder + replay harness.
-- [ ] **A6 — Instructions/markdown extension list** used by the legacy instructions renderer and reader (§11.1, §11.2).
-- [ ] **A7 — Behavioral notes**: passcode validation mechanism (local hash vs server, §11.1), end-of-group affordance (§9.5), run-artifact persistence rules (§7.5).
+- [x] **A1 — Verified filename-prefix table** from legacy `src/files.js` + editor source, including magic names (`!sample_submissions.blockpy`, `!tags.blockpy`, `?toolbox.blockpy`, `?mock_urls.blockpy`, image/summary files) and the `&` vs `?` shadowing rule (§7.1, §7.2). → [docs/appendices/A1-filename-prefixes.md](docs/appendices/A1-filename-prefixes.md)
+- [x] **A2 — Event vocabulary** (`events.ts`): complete event-type × field enum extracted from both legacy codebases, incl. reader video events and quiz interaction events; confirm whether events batch today (§14.4). _Review-gate deliverable — research pipelines depend on it._ → [docs/appendices/A2-event-vocabulary.md](docs/appendices/A2-event-vocabulary.md)
+- [x] **A3 — Quiz schema fixtures**: real payload samples for every question type from `frontend/components/quizzes/`; generate frozen TS types from them (§11.3). → [docs/appendices/A3-quiz-schema.md](docs/appendices/A3-quiz-schema.md)
+- [x] **A4 — Settings-key inventory**: every key read from `!assignment_settings.blockpy` and every `settings-*` query param (§11.1, §15.2). → [docs/appendices/A4-settings-inventory.md](docs/appendices/A4-settings-inventory.md)
+- [x] **A5 — Golden transcripts**: record full HTTP traffic of a scripted legacy session (load group → navigate → edit → run → pass → quiz → reading) against a dev server (§16.2). _First transcript recorded via `tools/record-golden-transcript.mjs` (Playwright HAR, scrubbed): [docs/appendices/A5-golden-transcripts.md](docs/appendices/A5-golden-transcripts.md). Extend (passing grader run, authenticated + instructor sessions, history/uploads) before the Milestone 1.2 freeze._
+- [x] **A6 — Instructions/markdown extension list** used by the legacy instructions renderer and reader (§11.1, §11.2). → [docs/appendices/A6-markdown-extensions.md](docs/appendices/A6-markdown-extensions.md)
+- [x] **A7 — Behavioral notes**: passcode validation mechanism (local hash vs server, §11.1), end-of-group affordance (§9.5), run-artifact persistence rules (§7.5). → [docs/appendices/A7-behavioral-notes.md](docs/appendices/A7-behavioral-notes.md)
 
 ### 0.3 Technical spikes (de-risk before Phase 1)
 
-- [ ] **Spike S1 — Pyodide in LMS iframes**: measure load time, verify compat-mode (no SAB) interrupt/input strategies actually work inside Canvas/Moodle iframes (§6.6). _Highest-risk item in the project; do first._
-- [ ] **Spike S2 — CPython `ast` → JSON → Blockly workspace** round-trip on 10 representative student programs (§8.2–8.3).
-- [ ] **Spike S3 — Pedal wheel running in Pyodide** with a real `!on_run.py` from curriculum-sneks (§10.1).
+- [x] **Spike S1 — Pyodide in LMS iframes**: _resolved by maintainer testing (2026-07-10)._ SharedArrayBuffer is confirmed unavailable in Canvas iframes, and iframe embedding is a hard requirement — so **compat mode (no SAB) is the engine's primary mode**, with SAB isolated mode as opportunistic enhancement. Load time is an accepted cost of Pyodide (managed via caching/lazy-load), not a go/no-go criterion. Residual work (tuning compat-mode interrupt latency, async input shim) folds into Milestone 1.3 step 4.
+- [x] **Spike S2 — Lezer CST → Blockly workspace** (maintainer decision 2026-07-10: blocks are generated from CodeMirror's CST, not from CPython `ast` in the worker — overrides spec §8.2's preference order): **GO.** 78/79 of the BlockMirror round-trip corpus parses in agreement with CPython 3.11 (`ast.parse`); the sole gap is valueless `yield` (upstream-fixable). Comments are CST nodes; error nodes are precisely detectable for B3; ~35 ms for a 1,000-line file. Report: [docs/spikes/S2-lezer-cst-blocks.md](docs/spikes/S2-lezer-cst-blocks.md).
+- [x] **Spike S3 — Pedal wheel running in Pyodide** with a real `!on_run.py` from curriculum-sneks (§10.1): **GO.** `pedal 3.0.1` + `curriculum-sneks` install and run unmodified on Pyodide 314 (Python 3.14); the real "Convert Pixels" grader from `courses/bakery_course.json` produces correct feedback for both incorrect and correct submissions in 10–20 ms. Key finding: the environment must call `start_trace()` before running student code (coverage tracer). Report: [docs/spikes/S3-pedal-pyodide.md](docs/spikes/S3-pedal-pyodide.md).
 
-**Exit criteria:** appendices A1–A7 merged and reviewed; spikes written up with go/no-go notes; CI green on the empty monorepo.
+### 0.4 Verification findings & decision log (from the 2026-07-10 appendix pass)
+
+The line-by-line verification invalidated several spec-draft assumptions. Summary in
+[docs/appendices/README.md](docs/appendices/README.md); consequences for this plan:
+
+**Plan adjustments (applied to the milestones below):**
+
+- **`quiz.preprocess` is a new capability, not a port** — no legacy engine-preprocessing pathway exists (A3). Moved to a flagged §17-style additive extension.
+- **Run artifacts are an extension, not parity** — legacy discards all program-written files; the `filewrite` hook is a stub (A1, A7). Per D3's decision note: run-written files surface in the UI **and persist to the backend as submission artifacts** (ledger LD-3x; ships flagged as a §17 additive extension).
+- **Reading completion is trivial** — legacy marks the reading correct immediately on load; scroll/video telemetry is logging-only (A7).
+- **Two markdown pipelines, no sanitization, no LaTeX in legacy** (A6) — per D4-A, the rewrite **replicates legacy: no sanitization** (spec §4/§11.1 "sanitized" language is superseded). Pipeline unification still needs checking against real course content (marked vs markdown-it differences, `breaks:true`).
+- **Do not re-emit server-fabricated events** — `Session.Start` and (nearly all) `File.Edit` rows are fabricated server-side from `load_assignment`/`save_file`; the quizzer logs nothing (A2).
+- **`BootConfig.settings` is `Record<string, string>`** — `settings-*` values are raw strings with per-key coercion, never JSON-parsed (A4). Applied to `packages/app/src/boot-config.ts`.
+
+**Replicate-or-fix decisions — ALL DECIDED (maintainer, 2026-07-10)** in **[docs/DECISIONS.md](docs/DECISIONS.md)**: D1-B (seed shuffle), D2-B (fix logging bugs + central event-id registry with deprecation metadata), D3-A (enforce read-only; plus persist run artifacts to the submission), D4-A (replicate: no sanitization), D5-B (round-trip unknown keys), D6-A (replicate), D7-B (preserve, conditional). Fix outcomes seeded into **[docs/approved-differences.md](docs/approved-differences.md)** (LD-1 … LD-7). Original context table:
+
+| # | Legacy behavior (cited in appendix) | Options |
+| --- | --- | --- |
+| D1 | Matching/dropdown option order shuffled with unseeded `Math.random` per render (A3) | Replicate, or seed it (fix) behind the ledger |
+| D2 | `X-Editor.Paste` always logs `{characters: 0}`; event-queue `splice` bug wipes queue tail on retry (A2) | Replicate bug-for-bug vs fix as `X-` delta |
+| D3 | Python/Markdown editors let students edit `&` read-only files; rename/manual-save paths dead (A1) | Enforce read-only uniformly (fix) vs replicate |
+| D4 | No sanitization of instructions/reading HTML (A6) | Sanitize (spec G-goal, may break courses) — needs a course-content audit first |
+| D5 | Legacy `saveAssignmentSettings` drops unregistered settings keys incl. server-only `time_limit`/`protected_ip_ranges` (A4) | Round-trip unknown keys (fix per §14.5 spirit) — recommended |
+| D6 | `settings-*` params unrestricted for students (can flip instructor UI client-side) (A4) | Replicate (server-side security holds) vs gate cosmetically |
+| D7 | Hidden pool questions' answers dropped on quiz save (A3) | Replicate vs preserve |
+
+**Exit criteria — MET (2026-07-10):** appendices A1–A7 delivered (A5 first transcript recorded; extensions listed); all three spikes resolved (S1 by maintainer testing, S2 GO, S3 GO); D1–D7 decided and ledgered; CI green. **Phase 0 is complete — Phase 1 may begin.**
 
 ---
 
@@ -67,7 +93,7 @@ Goal: the spec's §17 Phase 1 — a working coding-problem editor behind a per-c
 - Typed client for the full §14.2 endpoint inventory, generated/validated against golden transcripts (A5).
 - Auth plumbing: session cookie + `access_token` placement per transcript; group context on every call.
 - Versioned assignment decoder that round-trips unknown fields losslessly (§14.5).
-- Event logger implementing A2 vocabulary; per-event POST + offline queue (flag any timing delta as `X-`, §14.4).
+- Event logger implementing A2 vocabulary as a **central event-id registry with deprecation metadata** (D2 note: e.g. "field untrustworthy before Studio / superseded by Y"); per-event POST + offline queue with the legacy bugs fixed (ledger LD-2a/2b/2c).
 - **Tests:** transcript replay harness (first cut of the §16.2 G3 gate).
 
 ### Milestone 1.3 — `@blockpy/engine` (§6)
@@ -86,12 +112,12 @@ Build in this order:
 
 ### Milestone 1.4 — `@blockpy/blocks` + `@blockpy/editor` (§8)
 
-- CM6 setup: Python language, lint (Lezer squiggles only), autocomplete, merge view for history.
-- Parse service: in-worker CPython `ast` → JSON AST with LRU + parser-availability during long runs (§8.2).
-- Blockly block set + Python generator + AST→workspace builder; block↔line mapping for split-view sync and trace highlight (§8.3).
+- CM6 setup: Python language, lint, autocomplete, merge view for history.
+- Parsing: the Lezer CST from `@codemirror/lang-python` drives both diagnostics and block generation (maintainer decision, see §0.3 S2 — no engine-worker parse service; blocks work before/without Pyodide). Engine-side CPython `ast` remains available to Pedal (§10.1) only.
+- Blockly block set + Python generator + CST→workspace builder; block↔line mapping for split-view sync and trace highlight (§8.3).
 - Three view modes with legacy toggle semantics; unparseable-text lockout of Blocks/Split (B1–B3).
 - Instructor-configurable toolbox from legacy settings keys (B4, fixture A4).
-- Editor chrome: instructions pane (A6 pipeline), Run/Stop/Evaluate/console, Trace explorer, History diffs, reset-to-`^`, file tabs per role, feedback pane with Pedal categories, passcode lock (§11.1 checklist — each item is a test target).
+- Editor chrome: instructions pane (A6 pipeline; D4-A: **no sanitization**, legacy parity), Run/Stop/Evaluate/console, Trace explorer, History diffs, reset-to-`^`, file tabs per role (D3-A: `&` files read-only in every editor, ledger LD-3; instructor settings saves round-trip unknown keys, D5-B/LD-5), feedback pane with Pedal categories, passcode lock (§11.1 checklist — each item is a test target).
 - Minified editor variant (§8.4) — build now, consumed by `reader` in Phase 2.
 - **Tests:** round-trip suite over the BlockMirror corpus (§16.1.2).
 
@@ -128,22 +154,22 @@ Goal: the React app owns the whole `editor.html` body for flagged courses (§17 
 
 - Dual-rendered header/footer from one store; exact legacy layout, button semantics, `✔` prefixes, CSS class hooks (§9.1, §9.6).
 - Completion box + selector expansion with exact localStorage key; secretive `??` masking (§9.1, §9.3).
-- `markCorrect` store action + global alias; Next success styling; end-of-group affordance per A7.
-- Time-spent clock (tiers, 10s tick, mode toggle via `estimate_group_duration`) and countdown span (§9.4).
+- `markCorrect` store action + global alias; Next success styling (A7: turns green on _any_ markCorrect, not just current); end-of-group = green-but-disabled Next + full count, no congratulations message (A7).
+- Time-spent clock (tiers, 10s tick, mode toggle via `estimate_group_duration`) and countdown span — A7: the frontend owns the countdown (5 s tick, `"X elapsed; Y left"`, per-student limit overrides, "Time is up!" overlay) (§9.4).
 - **Tests:** Playwright navigation suite (§16.1.4).
 
 ### Milestone 2.3 — `@blockpy/reader` (§11.2)
 
-- Markdown/HTML pipeline shared with instructions; YouTube event logging per A2.
-- Runnable code blocks hydrating minified editors sharing the page engine; events attach to the reading id (§12).
-- Completion rule per legacy component (verified in A7 follow-up); subordinate quiz composition; `asPreamble` prop.
+- Markdown/HTML pipeline: legacy uses markdown-it here vs marked for instructions (A6) — unify carefully; D4-A: **no sanitization** (legacy parity); keep the `download_file` link/image rewrite; YouTube + scroll telemetry per A2 (logging only).
+- Runnable code blocks hydrating minified editors sharing the page engine (A7: runnable = python fence with non-empty info-string part id; save/submit endpoints stripped); events attach to the reading id (§12).
+- Completion rule per A7: mark correct immediately on load when a submission exists; subordinate quiz composition; `asPreamble` prop.
 
 ### Milestone 2.4 — `@blockpy/quizzer` (§11.3)
 
-- All question types from A3 fixtures; pooling/shuffle/seed reproducibility; attempt lifecycle + timed-quiz countdown integration.
-- Feedback display flags (immediate vs on-close, secretive hiding); autosave via legacy payload shapes.
-- Pyodide preprocessing with fail-soft `preprocessing_error` (§6.5, §11.3.6).
-- Unknown quiz JSON passes through untouched (instructor-editor compatibility).
+- All question types from A3 fixtures (10 rendered + `calculated_question`/`file_upload_question` as pass-through); pool membership seeded by submission id; option shuffle seeded with the same seed (D1-B, ledger LD-1); attempt lifecycle incl. `mulligans`; timed-quiz countdown via the generic `time_limit` mechanism (A3/A7).
+- Feedback display flags (`feedbackType`, secretive hiding) and the server-written `summary` block; autosave via `save_file` of the answer JSON, grading via server-side `process_quiz` (A3).
+- Pyodide preprocessing with fail-soft `preprocessing_error` — **new additive capability, ships flagged** (§6.5, §17; A3 finding).
+- Unknown quiz JSON passes through untouched (instructor-editor compatibility); hidden-pool answers preserved via merge (D7-B, ledger LD-7 — conditional on the server tolerating extra answer keys, verify in these fixtures).
 - **Tests:** quiz suite (§16.1.5).
 
 ### Milestone 2.5 — Composition, LTI, legacy islands
@@ -182,10 +208,10 @@ Goal: the React app owns the whole `editor.html` body for flagged courses (§17 
 
 | #   | Risk                                                                        | Impact                                         | Mitigation                                                                                                  |
 | --- | --------------------------------------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| R1  | Pyodide unusable/slow in LMS iframes without COOP/COEP                      | Core value prop fails                          | Spike S1 first; compat mode is a hard requirement (§6.6); worker-termination hard stop as floor             |
+| R1  | ~~Pyodide unusable in LMS iframes without COOP/COEP~~ RESOLVED: SAB confirmed dead in Canvas; compat mode is primary | Interrupt latency / async-input UX in compat mode | Compat-path-first engine design (M1.3); worker-termination hard stop as floor; SAB as enhancement |
 | R2  | Pedal/TIFA behavior differs on CPython vs Skulpt, breaking existing graders | Curriculum regressions at scale                | Engine regression corpus (§16.1.3) early; shim in the Pedal integration layer, never the engine core (§6.7) |
 | R3  | Prefix/visibility semantics mis-transcribed from `files.js`                 | Silent data corruption on the wire             | A1 is a blocking Phase-0 gate; adapter is a single module with a conformance fixture suite                  |
-| R4  | Text→blocks round-trip diverges from BlockMirror on real student code       | Blocks mode unusable for courses               | Spike S2 + BlockMirror corpus suite (§16.1.2) before editor freeze                                          |
+| R4  | Lezer CST diverges from CPython grammar (error tolerance, edge constructs), so blocks disagree with what actually runs | Blocks mode unusable or misleading for courses | Spike S2 corpus validation; round-trip suite (§16.1.2); tests cross-check Lezer parse success against CPython `ast` verdicts |
 | R5  | Event vocabulary drift breaks research pipelines                            | Loss of research data continuity               | A2 review gate; only `X-` extensions allowed (§14.4)                                                        |
 | R6  | Quiz schema richer than sampled fixtures                                    | Data loss on quiz save                         | Round-trip-unknown-fields rule (§11.3.7, §14.5); widen A3 sampling across production courses                |
 | R7  | Pyodide first-load latency hurts readings/quizzes                           | Bad first impression on non-coding assignments | Readings/quizzes interactive before engine loads (§16.3); lazy engine boot                                  |

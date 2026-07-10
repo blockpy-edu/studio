@@ -12,6 +12,9 @@ coverage/
 playwright-report/
 test-results/
 
+# Unscrubbed recorder output (scrubbed transcripts live in docs/appendices/transcripts/)
+spikes/*.har
+
 # Local
 *.local
 .vite/
