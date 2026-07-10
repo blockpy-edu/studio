@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BlockPy Studio — Dev Harness</title>
+  </head>
+  <body>
+    <!-- Static dev harness: mounts the app from a hand-written BootConfig,
+         no server required (DEVELOPMENT_PLAN.md §0.1). Mirrors the spec §5.2
+         bootstrapping contract. -->
+    <div id="blockpy-root"></div>
+    <script type="application/json" id="blockpy-config">
+      {
+        "urls": {
+          "loadAssignment": "/api/load_assignment",
+          "saveFile": "/api/save_file",
+          "logEvent": "/api/log_event",
+          "importDatasets": "https://corgis-edu.github.io/corgis/datasets/"
+        },
+        "user": {
+          "id": 1,
+          "name": "Dev Student",
+          "role": "learner",
+          "courseId": 1
+        },
+        "assignment": {
+          "currentAssignmentId": 101,
+          "assignmentGroupId": 11,
+          "typeIndex": {
+            "quiz": [102],
+            "reading": [103],
+            "textbook": [],
+            "java": [],
+            "typescript": [],
+            "explain": [],
+            "blockpy": [101]
+          }
+        },
+        "group": {
+          "assignments": [
+            {
+              "id": 101,
+              "name": "Hello World",
+              "url": "#101",
+              "subordinate": false,
+              "hidden": false,
+              "correct": false
+            },
+            {
+              "id": 103,
+              "name": "Reading: Variables",
+              "url": "#103",
+              "subordinate": false,
+              "hidden": false,
+              "correct": false
+            },
+            {
+              "id": 102,
+              "name": "Quiz: Variables",
+              "url": "#102",
+              "subordinate": true,
+              "hidden": false,
+              "correct": false
+            }
+          ],
+          "anySecretive": false,
+          "currentAssignmentId": 101
+        },
+        "display": { "instructor": false, "readOnly": false, "embed": false },
+        "passcodeProtected": false,
+        "sessionStartTime": null,
+        "paths": {
+          "blocklyMedia": "/blockly-media/",
+          "emojiProxy": "/emoji/",
+          "pyodideIndexURL": "https://cdn.jsdelivr.net/pyodide/"
+        },
+        "settings": {},
+        "corgisUrl": "https://corgis-edu.github.io/corgis/datasets/"
+      }
+    </script>
+    <script type="module" src="/src/dev.ts"></script>
+  </body>
+</html>

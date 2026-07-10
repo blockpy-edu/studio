@@ -23,10 +23,10 @@ Goal: eliminate specification ambiguity and stand up the monorepo. Everything he
 
 ### 0.1 Repository & tooling
 
-- [ ] pnpm monorepo scaffold: `packages/{engine,vfs,editor,blocks,reader,quizzer,textbook,navigation,api,lti-embed,legacy-shim,app}` (§4).
-- [ ] Shared TypeScript ≥5 `strict` config, ESLint/Prettier, Vitest, Playwright, CI pipeline (lint → unit → e2e smoke).
-- [ ] Vite build targets: full app bundle, `blockpy-studio.iife.js` embeddable, per-package ESM (§4).
-- [ ] Dev harness: static page that mounts the app from a hand-written `BootConfig` (no server needed).
+- [x] pnpm monorepo scaffold: `packages/{engine,vfs,editor,blocks,reader,quizzer,textbook,navigation,api,lti-embed,legacy-shim,app}` (§4).
+- [x] Shared TypeScript ≥5 `strict` config, ESLint/Prettier, Vitest, Playwright, CI pipeline (lint → unit → e2e smoke).
+- [x] Vite build targets: full app bundle, `blockpy-studio.iife.js` embeddable, per-package ESM (§4).
+- [x] Dev harness: static page that mounts the app from a hand-written `BootConfig` (no server needed).
 
 ### 0.2 Legacy verification appendices (the §17 Phase-0 "freeze" deliverables)
 

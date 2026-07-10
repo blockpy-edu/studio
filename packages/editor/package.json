@@ -1,0 +1,25 @@
+{
+  "name": "@blockpy/editor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@blockpy/blocks": "workspace:*",
+    "@blockpy/engine": "workspace:*",
+    "@blockpy/vfs": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18.3.0"
+  },
+  "devDependencies": {}
+}

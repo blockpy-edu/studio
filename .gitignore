@@ -1,1 +1,18 @@
 courses/*.json
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+dist-lib/
+coverage/
+
+# Test artifacts
+playwright-report/
+test-results/
+
+# Local
+*.local
+.vite/
+.DS_Store
