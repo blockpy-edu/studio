@@ -324,6 +324,7 @@ Before each job, the engine worker materializes a snapshot of the resolved names
 - **B3** Unparseable text disables the Blocks/Split modes with the current "your code has an error, blocks unavailable" affordance, showing the syntax error location in the text editor.
 - **B4** The block palette ("toolbox") is instructor-configurable per assignment via the existing assignment settings (named toolbox levels and custom toolbox definitions must keep loading from their legacy settings keys).
 - **B5** Images-in-code, corgis dataset import blocks, and the block styling/l10n of the current BlockMirror set carry over incrementally; v1 must cover the full core-language block set BlockMirror supports (statements, expressions, literals, functions/defs, classes minimal, imports, comprehensions per current support level).
+- **B6 — Visual parity (added 2026-07-10).** The interface must be basically the same as the original BlockPy interface, especially in **layout** (region arrangement: instructions pane, view toggles, run controls, console, feedback pane, file tabs) and **color** (the legacy palette). Icons and fonts may change only where the replacement is relatively similar, makes sense, and improves usability/accessibility — such changes are proposed individually with rationale, not wholesale. The legacy layout/palette extraction in the A8 appendix is the conformance fixture.
 
 ### 8.2 Parsing strategy
 

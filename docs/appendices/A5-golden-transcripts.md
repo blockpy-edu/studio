@@ -26,6 +26,14 @@ blockpy-server. The recordings are the normative fixtures for `@blockpy/api`
   `access_token` form fields redacted; third-party traffic (YouTube embeds in
   readings) dropped. The anonymous dev `user_id`/`submission_id` values are
   synthetic and retained.
+- **Exam-content redaction (2026-07-10):** quiz 1022 is an **exam** — its
+  question JSON (`assignment.instructions`), the `studentAnswers` bodies in
+  the quiz `save_file` requests, the per-question `feedbacks` in the
+  `update_submission` response, and the real `protected_ip_ranges` IPs were
+  replaced with redaction placeholders (structure-preserving, so the replay
+  suite still passes). **Consequence:** this transcript no longer carries
+  authentic quiz payload *contents* — record the A3/M2.4 quiz fixtures from
+  a non-exam practice quiz.
 - **Live confirmations of appendix findings:** readings mark correct on load
   via `update_submission status=1&correct=true` (A7); `Resource.View`
   `category=reading label=read` events with escalating-interval `count/delay`

@@ -114,6 +114,7 @@ Build in this order:
 
 ### Milestone 1.4 — `@blockpy/blocks` + `@blockpy/editor` (§8)
 
+- **Visual parity requirement (maintainer, 2026-07-10; spec B6):** the interface must be basically the same as the original BlockPy interface, **especially layout and color** — region arrangement (instructions pane, view toggles, run controls, console, feedback pane, file tabs) and the palette are conformance targets like any legacy behavior. Icons and fonts MAY change only if relatively similar, sensible, and the change improves usability/accessibility; propose such changes individually with rationale. Reference fixture: [docs/appendices/A8-ui-parity.md](docs/appendices/A8-ui-parity.md) (legacy layout + palette extraction).
 - CM6 setup: Python language, lint, autocomplete, merge view for history.
 - Parsing: the Lezer CST from `@codemirror/lang-python` drives both diagnostics and block generation (maintainer decision, see §0.3 S2 — no engine-worker parse service; blocks work before/without Pyodide). Engine-side CPython `ast` remains available to Pedal (§10.1) only.
 - Blockly block set + Python generator + CST→workspace builder; block↔line mapping for split-view sync and trace highlight (§8.3).
