@@ -1,7 +1,7 @@
 /**
  * @blockpy/engine — Pyodide-backed Python execution service (spec §6).
- * Compat mode (no SharedArrayBuffer) is the primary mode — see
- * docs/spikes and memory: SAB is unavailable in Canvas LMS iframes.
+ * Compat mode (no SharedArrayBuffer) is the primary mode — SAB is
+ * unavailable in Canvas LMS iframes (maintainer testing, 2026-07-10).
  */
 export { PHASE_PRIORITY, detectEngineMode } from './protocol';
 export type {
@@ -11,12 +11,18 @@ export type {
   EngineMode,
   EngineResult,
   Phase,
+  TraceStep,
   WorkerToClient,
 } from './protocol';
 export { JobQueue } from './queue';
 export type { JobQueueOptions } from './queue';
 export { JobRunner } from './runner';
-export type { PyodideLike } from './runner';
+export type { PyodideLike, StreamCallbacks } from './runner';
+export { WorkerHost } from './worker-host';
+export type { WorkerHostOptions } from './worker-host';
+export { EngineClient } from './client';
+export type { EngineClientOptions, EnginePort, RunCallbacks } from './client';
+export { createLoopbackPort } from './loopback';
 export { RUNTIME_PY } from './runtime.py';
 
 export const PACKAGE_NAME = '@blockpy/engine';

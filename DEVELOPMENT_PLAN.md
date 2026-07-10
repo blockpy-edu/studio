@@ -102,13 +102,13 @@ Goal: the spec's §17 Phase 1 — a working coding-problem editor behind a per-c
 
 Build in this order:
 
-1. [~] Protocol types frozen (`EngineJob`/`EngineResult`/worker messages) and `JobRunner` executing against a Pyodide instance with stdout/stderr capture — `packages/engine/src/{protocol,runner,runtime.py}.ts`. Worker entry + `EngineClient` postMessage plumbing and live stdout streaming still to come.
+1. [x] Protocol frozen (`EngineJob`/`EngineResult`/`TraceStep`/worker messages); `JobRunner` + `WorkerHost` (Node-testable message handling) + `worker.entry.ts` (browser Web Worker shell) + `EngineClient` with live stdout/stderr streaming per job — `packages/engine/src/{protocol,runner,runtime.py,worker-host,worker.entry,client,loopback}.ts`.
 2. [x] Job model + queue with priorities and `on_change` debounce/coalesce (§6.3, E5): user jobs FIFO and preempt background; only the newest on_change survives — `packages/engine/src/queue.ts`.
-3. [x] Per-job isolation (fresh `__main__` module, `sys.modules` snapshot/restore, FS staging under `/mnt/blockpy` with LD-3x artifact diff-back §7.5) — verified against real Pyodide in the Node suite. "Restart kernel" lands with the worker (it is a worker-level operation).
-4. [ ] Dual interrupt/input paths: compat mode PRIMARY (S1: SAB dead in Canvas) with worker-termination hard stop; SAB isolated mode as enhancement; boot-time `detectEngineMode` done, `X-Engine.Mode` event emission + interactive `input()` land with the worker plumbing.
-5. [~] Student-relative traceback mapping (`answer_prefix` lines subtracted, §6.3) and persistent REPL namespace (§6.4) done; instructor phases execute but the Pedal environment contract (`set_source → start_trace → run → tifa → exec → resolve`, per Spike S3) is Milestone 1.5.
-6. [ ] Opt-in `sys.settrace` tracing streamed as compact events (E3).
-7. [ ] Time limits: client-side watchdog (compat hard stop) + trace instruction counter; `execLimit` mapping (§6.2).
+3. [x] Per-job isolation (fresh `__main__` module, `sys.modules` snapshot/restore, FS staging under `/mnt/blockpy` with LD-3x artifact diff-back §7.5) — verified against real Pyodide in the Node suite. "Restart kernel" = `EngineClient.restartKernel()` (worker respawn + fresh interpreter, verified end-to-end).
+4. [x] Compat mode PRIMARY (S1: SAB dead in Canvas): `interrupt()` on a running job = worker-termination hard stop with automatic respawn; `detectEngineMode` at boot; mode reported per (re)spawn via `onMode` (the `X-Engine.Mode` log source). _Deferred as isolated-mode enhancements: SAB interrupt buffer, synchronous interactive `input()`. Compat interactive input strategy: UI collects input and replays via `inputsPrefill` (M1.4 console)._
+5. [x] Student-relative traceback mapping (`answer_prefix` lines subtracted, §6.3) and persistent REPL namespace (§6.4). Instructor phases execute; the Pedal environment contract (`set_source → start_trace → run → tifa → exec → resolve`, per Spike S3) is Milestone 1.5.
+6. [x] Opt-in `sys.settrace` tracing (E3): compact per-line events with truncated-repr variable snapshots and student-relative lines, 10k-step storage cap — powers the Trace/State Explorer.
+7. [x] Time limits (§6.2): client-side wall-clock watchdog (compat hard stop → `TimeoutError` result) + tracer step counter (`limits.traceSteps` → `TraceLimitError`); legacy `execLimit` maps to these.
 
 - **Tests:** engine conformance suite headless in Node (§16.1.3 seed: a handful of curriculum graders from Spike S3).
 

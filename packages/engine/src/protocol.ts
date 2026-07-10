@@ -38,8 +38,24 @@ export interface EngineJob {
   answerSuffix?: string;
   /** Scripted stdin (sample-input replay, Pedal input scripting). */
   inputsPrefill?: string[];
-  limits?: { wallMs?: number };
+  /**
+   * wallMs: client-side watchdog (compat hard stop = worker termination).
+   * traceSteps: instruction limit enforced by the tracer when trace is on
+   * (legacy `execLimit` maps here, §6.2).
+   */
+  limits?: { wallMs?: number; traceSteps?: number };
+  /** Opt-in per run (perf) — E3. */
   trace?: boolean;
+}
+
+/** One compact trace event (E3): powers the Trace/State Explorer. */
+export interface TraceStep {
+  event: 'call' | 'line' | 'return' | 'exception';
+  line: number;
+  /** Line with instructor `answer_prefix` lines subtracted. */
+  studentLine: number;
+  /** Variable snapshot (repr, truncated) — present on 'line' events. */
+  locals?: Record<string, string>;
 }
 
 export interface EngineError {
@@ -63,6 +79,8 @@ export interface EngineResult {
   error?: EngineError;
   /** repr() of the final expression for eval phases. */
   value?: string;
+  /** Trace buffer when the job opted in (E3). */
+  trace?: TraceStep[];
   /** Files created or modified by the run (LD-3x run artifacts). */
   artifacts: Record<string, string>;
   durationMs: number;
@@ -72,6 +90,7 @@ export interface EngineResult {
 //    interrupt work; the types are part of the frozen protocol now) ---------
 
 export type ClientToWorker =
+  | { kind: 'init'; indexURL?: string }
   | { kind: 'run'; job: EngineJob }
   | { kind: 'input-response'; jobId: string; value: string }
   | { kind: 'interrupt'; jobId: string }

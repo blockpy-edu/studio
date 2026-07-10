@@ -3,8 +3,10 @@
  * Pyodide once at boot. Implements per-job isolation (§6.2): fresh
  * `__main__` module dict per job, `sys.modules` snapshot/restore, FS
  * staging under /mnt/blockpy with artifact diff-back (spec §7.5, LD-3x),
- * scripted stdin, and student-relative traceback line mapping (§6.3 —
- * instructor `answer_prefix` lines are subtracted, as legacy Skulpt did).
+ * scripted stdin, student-relative traceback line mapping (§6.3 —
+ * instructor `answer_prefix` lines are subtracted, as legacy Skulpt did),
+ * live stdout/stderr tee streaming, and opt-in sys.settrace tracing whose
+ * step counter doubles as the instruction limit (E3, §6.2).
  */
 export const RUNTIME_PY = `
 import builtins
@@ -17,6 +19,25 @@ import traceback
 import types
 
 MOUNT = '/mnt/blockpy'
+TRACE_STORAGE_CAP = 10000
+
+
+class TraceLimitError(Exception):
+    pass
+
+
+class _Tee(io.StringIO):
+    """Accumulates output while forwarding each chunk to a JS callback."""
+
+    def __init__(self, callback):
+        super().__init__()
+        self.callback = callback
+
+    def write(self, text):
+        # JS null arrives as JsNull (not None) — guard on callability.
+        if text and callable(self.callback):
+            self.callback(text)
+        return super().write(text)
 
 
 class StudioRuntime:
@@ -66,12 +87,54 @@ class StudioRuntime:
             if name not in self.baseline_modules:
                 del sys.modules[name]
 
+    # -- tracing (E3): step events + instruction limit ------------------------
+
+    def make_tracer(self, target_filename, prefix_lines, step_limit, steps):
+        state = {'count': 0}
+
+        def snapshot_locals(frame):
+            snapshot = {}
+            for key, value in frame.f_locals.items():
+                if key.startswith('__'):
+                    continue
+                try:
+                    snapshot[key] = repr(value)[:120]
+                except Exception:  # noqa: BLE001
+                    snapshot[key] = '<unrepresentable>'
+            return snapshot
+
+        def tracer(frame, event, arg):
+            if frame.f_code.co_filename != target_filename:
+                return None
+            state['count'] += 1
+            if step_limit is not None and state['count'] > step_limit:
+                raise TraceLimitError(
+                    'Execution exceeded the configured limit of '
+                    + str(step_limit) + ' steps'
+                )
+            if len(steps) < TRACE_STORAGE_CAP:
+                step = {
+                    'event': event,
+                    'line': frame.f_lineno,
+                    'student_line': frame.f_lineno - prefix_lines,
+                }
+                if event == 'line':
+                    step['locals'] = snapshot_locals(frame)
+                steps.append(step)
+            return tracer
+
+        return tracer
+
     # -- execution ------------------------------------------------------------
 
     def run(self, code, filename='answer.py', prefix='', suffix='',
-            inputs=None, mode='exec', extract_result=False):
+            inputs=None, mode='exec', extract_result=False,
+            trace=False, trace_limit=None, on_stdout=None, on_stderr=None):
         full = (prefix or '') + code + (suffix or '')
         prefix_lines = (prefix or '').count('\\n')
+        # JS null arrives as JsNull (not None) — normalize scalar options.
+        if not isinstance(trace_limit, int):
+            trace_limit = None
 
         module = types.ModuleType('__main__')
         module.__dict__['__file__'] = filename
@@ -85,7 +148,8 @@ class StudioRuntime:
             except StopIteration:
                 raise EOFError('No scripted input available') from None
 
-        stdout, stderr = io.StringIO(), io.StringIO()
+        stdout, stderr = _Tee(on_stdout), _Tee(on_stderr)
+        steps = []
         old_input = builtins.input
         old_main = sys.modules.get('__main__')
         builtins.input = scripted_input
@@ -95,7 +159,15 @@ class StudioRuntime:
         try:
             with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
                 compiled = compile(full, filename, mode)
-                result = eval(compiled, module.__dict__)
+                if trace:
+                    sys.settrace(
+                        self.make_tracer(filename, prefix_lines, trace_limit, steps),
+                    )
+                try:
+                    result = eval(compiled, module.__dict__)
+                finally:
+                    if trace:
+                        sys.settrace(None)
                 if mode == 'eval':
                     value = repr(result)
                 elif extract_result and 'result' in module.__dict__:
@@ -114,12 +186,13 @@ class StudioRuntime:
             'value': value,
             'stdout': stdout.getvalue(),
             'stderr': stderr.getvalue(),
+            'trace': steps if trace else None,
         }
 
-    def evaluate(self, expression):
+    def evaluate(self, expression, on_stdout=None, on_stderr=None):
         """Persistent REPL bound to the last run's namespace (spec 6.4)."""
         target = self.last_globals if self.last_globals is not None else {}
-        stdout, stderr = io.StringIO(), io.StringIO()
+        stdout, stderr = _Tee(on_stdout), _Tee(on_stderr)
         error = None
         value = None
         try:
@@ -135,6 +208,7 @@ class StudioRuntime:
             'value': value,
             'stdout': stdout.getvalue(),
             'stderr': stderr.getvalue(),
+            'trace': None,
         }
 
     def clear_namespace(self):
