@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@blockpy/vfs": "workspace:*"
-  },
-  "devDependencies": {}
+    "@blockpy/vfs": "workspace:*",
+    "pyodide": "^314.0.2"
+  }
 }

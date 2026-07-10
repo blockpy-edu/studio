@@ -102,13 +102,13 @@ Goal: the spec's §17 Phase 1 — a working coding-problem editor behind a per-c
 
 Build in this order:
 
-1. Worker + one Pyodide instance; `EngineClient` postMessage protocol; stdout/stderr streaming.
-2. Job model + FIFO queue with priorities and `on_change` debounce/coalesce (§6.3, E5).
-3. Per-job isolation (`__main__` reset, `sys.modules` snapshot, FS staging from VFS snapshots §7.5) + "restart kernel" nuclear reset.
-4. Dual interrupt/input paths: SAB isolated mode and compat mode with worker-termination hard stop; boot-time detection + `X-Engine.Mode` event (§6.2, §6.6 — informed by Spike S1).
-5. Instructor phases (`on_run`/`on_change`/`on_eval`), student-relative traceback line mapping (§6.3), persistent REPL namespace (§6.4).
-6. Opt-in `sys.settrace` tracing streamed as compact events (E3).
-7. Time limits: JS watchdog + trace instruction counter; `execLimit` mapping (§6.2).
+1. [~] Protocol types frozen (`EngineJob`/`EngineResult`/worker messages) and `JobRunner` executing against a Pyodide instance with stdout/stderr capture — `packages/engine/src/{protocol,runner,runtime.py}.ts`. Worker entry + `EngineClient` postMessage plumbing and live stdout streaming still to come.
+2. [x] Job model + queue with priorities and `on_change` debounce/coalesce (§6.3, E5): user jobs FIFO and preempt background; only the newest on_change survives — `packages/engine/src/queue.ts`.
+3. [x] Per-job isolation (fresh `__main__` module, `sys.modules` snapshot/restore, FS staging under `/mnt/blockpy` with LD-3x artifact diff-back §7.5) — verified against real Pyodide in the Node suite. "Restart kernel" lands with the worker (it is a worker-level operation).
+4. [ ] Dual interrupt/input paths: compat mode PRIMARY (S1: SAB dead in Canvas) with worker-termination hard stop; SAB isolated mode as enhancement; boot-time `detectEngineMode` done, `X-Engine.Mode` event emission + interactive `input()` land with the worker plumbing.
+5. [~] Student-relative traceback mapping (`answer_prefix` lines subtracted, §6.3) and persistent REPL namespace (§6.4) done; instructor phases execute but the Pedal environment contract (`set_source → start_trace → run → tifa → exec → resolve`, per Spike S3) is Milestone 1.5.
+6. [ ] Opt-in `sys.settrace` tracing streamed as compact events (E3).
+7. [ ] Time limits: client-side watchdog (compat hard stop) + trace instruction counter; `execLimit` mapping (§6.2).
 
 - **Tests:** engine conformance suite headless in Node (§16.1.3 seed: a handful of curriculum graders from Spike S3).
 

@@ -140,6 +140,9 @@ importers:
       '@blockpy/vfs':
         specifier: workspace:*
         version: link:../vfs
+      pyodide:
+        specifier: ^314.0.2
+        version: 314.0.2
 
   packages/legacy-shim:
     dependencies:
