@@ -82,11 +82,12 @@ Goal: the spec's §17 Phase 1 — a working coding-problem editor behind a per-c
 
 ### Milestone 1.1 — `@blockpy/vfs` (§7)
 
-- Layered overlay FS (transient / submission / uploads / assignment / system), top-down `resolve`.
-- `LegacyName.parse/format` adapter — the _only_ place prefixes live (§7.3); driven by fixture A1.
-- Per-layer dirty tracking, change events, role-based visibility matrix.
-- Persistence adapter mapping layer × file → legacy endpoint + legacy filename (§7.4), incl. `answer.py` debounce-autosave and stale-version banner semantics.
-- **Tests:** VFS/legacy-name conformance suite (§16.1.1) — runnable in Node.
+- [x] Layered FS storing by (space, basename) with the **role-dependent legacy search orders** from A1 §4a (student `? → & → plain → *`; instructor EVERYWHERE and `_instructor/` orders) — `packages/vfs/src/vfs.ts`.
+- [x] `parse/format` adapter — the _only_ place prefixes live (§7.3); full eight-space set (`!^?&$*#` + unprefixed) harmonized per A1 §7.8, plus the verified magic-name registry — `packages/vfs/src/legacy-names.ts`.
+- [x] Dirty tracking (by legacy name), change events, role-based visibility/mutability matrix (D3-A: `&` uniformly read-only for students, ledger LD-3) — `packages/vfs/src/permissions.ts`.
+- [x] Persistence **mapping** (§7.4): per-file plan → `saveFile` individual / `#`-bundle / manual `saveAssignment` / uploads / never (A1 §4d), incl. bundle wire encode/decode and reset-to-start semantics.
+- [ ] Persistence **transport**: debounced autosave through `@blockpy/api`, `autoSave`/`readOnly` gating, stale-version banner, uploads-layer endpoints, LD-3x artifact persistence — lands with Milestone 1.2 (needs the API client).
+- [x] **Tests:** VFS/legacy-name conformance suite (§16.1.1) — 28 Node-runnable tests over search orders, visibility, deletion guards, bundles, persistence plans.
 
 ### Milestone 1.2 — `@blockpy/api` (§14)
 
