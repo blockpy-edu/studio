@@ -28,3 +28,5 @@ export { Vfs } from './vfs';
 export type { VfsEntry, VfsChange, VfsListener, ResolvedFile } from './vfs';
 
 export const PACKAGE_NAME = '@blockpy/vfs';
+export { Autosaver } from './autosaver';
+export type { AutosaverOptions, FileSaver } from './autosaver';

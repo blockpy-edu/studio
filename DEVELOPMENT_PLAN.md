@@ -91,11 +91,12 @@ Goal: the spec's §17 Phase 1 — a working coding-problem editor behind a per-c
 
 ### Milestone 1.2 — `@blockpy/api` (§14)
 
-- Typed client for the full §14.2 endpoint inventory, generated/validated against golden transcripts (A5).
-- Auth plumbing: session cookie + `access_token` placement per transcript; group context on every call.
-- Versioned assignment decoder that round-trips unknown fields losslessly (§14.5).
-- Event logger implementing A2 vocabulary as a **central event-id registry with deprecation metadata** (D2 note: e.g. "field untrustworthy before Studio / superseded by Y"); per-event POST + offline queue with the legacy bugs fixed (ledger LD-2a/2b/2c).
-- **Tests:** transcript replay harness (first cut of the §16.2 G3 gate).
+- [x] Typed client for the core endpoint set (`loadAssignment`, `saveFile`, `saveAssignment`, `loadHistory`, `updateSubmission`, `updateSubmissionStatus`, `saveImage`, `logEvent`), validated against the golden transcript — `packages/api/src/client.ts`. Uploads endpoints (`listUploadedFiles`/`uploadFile`/`renameFile`/`downloadFile`), `forkAssignment`, `openaiProxy`, `shareUrl` pending the A5 transcript extensions.
+- [x] Auth plumbing per A2 §1.1: `Authorization: Bearer` header only (access token never in the body); the eleven-field base context on every call; `version` = submission version (the frontend's assignment-version corruption is NOT reproduced) — `packages/api/src/context.ts`, `transport.ts`.
+- [x] Versioned assignment/submission decoder round-tripping unknown fields (§14.5) + `mergeSettings` implementing D5-B/LD-5 — `packages/api/src/decoder.ts`.
+- [x] **Central event-id registry with deprecation metadata** (D2): 25 live + 3 dead + 16 server-fabricated identifiers; `clientMayEmit` blocks server-fabricated/dead types and admits `X-` extensions; `X-Editor.Paste`/`X-IP.Change` carry "untrustworthy before Studio" annotations — `packages/api/src/events.ts`. Logger: per-event POST, legacy retry ladder (+2000 ms linear), 200-entry deduped offline queue with LIFO boot flush; LD-2b (single-entry dequeue) and LD-2c (working IP-change detection) fixed.
+- [x] **Tests:** transcript replay harness (first cut of the §16.2 G3 gate) asserting field-set + value parity per endpoint against the recorded HAR, plus transport/queue/decoder suites — 18 tests.
+- [x] VFS persistence transport: `Autosaver` binds `Vfs` change events → debounced `saveFile` (legacy 1000 ms `TIMER_DELAY`, bundle coalescing, `autoSave`/`readOnly` gating, immediate `answer.py` save on Run, `version_change` → stale-version banner callback) — `packages/vfs/src/autosaver.ts`, structurally typed so `vfs` keeps no dependency on `api`.
 
 ### Milestone 1.3 — `@blockpy/engine` (§6)
 
