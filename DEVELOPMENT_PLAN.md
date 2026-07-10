@@ -125,7 +125,9 @@ Build in this order:
 
 ### Milestone 1.5 — Integrations needed for parity (§10)
 
-- Pedal wheels (`pedal`, `curriculum-ctvt`, `curriculum-sneks`) bundled; blockpy-environment contract implemented; final-feedback object → feedback pane → `updateSubmission`/`markCorrect` ordering (§10.1, §14.3).
+- [x] **Pedal environment implemented** (`packages/engine/src/pedal{,-env.py}.ts`): the S3 pipeline (`clear → stage → set_source → queue_input → start_trace → run → tifa → exec(on_run) → resolve`) with the legacy `_instructor` package contract (instructor `!`/`?`/`&` .py files importable, files staged prefix-stripped — A1 §3) and fail-soft `system_error` feedback on grader/Pedal crashes. **Corpus regression: 213/213 bakery graders execute (194 clean, 19 categorized fail-softs — see appendix)** via `tools/run-grader-corpus.mjs`; integration tests gated behind `PEDAL_IT=1` (network). §6.7 appendix started: [docs/appendices/skulpt-compat.md](docs/appendices/skulpt-compat.md).
+- [ ] Wheels bundled with the deployment (currently PyPI via micropip): `pedal`, `curriculum-sneks`, `bakery` resolve; **`curriculum-ctvt` is not on PyPI** — needs a bundled wheel, as do `bakery_canvas` and the legacy `utility` module (compat appendix table).
+- [ ] Final-feedback → `updateSubmission`/`markCorrect` ordering (§14.3) — editor wiring, lands with M1.4/M1.6; verify legacy score derivation first (S3 open item).
 - matplotlib Agg capture → `image` events → console rendering + `saveImage`; Pedal plot-inspection shim (§10.2).
 - CORGIS dataset import into uploads layer + engine mount; `?mock_urls.blockpy` shims (§10.4).
 - OpenAI proxy pass-through (§10.5).

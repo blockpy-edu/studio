@@ -26,3 +26,6 @@ export { createLoopbackPort } from './loopback';
 export { RUNTIME_PY } from './runtime.py';
 
 export const PACKAGE_NAME = '@blockpy/engine';
+export { PedalEnvironment, DEFAULT_PEDAL_PACKAGES } from './pedal';
+export type { PedalFeedback, PedalGradeOptions, PedalPyodideLike } from './pedal';
+export { PEDAL_ENV_PY } from './pedal-env.py';
