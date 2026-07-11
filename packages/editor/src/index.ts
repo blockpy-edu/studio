@@ -1,6 +1,29 @@
 /**
- * @blockpy/editor — Dual block/text Python editor and coding-assignment surface (spec §8, §11.1). Implementation: Milestone 1.4.
+ * @blockpy/editor — Dual block/text Python editor and coding-assignment
+ * surface (spec §8, §11.1).
  *
- * Scaffold placeholder; see DEVELOPMENT_PLAN.md for the milestone checklist.
+ * The dual editor (`DualEditor`) is the port of legacy BlockMirror; the
+ * React chrome around it (toolbar, console, feedback pane — A8 parity)
+ * builds on top.
  */
+export {
+  DualEditor,
+  BREAK_WIDTH,
+  type DualEditorConfiguration,
+  type DualEditorMode,
+  type DualEditorChangeEvent,
+  type DualEditorListener,
+} from './dual/dual-editor';
+export { DualTextEditor } from './dual/text-editor';
+export { DualBlockEditor } from './dual/block-editor';
+export {
+  TOOLBOXES,
+  TOOLBOX_CATEGORY,
+  EXTRA_TOOLS,
+  makeToolboxXml,
+  toolboxPythonToBlocks,
+} from './dual/toolboxes';
+export type { ToolboxSpec, ToolboxCategory, ToolboxEntry } from './dual/toolboxes';
+export { DualEditorView, type DualEditorViewProps } from './components/DualEditorView';
+
 export const PACKAGE_NAME = '@blockpy/editor';

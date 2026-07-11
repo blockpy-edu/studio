@@ -1,0 +1,82 @@
+/**
+ * BlockPy design tokens — values are NORMATIVE, extracted from the legacy
+ * stylesheets (docs/appendices/A8-ui-parity.md §2.2; B6 visual parity).
+ * Do not "modernize" a value without a ledger entry.
+ */
+:root {
+  /* Frame */
+  --blockpy-bg-parchment: #fcf8e3; /* page + markdown preview bg */
+  --blockpy-border-warm: #faebcc; /* frame, row seams, quick-menu divider (folds the #faebcd typo in) */
+
+  /* Run button */
+  --blockpy-run-green: rgb(40, 130, 40);
+  --blockpy-run-green-focus: rgb(20, 100, 20);
+  --blockpy-run-running: var(--blockpy-status-warning); /* #f0ad4e */
+  --blockpy-run-error: var(--blockpy-status-danger); /* #d9534f */
+
+  /* Delete button */
+  --blockpy-delete-maroon: rgb(130, 40, 40);
+  --blockpy-delete-maroon-dark: rgb(100, 20, 20);
+
+  /* Status semantics (Bootstrap-3-era brand colors, reused by feedback
+     badges AND server badges) */
+  --blockpy-status-success: #5cb85c; /* complete badge, server ready */
+  --blockpy-status-success-dark: #358535; /* label-success */
+  --blockpy-status-info: #5bc0de; /* no-errors + instructions badges, server active */
+  --blockpy-status-warning: #f0ad4e; /* feedback-error badge, run-running, server retrying */
+  --blockpy-status-danger: #d9534f; /* runtime-error badge, run-error, server failed */
+  --blockpy-status-syntax: darkred; /* #8b0000 — syntax/editor error badge */
+  --blockpy-status-semantic: orangered; /* #ff4500 — semantic/analyzer badge, traceback lineno */
+  --blockpy-status-internal: black; /* internal-error badge */
+  --blockpy-status-offline: #333; /* server offline */
+
+  /* Feedback accents */
+  --blockpy-positive-green: green; /* check marks, stars, traceback filename */
+  --blockpy-alert-red: red; /* "New feedback" floating alert */
+  --blockpy-student-error-pink: pink; /* quick-menu bug icon */
+
+  /* File tabs */
+  --blockpy-tab-bg: #cccccc;
+  --blockpy-tab-border: #ddd; /* shared with tab hover bg and CM gutter bg */
+  --blockpy-tab-active-bg: white;
+  --blockpy-tab-uneditable: darkblue; /* #00008b */
+
+  /* Editor line highlights */
+  --blockpy-line-active-bg: #c4fbc4; /* also traced-line */
+  --blockpy-line-active-text: #8a1f11;
+  --blockpy-line-error-bg: #fbc4c4;
+  --blockpy-line-uncovered-bg: #fbfbc4;
+  --blockpy-editor-readonly-bg: #e5e5e5;
+  --blockpy-gutter-border: #bbb;
+  --blockpy-line-rule: rgba(1, 1, 1, 0.1);
+
+  /* Neutral ramp (buttons, chrome, code blocks) */
+  --blockpy-neutral-900: black; /* #000, overlay, inverse console */
+  --blockpy-neutral-800: #333; /* secondary-button text */
+  --blockpy-neutral-700: #444; /* text-muted-less */
+  --blockpy-neutral-600: #666; /* label-default */
+  --blockpy-neutral-500: #8c8c8c; /* secondary-button focus border */
+  --blockpy-neutral-450: #adadad; /* secondary-button hover border */
+  --blockpy-neutral-400: darkgray; /* #a9a9a9, inverse-console + pygame borders */
+  --blockpy-neutral-350: #bbb;
+  --blockpy-neutral-300: #cccccc;
+  --blockpy-neutral-250: lightgray; /* #d3d3d3, most 1px borders */
+  --blockpy-neutral-200: #ddd;
+  --blockpy-neutral-150: #e5e5e5;
+  --blockpy-neutral-125: #e6e6e6; /* secondary-button hover/focus bg */
+  --blockpy-neutral-100: #eee; /* markdown toolbar bg */
+  --blockpy-neutral-75: #f0f0f0; /* feedback pre bg, pygame title bar */
+  --blockpy-neutral-0: white;
+
+  /* Overlay retry ramp (JS-driven) */
+  --blockpy-overlay-1: #988;
+  --blockpy-overlay-2: #655;
+  --blockpy-overlay-3: #333;
+  --blockpy-overlay-4: black;
+
+  /* Pygame window close button (Bootstrap-4 danger family; low priority) */
+  --blockpy-pygame-exit: rgb(220, 53, 69);
+  --blockpy-pygame-exit-border: rgb(200, 33, 49);
+  --blockpy-pygame-exit-hover: rgb(240, 73, 89);
+  --blockpy-pygame-exit-active: rgb(255, 150, 150);
+}
