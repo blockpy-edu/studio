@@ -449,6 +449,13 @@ button.blockpy-delete:active {
     border-right: 1px solid var(--blockpy-gutter-border);
 }
 
+/* CodeMirror 5 shipped a white editor background by default; CodeMirror 6's
+   .cm-editor is transparent, which would let the parchment page tint show
+   through. Pin the legacy white. */
+.blockpy-content .cm-editor {
+    background-color: var(--blockpy-neutral-0);
+}
+
 .editor-error-line {
     background: var(--blockpy-line-error-bg) !important;
 }

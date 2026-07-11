@@ -44,3 +44,39 @@ test('Run without an engine reports it in the console', async ({ page }) => {
     'No execution engine attached',
   );
 });
+
+test('layout regressions: no horizontal overflow, panels side by side, white editor', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.blocklySvg').first()).toBeVisible();
+  // 1. No horizontal scroll on the page.
+  const overflow = await page.evaluate(
+    () =>
+      document.documentElement.scrollWidth -
+      document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
+  // 2. Console and feedback are side by side (same top, disjoint x-ranges).
+  const consoleBox = (await page.locator('.blockpy-console').boundingBox())!;
+  const feedbackBox = (await page.locator('.blockpy-feedback').boundingBox())!;
+  expect(Math.abs(consoleBox.y - feedbackBox.y)).toBeLessThan(2);
+  expect(feedbackBox.x).toBeGreaterThanOrEqual(
+    consoleBox.x + consoleBox.width - 1,
+  );
+  // 3. The text editor surface is white, not the parchment page tint.
+  const editorBg = await page
+    .locator('.cm-editor')
+    .first()
+    .evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(editorBg).toBe('rgb(255, 255, 255)');
+  // 4. Blockly media resolves (no 404 → garbled sprites).
+  const spriteStatus = await page.evaluate(async () => {
+    const response = await fetch('/blockly-media/sprites.png');
+    return response.status;
+  });
+  expect(spriteStatus).toBe(200);
+  // 5. Toolbar buttons carry icons (lucide SVGs).
+  const runIcons = await page
+    .locator('button.blockpy-run svg')
+    .count();
+  expect(runIcons).toBeGreaterThan(0);
+});

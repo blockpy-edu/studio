@@ -14,6 +14,20 @@
  */
 
 /* --------------------------------------------------------------------------
+   Reboot: border-box sizing (Bootstrap applies this globally via Reboot;
+   without it the grid's percentage widths + 15px padding overflow the
+   viewport and paired col-md-6 panels wrap instead of sitting side by side.
+   Scoped to .blockpy-content so the host page is untouched.)
+   -------------------------------------------------------------------------- */
+
+.blockpy-content,
+.blockpy-content *,
+.blockpy-content *::before,
+.blockpy-content *::after {
+    box-sizing: border-box;
+}
+
+/* --------------------------------------------------------------------------
    Grid (.container-fluid, .row, .col-md-*)
    -------------------------------------------------------------------------- */
 

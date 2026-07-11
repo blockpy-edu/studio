@@ -6,6 +6,7 @@
  * wiring lands incrementally.
  */
 import { useEditorChromeStore } from './store';
+import { Icon, type IconName } from './icons';
 import type { DualEditorMode } from '../dual/dual-editor';
 
 export interface PythonToolbarProps {
@@ -16,11 +17,12 @@ export interface PythonToolbarProps {
   enableBlocks?: boolean;
 }
 
-const MODE_TABS: { name: string; icon: string; mode: DualEditorMode }[] = [
-  { name: 'Blocks', icon: 'fa-th-large', mode: 'block' },
-  { name: 'Split', icon: 'fa-columns', mode: 'split' },
-  { name: 'Text', icon: 'fa-align-left', mode: 'text' },
-];
+const MODE_TABS: { name: string; iconName: IconName; mode: DualEditorMode }[] =
+  [
+    { name: 'Blocks', iconName: 'blocks', mode: 'block' },
+    { name: 'Split', iconName: 'split', mode: 'split' },
+    { name: 'Text', iconName: 'text', mode: 'text' },
+  ];
 
 export function PythonToolbar({
   onRun,
@@ -45,7 +47,7 @@ export function PythonToolbar({
           }
           onClick={running ? onStop : onRun}
         >
-          <span className="fas fa-play" /> {running ? 'Stop' : 'Run'}
+          <Icon name={running ? 'stop' : 'run'} /> {running ? 'Stop' : 'Run'}
         </button>
       </div>
       {enableBlocks && (
@@ -69,7 +71,7 @@ export function PythonToolbar({
                 onChange={() => setPythonMode(tab.mode)}
                 style={{ position: 'absolute', clip: 'rect(0,0,0,0)' }}
               />
-              <span className={`fas ${tab.icon}`} /> {tab.name}
+              <Icon name={tab.iconName} /> {tab.name}
             </label>
           ))}
         </div>
@@ -80,30 +82,30 @@ export function PythonToolbar({
           className="btn btn-outline-secondary"
           onClick={onReset}
         >
-          <span className="fas fa-sync" /> Reset
+          <Icon name="reset" /> Reset
         </button>
       </div>
       <div className="btn-group mr-2" role="group">
         <button type="button" className="btn btn-outline-secondary" disabled>
-          <span className="fas fa-cloud-download-alt" /> Import datasets
+          <Icon name="datasets" /> Import datasets
         </button>
       </div>
       <div className="btn-group mr-2" role="group">
         <button type="button" className="btn btn-outline-secondary" disabled>
-          <span className="fas fa-file-upload" /> Upload
+          <Icon name="upload" /> Upload
         </button>
         <button type="button" className="btn btn-outline-secondary" disabled>
-          <span className="fas fa-download" />
-        </button>
-      </div>
-      <div className="btn-group mr-2" role="group">
-        <button type="button" className="btn btn-outline-secondary" disabled>
-          <span className="fas fa-history" /> History
+          <Icon name="download" />
         </button>
       </div>
       <div className="btn-group mr-2" role="group">
         <button type="button" className="btn btn-outline-secondary" disabled>
-          <span className="fas fa-ellipsis-v" />
+          <Icon name="history" /> History
+        </button>
+      </div>
+      <div className="btn-group mr-2" role="group">
+        <button type="button" className="btn btn-outline-secondary" disabled>
+          <Icon name="extra" />
         </button>
       </div>
     </div>
