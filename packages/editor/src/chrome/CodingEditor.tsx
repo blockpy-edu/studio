@@ -138,6 +138,15 @@ export function CodingEditor(props: CodingEditorProps) {
   const store = useEditorChromeStore;
   const pythonMode = useEditorChromeStore((state) => state.pythonMode);
   const traceVisible = useEditorChromeStore((state) => state.traceVisible);
+  const activeConsole = useEditorChromeStore((state) => state.activeConsole);
+
+  // Leaving instructor view forfeits the dev console slot (and keeps the
+  // unseen counters coherent for the next visit).
+  useEffect(() => {
+    if (!props.instructor && store.getState().activeConsole === 'dev') {
+      store.getState().setActiveConsole('student');
+    }
+  }, [props.instructor, store]);
 
   // Only answer.py gets the block/split modes; every other file is a plain
   // text file (legacy python.js forces TEXT for non-answer files).
@@ -328,18 +337,28 @@ export function CodingEditor(props: CodingEditorProps) {
       <div className="row">
         <div className="col-md-12">
           <div className="row">
-            <Console onEvaluate={handleEvaluate} />
+            {props.instructor && activeConsole === 'dev' ? (
+              <DevConsole
+                onShowStudent={() =>
+                  store.getState().setActiveConsole('student')
+                }
+              />
+            ) : (
+              <Console
+                onEvaluate={handleEvaluate}
+                onShowDev={
+                  props.instructor
+                    ? () => store.getState().setActiveConsole('dev')
+                    : undefined
+                }
+              />
+            )}
             {traceVisible ? (
               <TraceExplorer onStepLine={handleTraceLine} />
             ) : (
               <Feedback />
             )}
           </div>
-          {props.instructor && (
-            <div className="row">
-              <DevConsole />
-            </div>
-          )}
         </div>
       </div>
       {vfs && (

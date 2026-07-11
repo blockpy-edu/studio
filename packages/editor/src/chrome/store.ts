@@ -94,9 +94,15 @@ export interface EditorChromeState {
    * Dev console (STUDIO EXTENSION, no legacy analog): a secondary,
    * instructor-only console for system messages (engine boot, grader
    * lifecycle) and instructor-code output, keeping the student console
-   * clean.
+   * clean. It shares the console slot — a toggle swaps between the two.
    */
   devConsole: ConsoleEntry[];
+  /** Which console occupies the console slot. */
+  activeConsole: 'student' | 'dev';
+  /** Entries appended to the student console while the dev one is shown. */
+  consoleUnseen: number;
+  /** Entries appended to the dev console while the student one is shown. */
+  devUnseen: number;
 
   setPythonMode(mode: DualEditorMode): void;
   toggleHistoryMode(): void;
@@ -121,6 +127,8 @@ export interface EditorChromeState {
   setEvalState(state: EvalState): void;
   appendDevConsole(entry: ConsoleEntry): void;
   clearDevConsole(): void;
+  /** Swap the console slot; clears the shown console's unseen counter. */
+  setActiveConsole(which: 'student' | 'dev'): void;
 }
 
 /**
@@ -162,16 +170,26 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   dirtySubmission: true,
   evalState: 'hidden',
   devConsole: [],
+  activeConsole: 'student',
+  consoleUnseen: 0,
+  devUnseen: 0,
 
   setPythonMode: (mode) => set({ pythonMode: mode }),
   toggleHistoryMode: () =>
     set((state) => ({ historyMode: !state.historyMode })),
   setRunState: (runState) => set({ runState }),
   appendConsole: (entry) =>
-    set((state) => ({ console: [...state.console, entry] })),
+    set((state) => ({
+      console: [...state.console, entry],
+      // Notify the badge when the other console is in the slot.
+      consoleUnseen:
+        state.activeConsole === 'dev'
+          ? state.consoleUnseen + 1
+          : state.consoleUnseen,
+    })),
   // Legacy clears the whole printer on each run — the beginEval button line
-  // lives inside it, so it goes too.
-  clearConsole: () => set({ console: [], evalState: 'hidden' }),
+  // lives inside it, so it goes too (and there is nothing left unseen).
+  clearConsole: () => set({ console: [], evalState: 'hidden', consoleUnseen: 0 }),
   setFeedback: (feedback) => set({ feedback }),
   clearFeedback: () => set({ feedback: EMPTY_FEEDBACK }),
   setTrace: (steps) => set({ traceSteps: steps, traceStep: 0 }),
@@ -198,6 +216,18 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   setDirtySubmission: (dirty) => set({ dirtySubmission: dirty }),
   setEvalState: (evalState) => set({ evalState }),
   appendDevConsole: (entry) =>
-    set((state) => ({ devConsole: [...state.devConsole, entry] })),
-  clearDevConsole: () => set({ devConsole: [] }),
+    set((state) => ({
+      devConsole: [...state.devConsole, entry],
+      devUnseen:
+        state.activeConsole === 'student'
+          ? state.devUnseen + 1
+          : state.devUnseen,
+    })),
+  clearDevConsole: () => set({ devConsole: [], devUnseen: 0 }),
+  setActiveConsole: (which) =>
+    set(
+      which === 'dev'
+        ? { activeConsole: which, devUnseen: 0 }
+        : { activeConsole: which, consoleUnseen: 0 },
+    ),
 }));

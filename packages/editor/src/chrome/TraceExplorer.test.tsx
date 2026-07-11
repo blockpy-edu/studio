@@ -18,7 +18,14 @@ function resetStore() {
 const STEPS: TraceStepView[] = [
   { event: 'line', line: 1, studentLine: 1, locals: { a: '0' } },
   { event: 'line', line: 2, studentLine: 2, locals: { a: '0', b: "'hi'" } },
-  { event: 'return', line: 2, studentLine: 2 },
+  // The module return step snapshots the FINAL state (post-fix): the last
+  // trace page shows all end-of-run variables.
+  {
+    event: 'return',
+    line: 2,
+    studentLine: 2,
+    locals: { a: '0', b: "'hi'", c: '99' },
+  },
 ];
 
 describe('TraceExplorer', () => {
@@ -46,6 +53,9 @@ describe('TraceExplorer', () => {
       screen.getByRole('button', { name: 'Next step' }).click(); // clamps
     });
     expect(screen.getByText('3 / 3')).toBeTruthy();
+    // The last page shows the FINAL variables (module-return snapshot).
+    expect(screen.getByText('c')).toBeTruthy();
+    expect(screen.getByText('99')).toBeTruthy();
     act(() => {
       screen.getByRole('button', { name: 'First step' }).click();
     });

@@ -144,6 +144,7 @@ describe('CodingEditor chrome', () => {
 
   it('routes system messages to the footer status + dev console, not the student console', async () => {
     useEditorChromeStore.getState().clearDevConsole();
+    useEditorChromeStore.getState().setActiveConsole('student');
     const controller: RunController = {
       async run(_code, handlers) {
         handlers.system?.('Loading Python engine…\n');
@@ -168,18 +169,54 @@ describe('CodingEditor chrome', () => {
     expect(state.devConsole.map((e) => e.text)).toEqual([
       'Loading Python engine…',
     ]);
+    // …and the run completed with the Execution badge back to ready.
+    expect(state.serverStatus.onExecution).toBe('ready');
+    // The console slot still shows the student console; the toggle badges
+    // the one unseen dev entry.
+    const toggle = container.querySelector('.blockpy-console-toggle')!;
+    expect(toggle.textContent).toContain('Dev Console');
+    expect(
+      toggle.querySelector('.blockpy-console-toggle-badge')!.textContent,
+    ).toBe('1');
+    // Swapping the slot shows the dev console and clears the badge.
+    act(() => (toggle as HTMLButtonElement).click());
     expect(container.querySelector('.blockpy-dev-console')!.textContent).toContain(
       'Loading Python engine…',
     );
-    // …and the run completed with the Execution badge back to ready.
-    expect(state.serverStatus.onExecution).toBe('ready');
+    expect(container.querySelector('.blockpy-console .blockpy-printer-default')).toBeNull();
+    expect(useEditorChromeStore.getState().devUnseen).toBe(0);
+    // Student output arriving now badges the Console toggle instead.
+    act(() =>
+      useEditorChromeStore
+        .getState()
+        .appendConsole({ kind: 'stdout', text: 'late output' }),
+    );
+    const backToggle = container.querySelector('.blockpy-console-toggle')!;
+    expect(backToggle.textContent).toContain('Console');
+    expect(
+      backToggle.querySelector('.blockpy-console-toggle-badge')!.textContent,
+    ).toBe('1');
+    act(() => (backToggle as HTMLButtonElement).click());
+    expect(useEditorChromeStore.getState().consoleUnseen).toBe(0);
   });
 
-  it('dev console is instructor-only', () => {
+  it('dev console toggle is instructor-only; leaving instructor view restores the console', () => {
+    useEditorChromeStore.getState().setActiveConsole('student');
     const { container, rerender } = render(<CodingEditor startingCode="a = 0" />);
-    expect(container.querySelector('.blockpy-dev-console')).toBeNull();
+    expect(container.querySelector('.blockpy-console-toggle')).toBeNull();
     rerender(<CodingEditor startingCode="a = 0" instructor />);
+    act(() =>
+      (
+        container.querySelector('.blockpy-console-toggle') as HTMLButtonElement
+      ).click(),
+    );
     expect(container.querySelector('.blockpy-dev-console')).not.toBeNull();
+    // Unchecking "View as instructor" while the dev console is shown swaps
+    // back to the student console.
+    rerender(<CodingEditor startingCode="a = 0" />);
+    expect(container.querySelector('.blockpy-dev-console')).toBeNull();
+    expect(container.querySelector('.blockpy-console')).not.toBeNull();
+    expect(useEditorChromeStore.getState().activeConsole).toBe('student');
   });
 
   it('hide_evaluate suppresses the console Evaluate button', async () => {

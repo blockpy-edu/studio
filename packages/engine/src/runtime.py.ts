@@ -118,7 +118,10 @@ class StudioRuntime:
                     'line': frame.f_lineno,
                     'student_line': frame.f_lineno - prefix_lines,
                 }
-                if event == 'line':
+                # 'line' fires BEFORE the line executes; 'return' fires as
+                # the frame exits, so the module-level return carries the
+                # final variable state (the trace explorer's last page).
+                if event == 'line' or event == 'return':
                     step['locals'] = snapshot_locals(frame)
                 steps.append(step)
             return tracer

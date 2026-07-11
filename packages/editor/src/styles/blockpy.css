@@ -172,11 +172,10 @@
     position: relative;
 }
 
-/* Dev console (STUDIO EXTENSION): instructor-only secondary console for
-   system messages and instructor-code output. Shorter than the student
-   printer and visually distinct (dark, terminal-like). */
+/* Dev console (STUDIO EXTENSION): instructor-only secondary console sharing
+   the console slot via a header toggle. Same printer footprint as the
+   student console, visually distinct (dark, terminal-like). */
 .blockpy-dev-console .blockpy-dev-printer {
-    height: 100px;
     padding-bottom: 0;
     background-color: var(--blockpy-neutral-900);
     border: 1px solid var(--blockpy-neutral-400);
@@ -187,6 +186,13 @@
 
 .blockpy-dev-console .blockpy-dev-printer .blockpy-printer-output {
     border-bottom: none;
+}
+
+/* Unseen-entry count on the console/dev-console toggle button. */
+.blockpy-console-toggle .blockpy-console-toggle-badge {
+    background-color: var(--blockpy-status-danger);
+    color: var(--blockpy-neutral-0);
+    margin-left: 4px;
 }
 
 /** Feedback **/

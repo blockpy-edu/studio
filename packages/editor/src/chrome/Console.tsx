@@ -18,6 +18,33 @@ export interface ConsoleProps {
   size?: string;
   /** When provided, the Evaluate affordance can appear (legacy console eval). */
   onEvaluate?: (expression: string) => void;
+  /** Instructor-only: swap the slot to the dev console (Studio extension). */
+  onShowDev?: () => void;
+}
+
+/**
+ * Header button that swaps the console slot, with a count badge for entries
+ * the other console received while hidden.
+ */
+export function ConsoleToggleButton(props: {
+  label: string;
+  unseen: number;
+  onClick(): void;
+}) {
+  return (
+    <button
+      type="button"
+      className="btn btn-sm btn-outline-secondary float-right blockpy-console-toggle"
+      onClick={props.onClick}
+    >
+      {props.label}
+      {props.unseen > 0 && (
+        <span className="badge badge-pill blockpy-console-toggle-badge">
+          {props.unseen}
+        </span>
+      )}
+    </button>
+  );
 }
 
 /** One frozen (already-submitted) Evaluate line, legacy disabled-input look. */
@@ -53,9 +80,10 @@ function entryBody(entry: ConsoleEntry) {
   );
 }
 
-export function Console({ size = 'col-md-6', onEvaluate }: ConsoleProps) {
+export function Console({ size = 'col-md-6', onEvaluate, onShowDev }: ConsoleProps) {
   const entries = useEditorChromeStore((state) => state.console);
   const evalState = useEditorChromeStore((state) => state.evalState);
+  const devUnseen = useEditorChromeStore((state) => state.devUnseen);
   const [expression, setExpression] = useState('');
   const printerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -89,7 +117,16 @@ export function Console({ size = 'col-md-6', onEvaluate }: ConsoleProps) {
       role="region"
       aria-label="Console"
     >
-      <strong>Console:</strong>
+      <div className="clearfix">
+        {onShowDev && (
+          <ConsoleToggleButton
+            label="Dev Console"
+            unseen={devUnseen}
+            onClick={onShowDev}
+          />
+        )}
+        <strong>Console:</strong>
+      </div>
       <div
         ref={printerRef}
         className="blockpy-printer blockpy-printer-default"

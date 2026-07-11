@@ -61,6 +61,13 @@ describe('end-to-end through the worker protocol', () => {
     expect(afterX?.locals?.['x']).toBe('1');
     // student-relative lines subtract the one-line prefix
     expect(lines.at(-1)!.studentLine).toBe(lines.at(-1)!.line - 1);
+    // The final (module return) step snapshots the END state — the trace
+    // explorer's last page shows all final variables.
+    const last = result.trace!.at(-1)!;
+    expect(last.event).toBe('return');
+    expect(last.locals?.['x']).toBe('1');
+    expect(last.locals?.['y']).toBe('2');
+    expect(last.locals?.['scaffold']).toBe('0');
   });
 
   it('enforces the traceSteps instruction limit (execLimit mapping, §6.2)', async () => {

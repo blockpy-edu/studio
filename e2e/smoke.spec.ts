@@ -97,13 +97,21 @@ test('Run boots the engine lazily; system messages go to status + dev console', 
   await expect(
     page.locator('.blockpy-status .badge').last(),
   ).toHaveClass(/server-status-active/);
-  // Dev console is instructor-only: hidden for students, visible (with the
-  // system message) once the instructor view toggle is on.
-  await expect(page.locator('.blockpy-dev-console')).toHaveCount(0);
+  // Dev console is instructor-only and shares the console slot: students
+  // see no toggle; instructors get a toggle badged with the unseen count.
+  await expect(page.locator('.blockpy-console-toggle')).toHaveCount(0);
   await page.locator('#blockpy-as-instructor').check();
+  const toggle = page.locator('.blockpy-console-toggle');
+  await expect(toggle).toContainText('Dev Console');
+  await expect(toggle.locator('.blockpy-console-toggle-badge')).toHaveText('1');
+  await toggle.click();
   await expect(page.locator('.blockpy-dev-console')).toBeVisible();
   await expect(page.locator('.blockpy-dev-console')).toContainText(
     'Loading Python engine',
+  );
+  // The badge is consumed by viewing; the toggle now points back.
+  await expect(page.locator('.blockpy-console-toggle')).toContainText(
+    'Console',
   );
 });
 
@@ -125,11 +133,17 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
   await expect(page.locator('button.blockpy-run')).not.toHaveClass(
     /blockpy-run-running/,
   );
-  // Trace explorer: the run collected an E3 trace; stepping shows variables.
+  // Trace explorer: the run collected an E3 trace; stepping shows variables,
+  // and the LAST page shows the final end-of-run state (module-return
+  // snapshot: a = 0).
   await page.getByRole('button', { name: /View Trace/ }).click();
   await expect(page.locator('.blockpy-trace')).toContainText('Step:');
   await page.getByRole('button', { name: 'Last step' }).click();
-  await expect(page.locator('.blockpy-trace table')).toContainText('a');
+  const lastRow = page.locator('.blockpy-trace table tbody tr', {
+    hasText: 'a',
+  });
+  await expect(lastRow).toContainText('int');
+  await expect(lastRow.locator('code')).toHaveText('0');
   await page.getByRole('button', { name: /Hide Trace/ }).click();
   // REPL: the successful run pinned an Evaluate button in the console
   // (legacy beginEval); clicking it opens the inline input line (§6.4).
@@ -211,15 +225,21 @@ test('layout regressions: no horizontal overflow, panels side by side, white edi
     .locator('.blockpy-feedback')
     .boundingBox())!;
   expect(badgeWidth).toBeLessThan(feedbackPane.width / 2);
-  // 7. The dev console (instructor view) spans the console+feedback row and
-  //    uses the dark terminal styling, clearly distinct from the student
-  //    printer.
+  // 7. The dev console swaps into the console slot (same half-width column
+  //    as the student console) with the dark terminal styling.
   await page.locator('#blockpy-as-instructor').check();
+  await page.locator('.blockpy-console-toggle').click();
   const devPrinter = page.locator('.blockpy-dev-printer');
   await expect(devPrinter).toBeVisible();
   const devBox = (await devPrinter.boundingBox())!;
-  const contentBox = (await page.locator('.blockpy-content').boundingBox())!;
-  expect(devBox.width).toBeGreaterThan(contentBox.width * 0.9);
+  // Re-measure: the instructor toggle grows the file-tab strip, shifting
+  // rows below Row 2.
+  const feedbackNow = (await page
+    .locator('.blockpy-feedback')
+    .boundingBox())!;
+  expect(devBox.y).toBeGreaterThanOrEqual(feedbackNow.y - 1);
+  expect(devBox.y).toBeLessThan(feedbackNow.y + feedbackNow.height);
+  expect(devBox.width).toBeLessThan(feedbackNow.width * 1.1);
   expect(
     await devPrinter.evaluate((el) => getComputedStyle(el).backgroundColor),
   ).not.toBe('rgb(255, 255, 255)');
