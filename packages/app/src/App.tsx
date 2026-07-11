@@ -22,6 +22,7 @@ import {
 } from '@blockpy/api';
 import { createEngineRunController } from './engine-adapter';
 import { parseAssignmentSettings, vfsFromAssignment } from './assignment-loader';
+import { AssignmentHost } from './AssignmentHost';
 import { SubmissionSync } from './submission-sync';
 import '@blockpy/editor/styles/tokens.css';
 import '@blockpy/editor/styles/bootstrap-subset.css';
@@ -198,8 +199,12 @@ export function App({ config, extras, registerActions }: AppProps) {
     [api, adoptAssignmentData, store],
   );
 
+  // AssignmentHost dispatch (spec §5.3) — the modern loadAssignmentWrapper.
+  const dispatchRef = useRef<((assignmentId: number) => Promise<void>) | null>(null);
+
   // Boot-time load: inline assignment_data beats the id fetch, exactly the
-  // editor.html:341-348 ordering.
+  // editor.html:341-348 ordering; the id path routes through the host's
+  // type dispatch (legacy loadAssignmentWrapper(current_assignment_id)).
   const bootedRef = useRef(false);
   useEffect(() => {
     if (bootedRef.current) return;
@@ -210,7 +215,8 @@ export function App({ config, extras, registerActions }: AppProps) {
       assignment.currentAssignmentId !== null &&
       api?.isEndpointConnected('loadAssignment')
     ) {
-      void loadAssignment(assignment.currentAssignmentId).catch(() => undefined);
+      const load = dispatchRef.current ?? loadAssignment;
+      void load(assignment.currentAssignmentId).catch(() => undefined);
     }
     if (config.passcodeProtected) requestPasscode();
     // Drain events queued while offline (legacy checkCaches, LIFO).
@@ -440,6 +446,14 @@ export function App({ config, extras, registerActions }: AppProps) {
           </button>
         </div>
       )}
+      <AssignmentHost
+        typeIndex={assignment.typeIndex}
+        embed={display.embed}
+        loadEditorAssignment={loadAssignment}
+        onReady={(dispatch) => {
+          dispatchRef.current = dispatch;
+        }}
+      >
       {bootPending || (loading && active === null) ? (
         <p>Loading! Please wait.</p>
       ) : minified ? (
@@ -584,6 +598,7 @@ export function App({ config, extras, registerActions }: AppProps) {
           }}
         />
       )}
+      </AssignmentHost>
     </main>
   );
 }

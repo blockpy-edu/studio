@@ -8,6 +8,13 @@
 export { mount, mountConfig, mountLegacy } from './mount';
 export type { MountExtras } from './studio-handle';
 export { StudioHandle, type StudioActions } from './studio-handle';
+export {
+  AssignmentHost,
+  classifyAssignment,
+  replaceAssignmentIdInUrl,
+  type AssignmentHostProps,
+  type AssignmentType,
+} from './AssignmentHost';
 export { bootConfigFromLegacyGlobals, settingsFromSearch } from './legacy-globals';
 export type { LegacyGlobalsSource } from './legacy-globals';
 export {

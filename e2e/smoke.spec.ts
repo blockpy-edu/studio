@@ -190,6 +190,29 @@ test('images.blockpy tab opens the uploaded-files manager (§14.2 uploads)', asy
   await expect(page.locator('.cm-editor .cm-content').first()).toBeVisible();
 });
 
+test('AssignmentHost dispatches types via altAssignmentChangingFunction (§5.3/§15.3)', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.blocklySvg').first().waitFor();
+  // The harness typeIndex marks 102 as a quiz: dispatching hides (does not
+  // unmount) the editor and mounts the quiz slot; the URL follows.
+  await page.evaluate(() =>
+    (window as never as { altAssignmentChangingFunction(id: number): Promise<void> })
+      .altAssignmentChangingFunction(102),
+  );
+  await expect(page.locator('.blockpy-host-quiz')).toBeVisible();
+  await expect(page.locator('.blockpy-host-editor')).toBeHidden();
+  await expect(page.locator('.blockpy-content')).toBeAttached(); // still mounted
+  expect(new URL(page.url()).searchParams.get('assignment_id')).toBe('102');
+  // Back to the blockpy assignment: the editor returns, the quiz unmounts.
+  await page.evaluate(() =>
+    (window as never as { altAssignmentChangingFunction(id: number): Promise<void> })
+      .altAssignmentChangingFunction(101),
+  );
+  await expect(page.locator('.blockpy-host-editor')).toBeVisible();
+  await expect(page.locator('.blockpy-host-quiz')).toHaveCount(0);
+  await expect(page.locator('.blocklySvg').first()).toBeVisible();
+});
+
 test('History mode: toolbar + merge diff + Use adopts the old version', async ({ page }) => {
   await page.goto('/');
   await page.locator('.blocklySvg').first().waitFor();

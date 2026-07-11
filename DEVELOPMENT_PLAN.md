@@ -152,10 +152,10 @@ Goal: the React app owns the whole `editor.html` body for flagged courses (§17 
 
 ### Milestone 2.1 — `AssignmentHost` + routing (§5.3)
 
-- Type dispatch in legacy priority order (quiz → reading → textbook → java → kettle → explain → blockpy); unknown ids fall through to the editor; per-type unmount/remount semantics preserved.
-- Java tombstone message.
-- `loadAssignment(id)` exposed and aliased to `altAssignmentChangingFunction` (§15.3).
-- URL contract: `history.replaceState` param updates, deep links, full-page fallback via URL map (§5.3, §9.3).
+- [x] Type dispatch in legacy priority order (quiz → reading → textbook → java → kettle → explain → blockpy); unknown ids fall through to the editor; per-type unmount/remount semantics preserved — **landed 2026-07-11** (`app/AssignmentHost.tsx`, the `loadAssignmentWrapper` port, editor.html:304-338): `classifyAssignment` is the pure membership ladder; dispatch resets the SIX non-blockpy id slots every call (only the active type keeps its id → keyed remount), hides-but-never-unmounts the editor for non-blockpy types (`editor.hide()` semantics), and — legacy-exact — leaves the blockpy id UNTOUCHED in the non-blockpy branch, flipping it only in the editor branch's async completion (`whenDone`). Boot routes the initial id through the dispatch (legacy `loadAssignmentWrapper(current_assignment_id)`); the facade's `loadAssignment` stays the RAW editor load (legacy `editor.loadAssignment`). Type bodies are placeholders until M2.2-2.4 mount real components.
+- [x] Java tombstone message ("Java assignments are no longer supported in BlockPy.", editor.html:159 verbatim).
+- [x] `loadAssignment(id)` exposed and aliased to `altAssignmentChangingFunction` (§15.3) — published on mount, removed on unmount; smoke-verified end-to-end (dispatch a quiz id → editor hidden/quiz slot mounted/URL updated → back to blockpy → editor + blocks return).
+- [~] URL contract: `history.replaceState` updates `assignment_id` in place preserving every other param (`assignment_group_id`, `embed`, …), skipped in embeds; deep links honored at boot (BootConfig/`mountLegacy` parse `assignment_id`). _Pending: full-page fallback via the URL map when the SPA path is unavailable — lands with `@blockpy/navigation` URL_MAP (M2.2, §9.3)._
 
 ### Milestone 2.2 — `@blockpy/navigation` (§9)
 
