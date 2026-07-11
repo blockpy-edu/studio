@@ -26,4 +26,24 @@ export {
 export type { ToolboxSpec, ToolboxCategory, ToolboxEntry } from './dual/toolboxes';
 export { DualEditorView, type DualEditorViewProps } from './components/DualEditorView';
 
+export {
+  CodingEditor,
+  type CodingEditorProps,
+  type RunController,
+  type RunHandlers,
+  type RunOutcome,
+} from './chrome/CodingEditor';
+export { Console } from './chrome/Console';
+export { Feedback } from './chrome/Feedback';
+export { Instructions, renderInstructions } from './chrome/Instructions';
+export { PythonToolbar } from './chrome/PythonToolbar';
+export {
+  useEditorChromeStore,
+  type ConsoleEntry,
+  type EditorChromeState,
+  type FeedbackState,
+  type RunState,
+} from './chrome/store';
+export { categoryPresentation } from './chrome/categories';
+
 export const PACKAGE_NAME = '@blockpy/editor';

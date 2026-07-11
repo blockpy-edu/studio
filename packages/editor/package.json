@@ -7,7 +7,8 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
-    }
+    },
+    "./styles/*": "./src/styles/*"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -26,7 +27,9 @@
     "@codemirror/search": "^6.5.0",
     "@codemirror/state": "^6.5.0",
     "@codemirror/view": "^6.36.0",
-    "blockly": "11.2.1"
+    "blockly": "11.2.1",
+    "marked": "^15.0.0",
+    "zustand": "^5.0.2"
   },
   "peerDependencies": {
     "react": "^18.3.0"
