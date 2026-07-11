@@ -88,6 +88,47 @@ describe('student.run', () => {
     expect(result.stdout).toBe('a,b,c\n');
   });
 
+  it('requests.get resolves through ?mock_urls.blockpy (§10.4)', async () => {
+    const result = await runner.execute(
+      job({
+        files: {
+          // stageFiles strips prefixes; map keys keep legacy names.
+          'mock_urls.blockpy': JSON.stringify({
+            '?report.json': ['https://example.com/report'],
+          }),
+          'report.json': '{"x": 41}',
+        },
+        code: [
+          'import requests',
+          'response = requests.get("https://example.com/report")',
+          'print(response.json()["x"] + 1)',
+        ].join('\n'),
+      }),
+    );
+    expect(result.stderr).toBe('');
+    expect(result.stdout).toBe('42\n');
+  });
+
+  it('unmocked urls raise the legacy IOError texts (§10.4)', async () => {
+    const unknown = await runner.execute(
+      job({
+        files: { 'mock_urls.blockpy': '{"data.txt": ["https://a.example"]}' },
+        code: 'import requests\nrequests.get("https://b.example")',
+      }),
+    );
+    expect(unknown.success).toBe(false);
+    expect(unknown.error?.message).toBe(
+      'Cannot access url: https://b.example was not made available for this assignment',
+    );
+    const noTable = await runner.execute(
+      job({ code: 'import requests\nrequests.get("https://a.example")' }),
+    );
+    expect(noTable.success).toBe(false);
+    expect(noTable.error?.message).toBe(
+      'Cannot access url: URL Data was not made available for this assignment',
+    );
+  });
+
   it('diffs run-written files back as artifacts (LD-3x)', async () => {
     const result = await runner.execute(
       job({

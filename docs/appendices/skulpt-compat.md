@@ -52,11 +52,60 @@ through the Studio Pedal environment (`tools/run-grader-corpus.mjs`,
   resolver — expected Pedal semantics, worth remembering when writing
   fixtures.
 
+## Student-runtime behaviors (implemented, verified by tests)
+
+- **`requests` is always the mock (§10.4, legacy parity).** Legacy Skulpt
+  routed every `requests.get` through `openURL` → the `?mock_urls.blockpy`
+  table (`{filename: [url, ...]}`) with no real-network path
+  (configurations.js:135-155). Studio installs a per-job `requests` shim in
+  `sys.modules` before student code runs, reproducing the exact IOError
+  texts ("URL Data was not made available…" / "Cannot access url: …").
+  Consequence: student code can NEVER reach the real network via
+  `requests`, even though Pyodide could — a deliberate parity/determinism
+  choice. The mock `Response` exposes `.text`, `.content`, `.json()`,
+  `.status_code`, `.ok`, `.raise_for_status()`.
+- **matplotlib is real (Agg), not the Skulpt mock (§10.2).** Figures are
+  snapshotted to PNGs after each run and closed; `plt.show()` is a silenced
+  no-op. Legacy's mock tracked plot CALLS for Pedal `assert_plot` graders —
+  those graders need the Pedal plot-inspection shim (open item).
+- **Pyodide packages auto-load from imports** (`numpy`, `matplotlib`, …)
+  and are adopted into the module baseline after first import — module-level
+  state in site-packages persists across runs (unlike legacy Skulpt's fully
+  fresh state). Stdlib and staged modules still purge per job (§6.2).
+
 ## Open items
 
 - Float `repr`, error-message wording, and `time` behavior deltas: to be
   cataloged when the curriculum regression corpus gains real student
   submissions (§16.1.3).
-- `score` semantics: the resolver returns `score=0` alongside
-  `success=true` for simple correct runs — verify legacy blockpy's
-  `update_submission` score derivation before wiring §14.3 (S3 open item).
+- Pedal plot-inspection shim: `assert_plot`-style graders inspected the
+  Skulpt matplotlib mock's call log; the real-Agg world needs an equivalent
+  (capture plt call metadata for Pedal, §10.2).
+- CORGIS dataset modules (`import weather` style) resolved through legacy
+  remote files (`filesToUrls`); the Studio equivalent (VFS remote-file fetch
+  into the engine mount) lands with the uploads layer (§10.4).
+- ~~`score` semantics (S3 open item)~~ **RESOLVED (2026-07-11), verified
+  against both legacy repos — the §14.3 wiring contract:**
+  - **Client** (blockpy `on_run.js:154-175`): reads the `SUCCESS`/`SCORE`/
+    `HIDE` globals from the executed on_run module (Pedal's Skulpt env
+    published the resolver output there). `score = clamp(SCORE, 0, 1)` then
+    `max(previousScore, score)` — monotonic, never decreases. `correct` in
+    the POST is the RAW `SUCCESS` of THIS run (the monotonic OR is display
+    state only). Payload adds `hidden_override`, `force_update: false`, and
+    `image` = block-workspace PNG (`getPngFromBlocks`).
+  - **Ordering** (§14.3): `presentFeedback` FIRST → `updateSubmission` POST
+    → navigation `markCorrect` (`callbacks.success(assignment_id)`) fires in
+    the response handler when `!hidden_override && correct` — note the
+    legacy quirk that it fires even when the server responded
+    `success: false`.
+  - **Server** (blockpy-server `post_grade.py:178-`, `submission.py:540,
+    555-`): stores `score` as `int(round(100*score))` and `correct` as
+    sent; LMS passback `full_score()` for non-reviewed assignments is
+    `(float(correct) or score/100) * points` — **`correct` DOMINATES; the
+    stored score only matters when correct is false (partial credit) or the
+    assignment is reviewed** (`(score + reviews)/100 * points`).
+  - **Consequence:** modern Pedal `resolve()` returning `success=true,
+    score=0` needs NO client-side fixup — send it as-is and the LMS grade
+    is full credit. Studio must replicate the clamp + client-side
+    monotonic-max, send raw success as `correct`, and preserve the
+    feedback → POST → markCorrect ordering.

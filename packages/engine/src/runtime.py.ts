@@ -106,6 +106,65 @@ class StudioRuntime:
             # per-job (§6.2): purge so the next run reimports fresh state.
             del sys.modules[name]
 
+    # -- mock URLs (spec 10.4, legacy configurations.js openURL) -------------
+
+    def install_requests_mock(self):
+        """Install a per-job \`requests\` shim resolving \`?mock_urls.blockpy\`.
+
+        Legacy parity: ALL url access goes through the mock table — the map
+        is JSON \`{filename: [url, ...]}\`; a hit returns the staged file's
+        contents, no map or an unknown url raises the legacy IOError texts
+        (configurations.js:135-155). The module is dynamic (no __file__), so
+        restore_modules purges it after every job.
+        """
+        mock_map = None
+        raw = self.staged.get('mock_urls.blockpy')
+        if raw is not None:
+            try:
+                mock_map = json.loads(raw)
+            except Exception:  # noqa: BLE001 - bad JSON = no mocks (legacy)
+                mock_map = None
+        staged = self.staged
+
+        class MockResponse:
+            def __init__(self, text):
+                self.text = text
+                self.content = text.encode('utf-8')
+                self.status_code = 200
+                self.ok = True
+
+            def json(self):
+                return json.loads(self.text)
+
+            def raise_for_status(self):
+                return None
+
+        def get(url, *args, **kwargs):
+            if mock_map is None:
+                raise OSError(
+                    'Cannot access url: URL Data was not made available '
+                    'for this assignment'
+                )
+            for filename, urls in mock_map.items():
+                if url in urls:
+                    contents = staged.get(filename)
+                    if contents is None:
+                        # Map keys use legacy prefixed names; staging is
+                        # prefix-stripped.
+                        contents = staged.get(filename.lstrip('!^?&$*#'))
+                    if contents is None:
+                        raise OSError('File not found: ' + filename)
+                    return MockResponse(contents)
+            raise OSError(
+                'Cannot access url: ' + url +
+                ' was not made available for this assignment'
+            )
+
+        module = types.ModuleType('requests')
+        module.get = get
+        module.Response = MockResponse
+        sys.modules['requests'] = module
+
     # -- plot capture (spec 10.2) --------------------------------------------
 
     def capture_figures(self):
@@ -199,6 +258,9 @@ class StudioRuntime:
         old_main = sys.modules.get('__main__')
         builtins.input = scripted_input
         sys.modules['__main__'] = module
+        # Legacy parity (spec 10.4): requests always resolves through the
+        # mock-urls table, never the network.
+        self.install_requests_mock()
         error = None
         value = None
         try:
