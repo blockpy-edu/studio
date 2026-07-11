@@ -110,6 +110,20 @@ export class ApiClient {
     );
   }
 
+  /**
+   * Total time spent across the group's sessions — the clock's "activity"
+   * mode (spec §9.4). Legacy is a page-level `$.get` global with the ids
+   * baked into the URL (editor.html:395-399); the endpoint takes GET or
+   * POST (blockpy.py:1248-1262) and the base payload already carries
+   * assignment_group_id/course_id. Response: `{success, duration}`.
+   */
+  async estimateGroupDuration(): Promise<LegacyResponse> {
+    return this.options.transport.postRetry(
+      this.url('estimateGroupDuration'),
+      this.buildPayload(),
+    );
+  }
+
   async saveImage(directory: string, image: string): Promise<LegacyResponse> {
     if (this.guardReadOnly()) return { success: false, readOnly: true };
     return this.options.transport.postRetry(

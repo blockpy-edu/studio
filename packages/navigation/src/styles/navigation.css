@@ -1,0 +1,36 @@
+/*
+ * The assignment_group_header macro's inline style block, verbatim
+ * (blockpy-server templates/helpers/assignment_groups.html:10-23) — the
+ * warning-yellow row is called out as layout-relevant in spec §9.6.
+ */
+
+/*
+ * Legacy renders the macro inside layout.html's padded container-fluid
+ * (layout.html:295) with Bootstrap's global border-box reboot, and the
+ * blockpy stylesheet zeroes the row's negative gutters (unscoped in legacy
+ * too). The app shell has neither wrapper: the header carries the container
+ * padding itself, and the border-box reboot is re-scoped here — without it
+ * the col-md-12's own padding inflates past the viewport (horizontal
+ * scroll).
+ */
+.assignment-selector-div {
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+.assignment-selector-div *,
+.assignment-selector-div *::before,
+.assignment-selector-div *::after {
+  box-sizing: border-box;
+}
+
+.assignment-selector-div .row {
+  border: 1px solid #faebcc;
+  border-bottom: 0;
+  background-color: #fcf8e3;
+  margin-right: 0px;
+}
+
+.assignment-selector {
+  overflow-y: auto;
+}

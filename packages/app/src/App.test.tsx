@@ -101,6 +101,50 @@ it('fetches the boot assignment through the ApiClient (§14.2)', async () => {
   expect(init.body).toContain('assignment_id=101');
 });
 
+it('dual-renders the group nav and publishes the markCorrect global (§9, §15.3)', async () => {
+  const globals = window as unknown as Record<string, unknown>;
+  const view = render(
+    <App
+      config={{
+        ...minimalConfig,
+        assignment: { ...minimalConfig.assignment, assignmentData: RAW_PAYLOAD },
+        group: {
+          assignments: [
+            { id: 101, name: 'Server Problem', url: '#101', subordinate: false, hidden: false, correct: false },
+            { id: 103, name: 'Reading', url: '#103', subordinate: false, hidden: false, correct: false },
+          ],
+          anySecretive: false,
+          currentAssignmentId: 101,
+        },
+      }}
+    />,
+  );
+  await waitFor(() => {
+    // Top AND bottom instances (editor.html:102-103, 188-190).
+    expect(view.container.querySelectorAll('.assignment-selector-div')).toHaveLength(2);
+  });
+  expect(typeof globals['markCorrect']).toBe('function');
+  (globals['markCorrect'] as (id: number) => void)(103);
+  await waitFor(() => {
+    for (const header of view.container.querySelectorAll('.assignment-selector-div')) {
+      expect(header.querySelector('.completion-rate')!.textContent).toBe('1');
+    }
+  });
+  view.unmount();
+  expect(globals['markCorrect']).toBeUndefined();
+});
+
+it('never clobbers a legacy-template markCorrect on group-less pages (shim mode)', () => {
+  const globals = window as unknown as Record<string, unknown>;
+  const legacyMarkCorrect = () => undefined;
+  globals['markCorrect'] = legacyMarkCorrect;
+  const view = render(<App config={minimalConfig} />);
+  expect(globals['markCorrect']).toBe(legacyMarkCorrect);
+  view.unmount();
+  expect(globals['markCorrect']).toBe(legacyMarkCorrect);
+  delete globals['markCorrect'];
+});
+
 it('surfaces a load failure without crashing (legacy fallback renderer)', async () => {
   const fetchStub = vi.fn(async () => ({
     ok: true,

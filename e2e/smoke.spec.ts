@@ -213,6 +213,69 @@ test('AssignmentHost dispatches types via altAssignmentChangingFunction (§5.3/�
   await expect(page.locator('.blocklySvg').first()).toBeVisible();
 });
 
+test('group navigation: dual headers, boundaries, markCorrect, clock (§9/§16.1.4)', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.blocklySvg').first().waitFor();
+  // Dual-rendered header/footer from one store (editor.html includes the
+  // macro twice); subordinate quiz 102 is filtered from the selector.
+  const headers = page.locator('.assignment-selector-div');
+  await expect(headers).toHaveCount(2);
+  const top = headers.first();
+  const bottom = headers.last();
+  await expect(top.locator('option')).toHaveText(['Hello World', 'Reading: Variables']);
+  await expect(top.locator('.completion-box')).toHaveText('(0/2 completed)');
+  // Boundaries: at the first assignment, First/Back disabled, Next/Last live.
+  await expect(top.locator('.assignment-selector-first')).toBeDisabled();
+  await expect(top.locator('.assignment-selector-back')).toBeDisabled();
+  await expect(top.locator('.assignment-selector-next')).toBeEnabled();
+  // markCorrect global (§15.3) updates BOTH instances: ✔ prefix, count,
+  // green Next (btn-success replaces btn-outline-secondary).
+  await page.evaluate(() =>
+    (window as never as { markCorrect(id: number): void }).markCorrect(103),
+  );
+  for (const header of [top, bottom]) {
+    await expect(header.locator('option[value="103"]')).toHaveText('✔ Reading: Variables');
+    await expect(header.locator('.completion-rate')).toHaveText('1');
+    await expect(header.locator('.assignment-selector-next')).toHaveClass(/btn-success/);
+  }
+  // Completion-box click expands the selector to a list box in both
+  // instances; the state persists across a reload (exact localStorage key).
+  await top.locator('.completion-box').click();
+  await expect(top.locator('select.assignment-selector')).toHaveJSProperty('size', 2);
+  await expect(bottom.locator('select.assignment-selector')).toHaveJSProperty('size', 2);
+  expect(
+    await page.evaluate(() => localStorage.getItem('blockpy_assignmentSelectorExpanded')),
+  ).toBe('true');
+  // Time-spent clock: session tier text, then click → activity mode fetches
+  // the stubbed 25-minute total through estimate_group_duration (§9.4).
+  await expect(top.locator('.assignment-selector-clock')).toHaveText('(Just started)');
+  await top.locator('.assignment-selector-clock').click();
+  await expect(top.locator('.assignment-selector-clock')).toHaveText('~25 minutes spent');
+  await top.locator('.assignment-selector-clock').click();
+  await expect(top.locator('.assignment-selector-clock')).toHaveText('(Just started)');
+  // Selecting the reading dispatches through the AssignmentHost: reading
+  // slot mounts, the editor hides (not unmounts), the URL follows, and
+  // Next/Last disable at the end of the group.
+  await top.locator('select.assignment-selector').selectOption('103');
+  await expect(page.locator('.blockpy-host-reading')).toBeVisible();
+  await expect(page.locator('.blockpy-host-editor')).toBeHidden();
+  expect(new URL(page.url()).searchParams.get('assignment_id')).toBe('103');
+  await expect(bottom.locator('select.assignment-selector')).toHaveValue('103');
+  await expect(top.locator('.assignment-selector-next')).toBeDisabled();
+  await expect(top.locator('.assignment-selector-last')).toBeDisabled();
+  await expect(top.locator('.assignment-selector-back')).toBeEnabled();
+  // Back returns to the coding assignment.
+  await top.locator('.assignment-selector-back').click();
+  await expect(page.locator('.blockpy-host-editor')).toBeVisible();
+  await expect(page.locator('.blocklySvg').first()).toBeVisible();
+  // The expansion survived the trip and a full reload.
+  await page.reload();
+  await page.locator('.blocklySvg').first().waitFor();
+  await expect(
+    page.locator('.assignment-selector-div').first().locator('select.assignment-selector'),
+  ).toHaveJSProperty('size', 2);
+});
+
 test('History mode: toolbar + merge diff + Use adopts the old version', async ({ page }) => {
   await page.goto('/');
   await page.locator('.blocklySvg').first().waitFor();

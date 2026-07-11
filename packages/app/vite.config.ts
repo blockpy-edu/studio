@@ -111,6 +111,8 @@ function devApi(): Plugin {
     '/api/list_files': () => uploaded,
     '/api/upload_file': () => ({ success: true }),
     '/api/rename_file': () => ({ success: true }),
+    // Clock "activity" mode total (spec §9.4): 25 minutes of prior sessions.
+    '/api/estimate_group_duration': () => ({ success: true, duration: 1500 }),
   };
   return {
     name: 'blockpy-dev-api',

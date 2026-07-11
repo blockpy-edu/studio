@@ -154,3 +154,22 @@ Replicate decisions (D4, D6) produce no entries — they are legacy parity.
   banner resets on assignment load.
 - **Wire impact:** none (the flag was already on every save response;
   Studio just stops discarding it).
+
+## LD-12 — Exam countdown active for BlockPy assignments too (Milestone 2.2)
+
+- **Legacy:** the countdown/expiry checker lives in the server frontend's
+  `AssignmentInterface` (assignment_interface.ts:88-115, 160-256), so it only
+  runs while a reader/quiz/kettle/explain component is mounted. A *blockpy*
+  assignment whose settings carry `time_limit` never shows a countdown or
+  the "Time is up!" overlay — the editor page has no checker of its own
+  (editor.html only runs the 10 s time-spent clock).
+- **Studio:** README §9.4 assigns countdown ownership to the navigation
+  store ("the rewrite owns it via the same store"), and the app feeds the
+  loaded pair's `time_limit`/`date_started` into the checker for **every**
+  assignment type. Format, tick rate (5 s), per-student overrides, overlay
+  text, freeze-after-expiry, instructor exemption, and the
+  `timer_expired`/`timer_cleared`/`timer_error` events are ports of the
+  legacy checker; the only delta is that time-limited *coding* assignments
+  are now covered instead of silently untimed.
+- **Wire impact:** timed blockpy assignments now emit the `timer_*` events
+  the reader/quiz paths already emitted; no new payload shapes.

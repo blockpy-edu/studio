@@ -20,6 +20,7 @@ import {
   type DecodedSubmission,
   type RawRecord,
 } from '@blockpy/api';
+import { GroupNav, createGroupNavStore, type GroupNavStore } from '@blockpy/navigation';
 import { createEngineRunController } from './engine-adapter';
 import { parseAssignmentSettings, vfsFromAssignment } from './assignment-loader';
 import { AssignmentHost } from './AssignmentHost';
@@ -27,6 +28,7 @@ import { SubmissionSync } from './submission-sync';
 import '@blockpy/editor/styles/tokens.css';
 import '@blockpy/editor/styles/bootstrap-subset.css';
 import '@blockpy/editor/styles/blockpy.css';
+import '@blockpy/navigation/styles/navigation.css';
 import type { BootConfig, LegacyAssignmentPayload } from './boot-config';
 import type { MountExtras, StudioActions } from './studio-handle';
 
@@ -126,6 +128,11 @@ export function App({ config, extras, registerActions }: AppProps) {
     return holder.client;
   }, [config, assignment, user, extras]);
 
+  // Grading success reaches the group header (spec §9.3) AND any host-page
+  // hook; the ref breaks the memo cycle (sync → markCorrect → navStore →
+  // loadAssignment → adoptAssignmentData → sync).
+  const navStoreRef = useRef<GroupNavStore | null>(null);
+
   // Autosave + §14.3 submission lifecycle rides the same client.
   const sync = useMemo(() => {
     if (!api) return null;
@@ -134,11 +141,14 @@ export function App({ config, extras, registerActions }: AppProps) {
       setStatus: (endpoint, status, message) =>
         store.getState().setServerStatus(endpoint, status, message),
       readOnly: () => config.display.readOnly,
-      markCorrect: extras?.markCorrect,
+      markCorrect: (assignmentId) => {
+        navStoreRef.current?.markCorrect(assignmentId);
+        extras?.markCorrect?.(assignmentId);
+      },
       onVersionChange: () => setVersionOutdated(true),
       getImage: () => dualEditorRef.current?.blockEditor.getPng() ?? Promise.resolve(''),
     });
-  }, [api, config.display.readOnly, extras?.markCorrect, store]);
+  }, [api, config.display.readOnly, extras, store]);
 
   // -- assignment adoption (legacy loadAssignmentData_, blockpy.js:491) ------
   const adoptAssignmentData = useCallback(
@@ -257,6 +267,64 @@ export function App({ config, extras, registerActions }: AppProps) {
     });
     return () => registerActions?.(null);
   }, [registerActions, loadAssignment, adoptAssignmentData]);
+
+  // -- assignment-group navigation (spec §9) ----------------------------------
+
+  // Total-duration fetcher for the clock's activity mode. Legacy is a $.get
+  // global with the ids baked into the URL (editor.html:395-399); ours rides
+  // the base payload (createServerData already carries the group/course ids)
+  // against the same GET-or-POST endpoint (blockpy.py:1248-1262).
+  const getGroupDuration = useMemo(() => {
+    if (!api?.isEndpointConnected('estimateGroupDuration')) return undefined;
+    return async () => {
+      const response = await api.estimateGroupDuration();
+      if (response.success !== true) throw new Error('estimate_group_duration failed');
+      return Number(response['duration'] ?? 0);
+    };
+  }, [api]);
+
+  // Timer telemetry attaches to the assignment URL (assignment_interface.ts
+  // passes this.assignment().url() as the event file path).
+  const activeAssignmentUrlRef = useRef('');
+
+  const navStore = useMemo(() => {
+    if (!config.group) return null;
+    return createGroupNavStore(config.group, {
+      loadAssignment: (assignmentId) =>
+        void (dispatchRef.current ?? loadAssignment)(assignmentId).catch(() => undefined),
+      ...(getGroupDuration ? { getGroupDuration } : {}),
+      logEvent: (eventType, category, label, message) =>
+        logEvent(eventType, category, label, message, activeAssignmentUrlRef.current),
+      // The real role, not the view-as toggle: legacy's isInstructor comes
+      // from the page render and never flips (assignment_interface.ts:76-80).
+      isInstructor: () => config.display.instructor,
+      sessionStartTime: config.sessionStartTime,
+    });
+  }, [config.group, config.sessionStartTime, config.display.instructor, getGroupDuration, loadAssignment, logEvent]);
+  navStoreRef.current = navStore;
+
+  // §15.3 globals. `markCorrect` is the alias older content calls directly —
+  // a no-op on group-less pages (editor.html:109-114). Never clobber a
+  // legacy-template-owned global when we don't own the navigation (shim
+  // mode against unmodified pages defines both itself).
+  useEffect(() => {
+    const globals = window as unknown as Record<string, unknown>;
+    if (!navStore && 'markCorrect' in globals) return;
+    globals['markCorrect'] = navStore
+      ? (assignmentId: number) => navStore.markCorrect(assignmentId)
+      : () => undefined;
+    return () => {
+      delete globals['markCorrect'];
+    };
+  }, [navStore]);
+  useEffect(() => {
+    const globals = window as unknown as Record<string, unknown>;
+    if (!getGroupDuration || 'ACTIVITY_GET_DURATION' in globals) return;
+    globals['ACTIVITY_GET_DURATION'] = getGroupDuration;
+    return () => {
+      delete globals['ACTIVITY_GET_DURATION'];
+    };
+  }, [getGroupDuration]);
 
   // -- dev-harness fallback (no server, no inline payload) --------------------
   const harnessVfs = useMemo(() => {
@@ -390,6 +458,26 @@ export function App({ config, extras, registerActions }: AppProps) {
     [active, config.settings],
   );
 
+  activeAssignmentUrlRef.current = active?.assignment.url ?? '';
+
+  // Exam countdown feed (spec §9.4): the checker reads settings.time_limit
+  // plus the per-student override and start from the submission — legacy
+  // reads the same live pair (assignment_interface.ts:186-193). The raw
+  // setting passes through unconverted: a numeric time_limit crashes
+  // parseTimeLimit into the timer_error path in legacy too.
+  useEffect(() => {
+    if (!navStore) return;
+    if (!active) {
+      navStore.setTimeLimit(null);
+      return;
+    }
+    navStore.setTimeLimit({
+      timeLimit: (settings['time_limit'] ?? null) as string | null,
+      studentTimeLimit: (active.submission?.raw['time_limit'] ?? null) as string | null,
+      dateStarted: (active.submission?.raw['date_started'] ?? null) as string | null,
+    });
+  }, [navStore, active, settings]);
+
   // preload_all_files (files.js:677-696): fetch the uploaded listing at
   // assignment load instead of waiting for the images tab. The specific
   // `preload_files` JSON variant lands with CORGIS (§10.4).
@@ -446,12 +534,21 @@ export function App({ config, extras, registerActions }: AppProps) {
           </button>
         </div>
       )}
+      {/* Dual-rendered group header/footer (spec §9): the legacy template
+          includes the macro at the top AND bottom of the page body
+          (editor.html:102-103, 188-190), synced through one store. */}
+      {navStore && <GroupNav store={navStore} />}
       <AssignmentHost
         typeIndex={assignment.typeIndex}
         embed={display.embed}
         loadEditorAssignment={loadAssignment}
         onReady={(dispatch) => {
-          dispatchRef.current = dispatch;
+          dispatchRef.current = async (assignmentId: number) => {
+            // Keep the selectors honest when the dispatch is host-driven
+            // (boot deep link; nav-driven calls are already set).
+            navStore?.setCurrentId(assignmentId);
+            await dispatch(assignmentId);
+          };
         }}
       >
       {bootPending || (loading && active === null) ? (
@@ -599,6 +696,7 @@ export function App({ config, extras, registerActions }: AppProps) {
         />
       )}
       </AssignmentHost>
+      {navStore && <GroupNav store={navStore} />}
     </main>
   );
 }
