@@ -30,11 +30,14 @@ export {
   CodingEditor,
   resolveToolboxSetting,
   type CodingEditorProps,
+  type EvalOutcome,
   type RunController,
   type RunHandlers,
+  type RunOptions,
   type RunOutcome,
 } from './chrome/CodingEditor';
 export { FileTabs, computeTabs, type FileTab } from './chrome/FileTabs';
+export { TraceExplorer, typeFromRepr } from './chrome/TraceExplorer';
 export { Console } from './chrome/Console';
 export { Feedback } from './chrome/Feedback';
 export { Instructions, renderInstructions } from './chrome/Instructions';
@@ -45,6 +48,7 @@ export {
   type EditorChromeState,
   type FeedbackState,
   type RunState,
+  type TraceStepView,
 } from './chrome/store';
 export { categoryPresentation } from './chrome/categories';
 

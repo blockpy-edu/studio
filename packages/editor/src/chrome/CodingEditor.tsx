@@ -18,7 +18,12 @@ import { Feedback } from './Feedback';
 import { FileTabs } from './FileTabs';
 import { Instructions } from './Instructions';
 import { PythonToolbar } from './PythonToolbar';
-import { useEditorChromeStore, type FeedbackState } from './store';
+import { TraceExplorer } from './TraceExplorer';
+import {
+  useEditorChromeStore,
+  type FeedbackState,
+  type TraceStepView,
+} from './store';
 
 /**
  * Resolve the legacy `toolbox` settings key (A4: enum normal/ct/ct2/minimal/
@@ -48,15 +53,34 @@ export interface RunHandlers {
   stderr(text: string): void;
 }
 
+export interface RunOptions {
+  /** Collect the E3 trace during this run (powers the Trace explorer). */
+  trace?: boolean;
+}
+
 export interface RunOutcome {
   /** Traceback/error text, or null on success. */
   error: string | null;
   /** Pedal feedback to show, if the run produced any. */
   feedback?: FeedbackState | null;
+  /** Trace buffer when the run collected one. */
+  trace?: TraceStepView[];
+}
+
+export interface EvalOutcome {
+  /** repr() of the expression, or null when it errored. */
+  value: string | null;
+  error: string | null;
 }
 
 export interface RunController {
-  run(code: string, handlers: RunHandlers): Promise<RunOutcome>;
+  run(
+    code: string,
+    handlers: RunHandlers,
+    options?: RunOptions,
+  ): Promise<RunOutcome>;
+  /** REPL evaluation against the persistent run namespace (§6.4). */
+  evaluate?(expression: string, handlers: RunHandlers): Promise<EvalOutcome>;
   stop?(): void;
 }
 
@@ -87,6 +111,7 @@ export function CodingEditor(props: CodingEditorProps) {
   const editorRef = useRef<DualEditor | null>(null);
   const store = useEditorChromeStore;
   const pythonMode = useEditorChromeStore((state) => state.pythonMode);
+  const traceVisible = useEditorChromeStore((state) => state.traceVisible);
 
   // Only answer.py gets the block/split modes; every other file is a plain
   // text file (legacy python.js forces TEXT for non-answer files).
@@ -146,10 +171,14 @@ export function CodingEditor(props: CodingEditorProps) {
     // file tab is active (legacy behavior).
     const studentCode = vfs ? (vfs.read('answer.py') ?? '') : code;
     try {
-      const outcome = await controller.run(studentCode, {
-        stdout: (text) => appendConsole({ kind: 'stdout', text }),
-        stderr: (text) => appendConsole({ kind: 'stderr', text }),
-      });
+      const outcome = await controller.run(
+        studentCode,
+        {
+          stdout: (text) => appendConsole({ kind: 'stdout', text }),
+          stderr: (text) => appendConsole({ kind: 'stderr', text }),
+        },
+        { trace: true },
+      );
       setRunState(outcome.error === null ? 'idle' : 'error');
       if (outcome.error !== null) {
         appendConsole({ kind: 'stderr', text: outcome.error });
@@ -157,11 +186,49 @@ export function CodingEditor(props: CodingEditorProps) {
       if (outcome.feedback) {
         setFeedback(outcome.feedback);
       }
+      store.getState().setTrace(outcome.trace ?? []);
     } catch (error) {
       setRunState('error');
       appendConsole({ kind: 'stderr', text: String(error) });
     }
   }, [code, vfs, props.runController, store]);
+
+  const handleEvaluate = useCallback(
+    (expression: string) => {
+      const controller = props.runController;
+      const { appendConsole } = store.getState();
+      appendConsole({ kind: 'value', text: '>>> ' + expression });
+      if (!controller?.evaluate) {
+        appendConsole({
+          kind: 'stderr',
+          text: 'No execution engine attached to this editor.',
+        });
+        return;
+      }
+      void controller
+        .evaluate(expression, {
+          stdout: (text) => appendConsole({ kind: 'stdout', text }),
+          stderr: (text) => appendConsole({ kind: 'stderr', text }),
+        })
+        .then((outcome) => {
+          if (outcome.error !== null) {
+            appendConsole({ kind: 'stderr', text: outcome.error });
+          } else if (outcome.value !== null) {
+            appendConsole({ kind: 'value', text: outcome.value });
+          }
+        });
+    },
+    [props.runController, store],
+  );
+
+  const handleTraceLine = useCallback((studentLine: number | null) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.clearHighlightedLines('editor-traced-line');
+    if (studentLine !== null && studentLine > 0) {
+      editor.setHighlightedLines([studentLine], 'editor-traced-line');
+    }
+  }, []);
 
   const handleStop = useCallback(() => {
     props.runController?.stop?.();
@@ -195,8 +262,12 @@ export function CodingEditor(props: CodingEditorProps) {
       <div className="row">
         <div className="col-md-12">
           <div className="row">
-            <Console />
-            <Feedback />
+            <Console onEvaluate={handleEvaluate} />
+            {traceVisible ? (
+              <TraceExplorer onStepLine={handleTraceLine} />
+            ) : (
+              <Feedback />
+            )}
           </div>
         </div>
       </div>

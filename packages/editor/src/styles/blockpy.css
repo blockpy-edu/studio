@@ -165,6 +165,19 @@
     left: 20px;
 }
 
+/* Studio's Evaluate strip is an input-group UNDER the printer, not the
+   legacy button pinned inside it — neutralize the legacy pinning there so
+   the button sizes like a normal input-group addon. */
+.blockpy-console-eval .blockpy-btn-eval {
+    position: static;
+    bottom: auto;
+    left: auto;
+}
+
+.blockpy-console-eval {
+    margin-top: 4px;
+}
+
 /** Feedback **/
 
 .blockpy-content .feedback-badge {

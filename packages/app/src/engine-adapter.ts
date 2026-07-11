@@ -12,7 +12,13 @@
  * syntax categories with student-relative line numbers (§6.3).
  */
 import { EngineClient, type EnginePort } from '@blockpy/engine';
-import type { RunController, RunHandlers, RunOutcome } from '@blockpy/editor';
+import type {
+  EvalOutcome,
+  RunController,
+  RunHandlers,
+  RunOptions,
+  RunOutcome,
+} from '@blockpy/editor';
 
 /** Adapt a browser Worker to the engine's port abstraction. */
 function workerPort(worker: Worker): EnginePort {
@@ -66,7 +72,11 @@ export function createEngineRunController(
   }
 
   return {
-    async run(code: string, handlers: RunHandlers): Promise<RunOutcome> {
+    async run(
+      code: string,
+      handlers: RunHandlers,
+      runOptions?: RunOptions,
+    ): Promise<RunOutcome> {
       const engine = ensureClient();
       if (!booted) {
         options.onBootStateChange?.(true);
@@ -82,6 +92,7 @@ export function createEngineRunController(
             files: {},
             code,
             filename: 'answer.py',
+            trace: runOptions?.trace ?? false,
             limits: { wallMs: options.wallMs ?? 5000 },
           },
           {
@@ -93,12 +104,15 @@ export function createEngineRunController(
           booted = true;
           options.onBootStateChange?.(false);
         }
+        const trace = result.trace ?? [];
         if (result.success) {
           if (options.onRunScript) {
-            return await gradeWithPedal(engine, code, options, handlers);
+            const graded = await gradeWithPedal(engine, code, options, handlers);
+            return { ...graded, trace };
           }
           return {
             error: null,
+            trace,
             feedback: {
               category: 'no errors',
               label: '',
@@ -111,6 +125,7 @@ export function createEngineRunController(
           error?.studentLine != null ? ` on line ${error.studentLine}` : '';
         return {
           error: error?.traceback || error?.message || 'Execution failed.',
+          trace,
           feedback: {
             category: error?.type === 'SyntaxError' ? 'syntax' : 'runtime',
             label: `${error?.type ?? 'Error'}${where}`,
@@ -120,6 +135,35 @@ export function createEngineRunController(
       } finally {
         activeJobId = null;
       }
+    },
+
+    /** REPL evaluation against the persistent run namespace (§6.4). */
+    async evaluate(
+      expression: string,
+      handlers: RunHandlers,
+    ): Promise<EvalOutcome> {
+      const engine = ensureClient();
+      const result = await engine.run(
+        {
+          id: `harness-eval-${++jobCounter}`,
+          phase: 'student.eval',
+          files: {},
+          code: expression,
+          limits: { wallMs: options.wallMs ?? 5000 },
+        },
+        {
+          onStdout: (chunk) => handlers.stdout(chunk),
+          onStderr: (chunk) => handlers.stderr(chunk),
+        },
+      );
+      if (!result.success) {
+        return {
+          value: null,
+          error:
+            result.error?.message ?? result.error?.traceback ?? 'Evaluation failed.',
+        };
+      }
+      return { value: result.value ?? null, error: null };
     },
 
     stop(): void {

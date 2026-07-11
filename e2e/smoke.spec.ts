@@ -81,6 +81,19 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
   await expect(page.locator('button.blockpy-run')).not.toHaveClass(
     /blockpy-run-running/,
   );
+  // Trace explorer: the run collected an E3 trace; stepping shows variables.
+  await page.getByRole('button', { name: /View Trace/ }).click();
+  await expect(page.locator('.blockpy-trace')).toContainText('Step:');
+  await page.getByRole('button', { name: 'Last step' }).click();
+  await expect(page.locator('.blockpy-trace table')).toContainText('a');
+  await page.getByRole('button', { name: /Hide Trace/ }).click();
+  // REPL: evaluate an expression against the persistent namespace (§6.4).
+  await page.getByRole('textbox', { name: 'Evaluate expression' }).fill('a + 41');
+  await page.getByRole('button', { name: 'Evaluate' }).click();
+  await expect(page.locator('.blockpy-printer')).toContainText('>>> a + 41');
+  await expect(page.locator('.blockpy-printer')).toContainText('41', {
+    timeout: 30_000,
+  });
   // Incorrect submission path: change the code, rerun, get the gentle hint.
   const content = page.locator('.cm-editor .cm-content').first();
   await content.click();
@@ -127,4 +140,25 @@ test('layout regressions: no horizontal overflow, panels side by side, white edi
     .locator('button.blockpy-run svg')
     .count();
   expect(runIcons).toBeGreaterThan(0);
+  // 6. Feedback badge is content-sized, not stretched by the flex column
+  //    (offsetWidth catches the stretch even while the badge is empty).
+  const badgeWidth = await page
+    .locator('.feedback-badge')
+    .evaluate((el) => (el as HTMLElement).offsetWidth);
+  const feedbackPane = (await page
+    .locator('.blockpy-feedback')
+    .boundingBox())!;
+  expect(badgeWidth).toBeLessThan(feedbackPane.width / 2);
+  // 7. Evaluate button sits in the input strip at input-group size (the
+  //    legacy absolute pinning must not apply in the strip).
+  const evalButton = page.locator('.blockpy-console-eval .blockpy-btn-eval');
+  const evalBox = (await evalButton.boundingBox())!;
+  const evalInput = (await page
+    .locator('.blockpy-console-eval input')
+    .boundingBox())!;
+  expect(Math.abs(evalBox.height - evalInput.height)).toBeLessThan(3);
+  expect(evalBox.width).toBeLessThan(150);
+  expect(
+    await evalButton.evaluate((el) => getComputedStyle(el).position),
+  ).toBe('static');
 });

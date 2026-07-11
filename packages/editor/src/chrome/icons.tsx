@@ -27,6 +27,8 @@
 import type { ComponentType } from 'react';
 import {
   AlignLeft,
+  ChevronLeft,
+  ChevronRight,
   CloudDownload,
   Columns2,
   Download,
@@ -38,6 +40,8 @@ import {
   Play,
   RefreshCw,
   Save,
+  SkipBack,
+  SkipForward,
   Square,
   Trash2,
   Upload,
@@ -60,6 +64,12 @@ const ICONS = {
   extra: EllipsisVertical,
   eye: Eye,
   runQuietly: MessageSquareOff,
+  // Trace/history stepping (legacy fa-step-backward/-backward/-forward/
+  // -step-forward → SkipBack/ChevronLeft/ChevronRight/SkipForward).
+  stepFirst: SkipBack,
+  stepBack: ChevronLeft,
+  stepForward: ChevronRight,
+  stepLast: SkipForward,
 } satisfies Record<string, ComponentType<LucideProps>>;
 
 export type IconName = keyof typeof ICONS;

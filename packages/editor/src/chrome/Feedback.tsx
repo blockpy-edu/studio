@@ -3,6 +3,7 @@
  * `label-*` classes, bold label, HTML message; aria-live like legacy).
  */
 import { categoryPresentation } from './categories';
+import { Icon } from './icons';
 import { useEditorChromeStore } from './store';
 
 export interface FeedbackProps {
@@ -11,18 +12,33 @@ export interface FeedbackProps {
 
 export function Feedback({ size = 'col-md-6' }: FeedbackProps) {
   const feedback = useEditorChromeStore((state) => state.feedback);
+  const setTraceVisible = useEditorChromeStore((state) => state.setTraceVisible);
+  const hasTrace = useEditorChromeStore((state) => state.traceSteps.length > 0);
   const presentation = categoryPresentation(feedback.category);
   return (
     <div
       className={`blockpy-feedback blockpy-panel ${size}`}
       aria-live="polite"
     >
-      <strong className="feedback-header">Feedback: </strong>
-      <span
-        className={`badge blockpy-feedback-category feedback-badge ${presentation.badgeClass}`}
-      >
-        {presentation.displayText}
-      </span>
+      {/* One header row: .blockpy-feedback is a flex column (legacy), so
+          bare inline children would stretch full-width — group them. */}
+      <div className="clearfix">
+        {hasTrace && (
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-secondary float-right"
+            onClick={() => setTraceVisible(true)}
+          >
+            <Icon name="eye" /> View Trace
+          </button>
+        )}
+        <strong className="feedback-header">Feedback: </strong>
+        <span
+          className={`badge blockpy-feedback-category feedback-badge ${presentation.badgeClass}`}
+        >
+          {presentation.displayText}
+        </span>
+      </div>
       <strong className="blockpy-feedback-label">{feedback.label}</strong>
       <div
         className="blockpy-feedback-message"

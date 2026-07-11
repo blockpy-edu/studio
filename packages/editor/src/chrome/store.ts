@@ -22,12 +22,24 @@ export interface FeedbackState {
 
 export type RunState = 'idle' | 'running' | 'error';
 
+/** One trace step as the chrome consumes it (engine E3 TraceStep shape). */
+export interface TraceStepView {
+  event: string;
+  line: number;
+  studentLine: number;
+  locals?: Record<string, string>;
+}
+
 export interface EditorChromeState {
   pythonMode: DualEditorMode;
   historyMode: boolean;
   runState: RunState;
   console: ConsoleEntry[];
   feedback: FeedbackState;
+  traceSteps: TraceStepView[];
+  traceStep: number;
+  /** Legacy `ui.secondRow.isTraceVisible` — trace replaces feedback. */
+  traceVisible: boolean;
 
   setPythonMode(mode: DualEditorMode): void;
   toggleHistoryMode(): void;
@@ -36,6 +48,9 @@ export interface EditorChromeState {
   clearConsole(): void;
   setFeedback(feedback: FeedbackState): void;
   clearFeedback(): void;
+  setTrace(steps: TraceStepView[]): void;
+  setTraceStep(index: number): void;
+  setTraceVisible(visible: boolean): void;
 }
 
 const EMPTY_FEEDBACK: FeedbackState = {
@@ -50,6 +65,9 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   runState: 'idle',
   console: [],
   feedback: EMPTY_FEEDBACK,
+  traceSteps: [],
+  traceStep: 0,
+  traceVisible: false,
 
   setPythonMode: (mode) => set({ pythonMode: mode }),
   toggleHistoryMode: () =>
@@ -60,4 +78,10 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   clearConsole: () => set({ console: [] }),
   setFeedback: (feedback) => set({ feedback }),
   clearFeedback: () => set({ feedback: EMPTY_FEEDBACK }),
+  setTrace: (steps) => set({ traceSteps: steps, traceStep: 0 }),
+  setTraceStep: (index) =>
+    set((state) => ({
+      traceStep: Math.max(0, Math.min(index, state.traceSteps.length - 1)),
+    })),
+  setTraceVisible: (visible) => set({ traceVisible: visible }),
 }));
