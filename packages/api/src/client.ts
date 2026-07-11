@@ -118,6 +118,77 @@ export class ApiClient {
     );
   }
 
+  // -- uploaded files (spec §14.2; legacy server.js:468-544, images.js) --------
+
+  /**
+   * Response shape: `{success, files: {placement: [[filename, url], …]}}`.
+   * Legacy `_postBlocking(…, 2 attempts)` with the base urlencoded payload.
+   */
+  async listUploadedFiles(): Promise<LegacyResponse> {
+    return this.options.transport.postRetry(
+      this.url('listUploadedFiles'),
+      this.buildPayload(),
+    );
+  }
+
+  /**
+   * Multipart upload; `deleteInstead` reuses the endpoint with empty
+   * contents + `delete: true` (legacy images.js:239-256).
+   */
+  async uploadFile(
+    placement: string,
+    directory: string | number,
+    filename: string,
+    contents: Blob | string,
+    deleteInstead = false,
+  ): Promise<LegacyResponse> {
+    if (this.guardReadOnly()) return { success: false, readOnly: true };
+    const fields: Record<string, string | number | boolean | null | Blob> = {
+      ...this.buildPayload(),
+      placement,
+      directory: String(directory),
+      filename,
+      contents,
+    };
+    if (deleteInstead) fields['delete'] = true;
+    return this.options.transport.postForm(this.url('uploadFile'), fields, {
+      attempts: 3,
+    }) as Promise<LegacyResponse>;
+  }
+
+  /** Raw text response (legacy dataType: "text", server.js:507-524). */
+  async downloadFile(
+    placement: string,
+    directory: string | number,
+    filename: string,
+  ): Promise<string> {
+    return this.options.transport.postForm(
+      this.url('downloadFile'),
+      { ...this.buildPayload(), placement, directory: String(directory), filename },
+      { attempts: 3, text: true },
+    ) as Promise<string>;
+  }
+
+  async renameFile(
+    placement: string,
+    directory: string | number,
+    oldFilename: string,
+    newFilename: string,
+  ): Promise<LegacyResponse> {
+    if (this.guardReadOnly()) return { success: false, readOnly: true };
+    return this.options.transport.postForm(
+      this.url('renameFile'),
+      {
+        ...this.buildPayload(),
+        placement,
+        directory: String(directory),
+        old_filename: oldFilename,
+        new_filename: newFilename,
+      },
+      { attempts: 3 },
+    ) as Promise<LegacyResponse>;
+  }
+
   // -- event logging (A2 §1-2) -------------------------------------------------
 
   /**

@@ -48,7 +48,7 @@ const fieldsOf = (entry: HarEntry): Map<string, string> => {
 function recordingClient(context: ApiContext) {
   const sent: Array<{ url: string; body: URLSearchParams }> = [];
   const fetch: FetchLike = async (url, init) => {
-    sent.push({ url, body: new URLSearchParams(init.body) });
+    sent.push({ url, body: new URLSearchParams(String(init.body)) });
     return { ok: true, json: async () => ({ success: true, ip: '127.0.0.1' }) };
   };
   const transport = new Transport({ fetch, schedule: (fn) => fn() });

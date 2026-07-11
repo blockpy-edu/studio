@@ -43,6 +43,13 @@ export { FileTabs, computeTabs, type FileTab } from './chrome/FileTabs';
 export { AddNewMenu, type AddNewMenuProps } from './chrome/AddNewMenu';
 export { MinifiedEditor, type MinifiedEditorProps } from './chrome/MinifiedEditor';
 export { TraceExplorer, typeFromRepr } from './chrome/TraceExplorer';
+export {
+  ImagesManager,
+  canModifyPlacement,
+  type ImagesManagerProps,
+  type UploadedFilesMap,
+  type UploadsController,
+} from './chrome/ImagesManager';
 export { Console } from './chrome/Console';
 export { DevConsole } from './chrome/DevConsole';
 export { Feedback } from './chrome/Feedback';

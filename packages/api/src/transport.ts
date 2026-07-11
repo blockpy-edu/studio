@@ -22,8 +22,8 @@ export interface LegacyResponse {
 
 export type FetchLike = (
   url: string,
-  init: { method: 'POST'; headers: Record<string, string>; body: string },
-) => Promise<{ ok: boolean; json(): Promise<unknown> }>;
+  init: { method: 'POST'; headers: Record<string, string>; body: string | FormData },
+) => Promise<{ ok: boolean; json(): Promise<unknown>; text?(): Promise<string> }>;
 
 /** Minimal key-value storage (localStorage-compatible subset). */
 export interface StorageLike {
@@ -118,6 +118,50 @@ export class Transport {
       };
       attempt(delayMs, 0);
     });
+  }
+
+  /**
+   * Multipart POST for the uploads endpoints (legacy `_postBlocking` with
+   * FormData, server.js:480-544): the browser sets the multipart boundary
+   * (no Content-Type header), finite attempts with the legacy FAIL_DELAY
+   * backoff, throwing after exhaustion so callers can show their dialog.
+   * `text: true` returns the raw body (downloadFile, jQuery dataType:text).
+   */
+  async postForm(
+    url: string,
+    fields: Record<string, string | number | boolean | null | Blob>,
+    options: { attempts?: number; text?: boolean } = {},
+  ): Promise<LegacyResponse | string> {
+    const attempts = options.attempts ?? 3;
+    const headers: Record<string, string> = {};
+    if (this.options.accessToken) {
+      headers['Authorization'] = `Bearer ${this.options.accessToken}`;
+    }
+    let lastError: unknown;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      if (attempt > 0) {
+        await new Promise((resolve) => this.schedule(() => resolve(undefined), FAIL_DELAY_MS));
+      }
+      try {
+        const body = new FormData();
+        for (const [key, value] of Object.entries(fields)) {
+          if (value instanceof Blob) body.append(key, value);
+          else body.append(key, value === null || value === undefined ? '' : String(value));
+        }
+        const response = await this.options.fetch(url, { method: 'POST', headers, body });
+        if (!response.ok) throw new Error(`POST ${url} failed at transport level`);
+        if (options.text) {
+          if (!response.text) throw new Error('fetch implementation lacks text()');
+          return response.text();
+        }
+        const parsed = (await response.json()) as LegacyResponse;
+        if (typeof parsed.ip === 'string') this.checkIp(parsed.ip);
+        return parsed;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw lastError instanceof Error ? lastError : new Error(`POST ${url} exhausted attempts`);
   }
 
   /** LD-2c: functional IP-change detection on every response path. */

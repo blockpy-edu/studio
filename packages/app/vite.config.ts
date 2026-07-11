@@ -32,7 +32,9 @@ const DEV_ASSIGNMENT = {
       '&sample_data.txt': 'temperature,42\nhumidity,13\n',
     }),
     extra_starting_files: '',
-    settings: '{}',
+    // preload_all_files exercises the remote-file pipeline (fetch the
+    // uploaded listing at load, stage contents into runs).
+    settings: '{"preload_all_files": true}',
     hidden: false,
     reviewed: false,
     public: true,
@@ -86,6 +88,19 @@ const devHistory = () => {
 
 /** Stub blockpy-server endpoints for the dev harness + smoke tests. */
 function devApi(): Plugin {
+  // One canned uploaded file exercises the whole remote-file pipeline
+  // (list → filesToUrls → download → engine staging).
+  const uploaded = {
+    success: true,
+    files: {
+      assignment: [
+        [
+          'capitals.txt',
+          '/api/download_file?placement=assignment&directory=101&filename=capitals.txt',
+        ],
+      ],
+    },
+  };
   const routes: Record<string, () => unknown> = {
     '/api/load_assignment': () => DEV_ASSIGNMENT,
     '/api/load_history': devHistory,
@@ -93,14 +108,24 @@ function devApi(): Plugin {
     '/api/log_event': () => ({ success: true }),
     '/api/update_submission': () => ({ success: true }),
     '/api/update_submission_status': () => ({ success: true }),
+    '/api/list_files': () => uploaded,
+    '/api/upload_file': () => ({ success: true }),
+    '/api/rename_file': () => ({ success: true }),
   };
   return {
     name: 'blockpy-dev-api',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const path = (req.url ?? '').split('?')[0];
+        if (req.method !== 'POST') return next();
+        if (path === '/api/download_file') {
+          // downloadFile answers raw text (legacy dataType: "text").
+          res.setHeader('Content-Type', 'text/plain');
+          res.end('France,Paris\nGreece,Athens\n');
+          return;
+        }
         const route = routes[path];
-        if (!route || req.method !== 'POST') return next();
+        if (!route) return next();
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify(route()));
       });

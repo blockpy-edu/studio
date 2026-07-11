@@ -24,6 +24,7 @@ import {
   type HistoryEntry,
 } from './History';
 import { HistoryDiffView } from '../components/HistoryDiffView';
+import { ImagesManager, type UploadsController } from './ImagesManager';
 import { Instructions } from './Instructions';
 import { PythonToolbar } from './PythonToolbar';
 import { QuickMenu, type QuickMenuProps } from './QuickMenu';
@@ -208,6 +209,11 @@ export interface CodingEditorProps {
    * `blockEditor.getPng()` for the updateSubmission image payload (§14.3).
    */
   onEditorReady?: (editor: DualEditor | null) => void;
+  /**
+   * Uploaded-files server actions — `images.blockpy` tabs render the
+   * ImagesManager instead of a code editor when provided.
+   */
+  uploads?: UploadsController;
   /** Legacy provideRatings (= !assignment.hidden) — feedback thumbs. */
   provideRatings?: boolean;
   /** submission.score (0-1) for the instructor feedback header. */
@@ -687,6 +693,11 @@ export function CodingEditor(props: CodingEditorProps) {
               current={code}
               height={400}
             />
+          ) : activeFile.endsWith('images.blockpy') && props.uploads ? (
+            // Legacy editor dispatch by extension (images.js: extensions
+            // ["images.blockpy"]) — the uploaded-files manager replaces the
+            // code editor for this tab.
+            <ImagesManager uploads={props.uploads} instructor={props.instructor} />
           ) : (
             <div
               className="blockpy-python-blockmirror"

@@ -6,6 +6,8 @@ import {
   useEditorChromeStore,
   type DualEditor,
   type HistoryEntry,
+  type UploadedFilesMap,
+  type UploadsController,
 } from '@blockpy/editor';
 import { Vfs } from '@blockpy/vfs';
 import {
@@ -264,6 +266,102 @@ export function App({ config, extras, registerActions }: AppProps) {
   }, []);
 
   const active: LoadedAssignment | null = loaded;
+  const activeVfsRef = useRef<Vfs | null>(null);
+  activeVfsRef.current = active?.vfs ?? null;
+
+  // Remote uploaded files (legacy reorganizeFiles + downloadRemoteFiles,
+  // files.js:669-737): register the url map on the VFS and fetch each new
+  // file's body so runs can stage it (consulted last in the search order).
+  const syncRemoteFiles = useCallback(
+    async (files: UploadedFilesMap) => {
+      const target = activeVfsRef.current;
+      if (!target || !api) return;
+      const urlMap: Record<string, string> = {};
+      const entries: Array<{ filename: string; placement: string; directory: string }> = [];
+      for (const placed of Object.values(files)) {
+        for (const [filename, url] of placed) {
+          urlMap[filename] = url;
+          try {
+            const params = new URL(url, window.location.origin).searchParams;
+            entries.push({
+              filename,
+              placement: params.get('placement') ?? '',
+              directory: params.get('directory') ?? '',
+            });
+          } catch {
+            // Unparseable URL — listed but not fetchable.
+          }
+        }
+      }
+      target.setRemoteFiles(urlMap);
+      await Promise.all(
+        entries.map(async (entry) => {
+          // Legacy fetches only files it has not seen (files.js:725-731).
+          if (target.hasRemoteContents(entry.filename)) return;
+          try {
+            const body = await api.downloadFile(
+              entry.placement,
+              entry.directory,
+              entry.filename,
+            );
+            target.setRemoteContents(entry.filename, body);
+          } catch {
+            // Fail-soft: an unfetchable file just is not staged.
+          }
+        }),
+      );
+    },
+    [api],
+  );
+
+  // Uploaded-files server actions for the images.blockpy manager
+  // (placement→directory ids per images.js:208-221).
+  const uploads = useMemo<UploadsController | undefined>(() => {
+    if (!api?.isEndpointConnected('listUploadedFiles')) return undefined;
+    const failure = (response: Record<string, unknown>): Error =>
+      new Error(String(response['message'] ?? 'The server rejected the request.'));
+    const placementDirectory = (placement: string): string => {
+      switch (placement) {
+        case 'submission':
+          return String(api.context.submissionId ?? '');
+        case 'assignment':
+          return String(api.context.assignmentId ?? '');
+        case 'course':
+          return String(api.context.courseId ?? '');
+        case 'user':
+          return String(api.context.userId ?? '');
+        default:
+          return '';
+      }
+    };
+    return {
+      async list() {
+        const response = await api.listUploadedFiles();
+        if (response.success !== true) throw failure(response);
+        const files = (response['files'] ?? {}) as UploadedFilesMap;
+        void syncRemoteFiles(files);
+        return files;
+      },
+      async upload(placement, filename, contents) {
+        const response = await api.uploadFile(
+          placement,
+          placementDirectory(placement),
+          filename,
+          contents,
+        );
+        if (response.success !== true) throw failure(response);
+      },
+      async remove(placement, directory, filename) {
+        // Legacy delete = upload with empty contents + delete flag.
+        const response = await api.uploadFile(placement, directory, filename, '', true);
+        if (response.success !== true) throw failure(response);
+      },
+      async rename(placement, directory, oldFilename, newFilename) {
+        const response = await api.renameFile(placement, directory, oldFilename, newFilename);
+        if (response.success !== true) throw failure(response);
+      },
+    };
+  }, [api, syncRemoteFiles]);
   // A boot-time load is coming: hold the "Loading" screen instead of
   // flashing the offline harness for one frame (legacy delete-on-load span).
   const bootPending =
@@ -285,6 +383,15 @@ export function App({ config, extras, registerActions }: AppProps) {
     }),
     [active, config.settings],
   );
+
+  // preload_all_files (files.js:677-696): fetch the uploaded listing at
+  // assignment load instead of waiting for the images tab. The specific
+  // `preload_files` JSON variant lands with CORGIS (§10.4).
+  useEffect(() => {
+    if (active && uploads && settingBool(settings['preload_all_files'] ?? false)) {
+      void uploads.list().catch(() => undefined);
+    }
+  }, [active, uploads, settings]);
 
   const loadHistory = useMemo(() => {
     if (!api?.isEndpointConnected('loadHistory')) return undefined;
@@ -387,6 +494,7 @@ export function App({ config, extras, registerActions }: AppProps) {
           onEditorReady={(editor) => {
             dualEditorRef.current = editor;
           }}
+          uploads={uploads}
           // Ratings render unless the assignment is hidden (blockpy.js:789).
           provideRatings={active ? active.assignment.raw['hidden'] !== true : true}
           submissionScore={score}

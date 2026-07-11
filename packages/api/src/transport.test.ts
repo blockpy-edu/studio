@@ -14,7 +14,7 @@ const okFetch =
 
 describe('auth placement (A2 §1.1)', () => {
   it('sends the access token as a Bearer header, never in the body', async () => {
-    let captured: { headers: Record<string, string>; body: string } | undefined;
+    let captured: { headers: Record<string, string>; body: string | FormData } | undefined;
     const fetch: FetchLike = async (_url, init) => {
       captured = init;
       return { ok: true, json: async () => ({ success: true }) };
@@ -87,7 +87,7 @@ describe('offline queue (A2 §2 + LD-2b)', () => {
     let online = true;
     const fetch: FetchLike = async (_url, init) => {
       if (!online) throw new Error('offline');
-      posted.push(Object.fromEntries(new URLSearchParams(init.body)));
+      posted.push(Object.fromEntries(new URLSearchParams(String(init.body))));
       return { ok: true, json: async () => ({ success: true }) };
     };
     const t = new Transport({ fetch, schedule: (fn) => fn() });

@@ -58,6 +58,7 @@ const INSTRUCTOR_PATH_ORDER: Space[] = [
 export class Vfs {
   private spaces = new Map<Space, Map<string, string>>();
   private remoteFiles = new Map<string, string>(); // basename -> url
+  private remoteContents = new Map<string, string>(); // basename -> fetched body
   private dirtyNames = new Set<string>(); // legacy names
   private listeners = new Set<VfsListener>();
 
@@ -170,6 +171,12 @@ export class Vfs {
     const order =
       role === 'instructor' ? INSTRUCTOR_EVERYWHERE_ORDER : STUDENT_ORDER;
     const staged: Record<string, string> = {};
+    // Remote files are consulted LAST in every search order (A1 §4a), so
+    // their fetched contents stage at the lowest priority — any local space
+    // overwrites them below.
+    for (const [basename, contents] of this.remoteContents) {
+      staged[basename] = contents;
+    }
     // Walk the order from LOWEST priority to highest so higher-priority
     // spaces overwrite (the search order lists highest first).
     for (const space of [...order].reverse()) {
@@ -185,6 +192,22 @@ export class Vfs {
   /** Register uploaded/remote files (consulted last in every search order). */
   setRemoteFiles(files: Record<string, string>): void {
     this.remoteFiles = new Map(Object.entries(files));
+    // Drop cached bodies for files that disappeared from the listing.
+    for (const basename of [...this.remoteContents.keys()]) {
+      if (!this.remoteFiles.has(basename)) this.remoteContents.delete(basename);
+    }
+  }
+
+  /**
+   * Cache a remote file's fetched body so runs can stage it (legacy
+   * `downloadRemoteFiles` → `remoteFiles_`, files.js:717-736).
+   */
+  setRemoteContents(basename: string, contents: string): void {
+    this.remoteContents.set(basename, contents);
+  }
+
+  hasRemoteContents(basename: string): boolean {
+    return this.remoteContents.has(basename);
   }
 
   // -- reset-to-start (A1: Reset copies ^name → unprefixed, prefix stripped) --

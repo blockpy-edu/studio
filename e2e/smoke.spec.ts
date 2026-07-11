@@ -171,6 +171,25 @@ test('Add New menu creates and opens files (instructor view)', async ({ page }) 
   await expect(page.getByRole('link', { name: 'On Change' })).toHaveCount(0);
 });
 
+test('images.blockpy tab opens the uploaded-files manager (§14.2 uploads)', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.blocklySvg').first().waitFor();
+  await page.locator('#blockpy-as-instructor').check();
+  await page.getByRole('button', { name: 'Add New' }).click();
+  await page.getByRole('link', { name: 'Images' }).click();
+  // The manager replaces the code editor for this tab, listing the
+  // stub server's uploaded file with modify actions (instructor).
+  await expect(page.locator('.blockpy-images-manager')).toBeVisible();
+  await expect(page.locator('.blockpy-images-manager')).toContainText('capitals.txt');
+  const manager = page.locator('.blockpy-images-manager');
+  await expect(manager.getByRole('button', { name: 'Delete' })).toBeVisible();
+  await expect(manager.getByRole('button', { name: 'Upload' })).toBeVisible();
+  // Leaving the tab restores the code editor.
+  await page.locator('.nav-link', { hasText: 'answer.py' }).click();
+  await expect(page.locator('.blockpy-images-manager')).toHaveCount(0);
+  await expect(page.locator('.cm-editor .cm-content').first()).toBeVisible();
+});
+
 test('History mode: toolbar + merge diff + Use adopts the old version', async ({ page }) => {
   await page.goto('/');
   await page.locator('.blocklySvg').first().waitFor();
@@ -321,6 +340,19 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
   await expect(page.locator('.blockpy-printer')).toContainText(
     'temperature,42',
     { timeout: 60_000 },
+  );
+  // Remote uploaded files stage too (preload_all_files → listUploadedFiles →
+  // downloadFile → VFS remote contents, consulted last in the search order).
+  await content.click();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.type("print(open('capitals.txt').read())");
+  await page.locator('button.blockpy-run').click();
+  await expect(page.locator('.blockpy-printer')).toContainText(
+    'France,Paris',
+    { timeout: 60_000 },
+  );
+  await expect(page.locator('button.blockpy-run')).not.toHaveClass(
+    /blockpy-run-running/,
   );
   // Queued inputs (quick-menu dialog) replay into input() — the compat-mode
   // stdin strategy (M1.3.4 → inputsPrefill).

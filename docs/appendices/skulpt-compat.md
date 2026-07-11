@@ -93,8 +93,12 @@ through the Studio Pedal environment (`tools/run-grader-corpus.mjs`,
   — see "Student-runtime behaviors" above; Pedal's own sandbox `MockPlt`
   provides the call log during grading.
 - CORGIS dataset modules (`import weather` style) resolved through legacy
-  remote files (`filesToUrls`); the Studio equivalent (VFS remote-file fetch
-  into the engine mount) lands with the uploads layer (§10.4).
+  remote files (`filesToUrls`). The VFS remote-file half landed with the
+  uploads layer (2026-07-11): uploaded files fetch into
+  `Vfs.setRemoteContents` and stage into runs at the lowest search-order
+  priority, so `open()` sees them. Remaining: the CORGIS import flow itself
+  (dataset toolbar → download `.py`/`.data` modules) and the
+  `preload_files` JSON variant (§10.4).
 - ~~`score` semantics (S3 open item)~~ **RESOLVED (2026-07-11), verified
   against both legacy repos — the §14.3 wiring contract:**
   - **Client** (blockpy `on_run.js:154-175`): reads the `SUCCESS`/`SCORE`/

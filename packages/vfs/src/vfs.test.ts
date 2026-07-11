@@ -87,6 +87,28 @@ describe('search order (files.js:563-599, A1 §4a)', () => {
     vfs.write('?data.txt', 'hidden');
     expect(vfs.searchForFile('data.txt', 'student')?.kind).toBe('file');
   });
+
+  it('stageFiles: fetched remote contents stage at the LOWEST priority', () => {
+    vfs.setRemoteFiles({
+      'capitals.txt': '/dl?filename=capitals.txt',
+      'data.txt': '/dl?filename=data.txt',
+    });
+    vfs.setRemoteContents('capitals.txt', 'France,Paris');
+    vfs.setRemoteContents('data.txt', 'remote');
+    vfs.write('data.txt', 'student'); // any local space overrides
+    const staged = vfs.stageFiles('student');
+    expect(staged['capitals.txt']).toBe('France,Paris');
+    expect(staged['data.txt']).toBe('student');
+  });
+
+  it('setRemoteFiles drops cached bodies for delisted files', () => {
+    vfs.setRemoteFiles({ 'a.txt': '/dl?filename=a.txt' });
+    vfs.setRemoteContents('a.txt', 'body');
+    expect(vfs.hasRemoteContents('a.txt')).toBe(true);
+    vfs.setRemoteFiles({});
+    expect(vfs.hasRemoteContents('a.txt')).toBe(false);
+    expect(vfs.stageFiles('student')['a.txt']).toBeUndefined();
+  });
 });
 
 describe('visibility matrix (A1 §2)', () => {
