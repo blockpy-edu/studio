@@ -111,6 +111,20 @@ export class ApiClient {
   }
 
   /**
+   * Exam-timer start (spec §9.4/§11.2): the reader's "I am ready to start
+   * the exam!" button POSTs blockpy/start_assignment with the reading's id
+   * and the client-chosen ISO start (legacy ajax_post, reader.ts:109-135).
+   * The base payload's ids ride along like every other call.
+   */
+  async startAssignment(assignmentId: number, dateStarted: string): Promise<LegacyResponse> {
+    if (this.guardReadOnly()) return { success: false, readOnly: true };
+    return this.options.transport.postRetry(
+      this.url('startAssignment'),
+      this.buildPayload({ assignment_id: assignmentId, date_started: dateStarted }),
+    );
+  }
+
+  /**
    * Total time spent across the group's sessions — the clock's "activity"
    * mode (spec §9.4). Legacy is a page-level `$.get` global with the ids
    * baked into the URL (editor.html:395-399); the endpoint takes GET or
@@ -217,6 +231,7 @@ export class ApiClient {
     message = '',
     filePath = '',
     extended = false,
+    overrides: WirePayload = {},
   ): Promise<LegacyResponse | undefined> {
     if (!clientMayEmit(eventType)) {
       throw new Error(
@@ -224,6 +239,9 @@ export class ApiClient {
       );
     }
     if (this.guardReadOnly() || !this.isEndpointConnected('logEvent')) return undefined;
+    // `overrides` lets a non-editor surface attach its OWN ids — the legacy
+    // reader/quiz AssignmentInterface builds its payload from its own loaded
+    // pair, not the editor model (assignment_interface.ts:266-284, §12).
     const payload = this.buildPayload({
       event_type: eventType,
       category,
@@ -231,6 +249,7 @@ export class ApiClient {
       message,
       file_path: filePath,
       extended,
+      ...overrides,
     });
     const transport = this.options.transport;
     transport.enqueue(payload);

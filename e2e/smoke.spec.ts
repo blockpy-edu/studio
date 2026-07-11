@@ -276,6 +276,59 @@ test('group navigation: dual headers, boundaries, markCorrect, clock (§9/§16.1
   ).toHaveJSProperty('size', 2);
 });
 
+test('reading assignment: content, load⇒correct, runnable block (§11.2)', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.blocklySvg').first().waitFor();
+  // The reading auto-marks correct on load (A7 §4): watch for the
+  // updateSubmission POST the reader sends with the READING's ids.
+  const markReadPost = page.waitForRequest(
+    (request) =>
+      request.url().includes('update_submission') &&
+      request.method() === 'POST' &&
+      (request.postData() ?? '').includes('assignment_id=103'),
+  );
+  await page
+    .locator('.assignment-selector-div')
+    .first()
+    .locator('select.assignment-selector')
+    .selectOption('103');
+  // Reader body: settings header/summary + markdown content.
+  const reading = page.locator('.blockpy-host-reading');
+  await expect(reading).toBeVisible();
+  await expect(reading.getByRole('heading', { name: 'Chapter 1' })).toBeVisible();
+  await expect(reading.getByText('Variables hold values.')).toBeVisible();
+  await expect(reading.getByRole('heading', { name: 'Variables' })).toBeVisible();
+  const markReadBody = (await markReadPost).postData() ?? '';
+  expect(markReadBody).toContain('correct=true');
+  expect(markReadBody).toContain('status=1');
+  // …and the navigation reflects the server echo: ✔, count, green Next.
+  const header = page.locator('.assignment-selector-div').first();
+  await expect(header.locator('option[value="103"]')).toHaveText('✔ Reading: Variables');
+  await expect(header.locator('.completion-rate')).toHaveText('1');
+  await expect(header.locator('.assignment-selector-next')).toHaveClass(/btn-success/);
+  // Relative image/link targets rewrote through download_file (A6 §2.4).
+  const img = reading.locator('.blockpy-reader-content img');
+  expect(await img.getAttribute('src')).toBe(
+    '/api/download_file?placement=assignment&directory=103&filename=variables.png',
+  );
+  // Runnable python fence (part id): Run button hydrates the minified
+  // editor in place and hides the highlighted pre; the plain fence stays.
+  await expect(reading.locator('.reader-launch-blockpy')).toBeVisible();
+  await reading.getByRole('button', { name: 'Run' }).click();
+  await expect(reading.locator('.blockpy-minified')).toBeVisible();
+  await expect(reading.locator('.blockpy-minified .cm-content')).toContainText('age = 5');
+  await expect(reading.locator('.reader-launch-blockpy')).toBeHidden();
+  await expect(reading.locator('pre:not(.reader-launch-blockpy) code.language-python')).toBeVisible();
+  // Back to the coding assignment: the editor returns intact.
+  await page
+    .locator('.assignment-selector-div')
+    .first()
+    .locator('.assignment-selector-back')
+    .click();
+  await expect(page.locator('.blockpy-host-editor')).toBeVisible();
+  await expect(page.locator('.blocklySvg').first()).toBeVisible();
+});
+
 test('History mode: toolbar + merge diff + Use adopts the old version', async ({ page }) => {
   await page.goto('/');
   await page.locator('.blocklySvg').first().waitFor();

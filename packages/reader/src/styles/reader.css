@@ -1,0 +1,27 @@
+/*
+ * Reader page styles, ported from the legacy editor page's inline style
+ * block (blockpy-server templates/blockpy/editor_includes.html:26-63),
+ * re-scoped from the <reader> custom element to .blockpy-reader.
+ */
+
+.blockpy-reader h4 {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.blockpy-reader blockquote {
+  padding-right: 20px;
+  font-style: italic;
+}
+
+.blockpy-reader img {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  max-height: 256px;
+}
+
+/* Legacy floats the Run button right of the runnable block (:60-62). */
+.blockpy-reader .reader-run-button {
+  float: right;
+}

@@ -21,6 +21,7 @@ import {
   type RawRecord,
 } from '@blockpy/api';
 import { GroupNav, createGroupNavStore, type GroupNavStore } from '@blockpy/navigation';
+import { Reader, type ReaderLoadResult } from '@blockpy/reader';
 import { createEngineRunController } from './engine-adapter';
 import { parseAssignmentSettings, vfsFromAssignment } from './assignment-loader';
 import { AssignmentHost } from './AssignmentHost';
@@ -29,6 +30,7 @@ import '@blockpy/editor/styles/tokens.css';
 import '@blockpy/editor/styles/bootstrap-subset.css';
 import '@blockpy/editor/styles/blockpy.css';
 import '@blockpy/navigation/styles/navigation.css';
+import '@blockpy/reader/styles/reader.css';
 import type { BootConfig, LegacyAssignmentPayload } from './boot-config';
 import type { MountExtras, StudioActions } from './studio-handle';
 
@@ -132,6 +134,13 @@ export function App({ config, extras, registerActions }: AppProps) {
   // hook; the ref breaks the memo cycle (sync → markCorrect → navStore →
   // loadAssignment → adoptAssignmentData → sync).
   const navStoreRef = useRef<GroupNavStore | null>(null);
+  const markCorrectEverywhere = useCallback(
+    (assignmentId: number) => {
+      navStoreRef.current?.markCorrect(assignmentId);
+      extras?.markCorrect?.(assignmentId);
+    },
+    [extras],
+  );
 
   // Autosave + §14.3 submission lifecycle rides the same client.
   const sync = useMemo(() => {
@@ -141,14 +150,11 @@ export function App({ config, extras, registerActions }: AppProps) {
       setStatus: (endpoint, status, message) =>
         store.getState().setServerStatus(endpoint, status, message),
       readOnly: () => config.display.readOnly,
-      markCorrect: (assignmentId) => {
-        navStoreRef.current?.markCorrect(assignmentId);
-        extras?.markCorrect?.(assignmentId);
-      },
+      markCorrect: markCorrectEverywhere,
       onVersionChange: () => setVersionOutdated(true),
       getImage: () => dualEditorRef.current?.blockEditor.getPng() ?? Promise.resolve(''),
     });
-  }, [api, config.display.readOnly, extras, store]);
+  }, [api, config.display.readOnly, markCorrectEverywhere, store]);
 
   // -- assignment adoption (legacy loadAssignmentData_, blockpy.js:491) ------
   const adoptAssignmentData = useCallback(
@@ -504,6 +510,120 @@ export function App({ config, extras, registerActions }: AppProps) {
     [paths.pyodideIndexURL],
   );
 
+  // -- reading slot (spec §11.2, M2.3) -----------------------------------------
+  // The reader keeps its OWN loaded pair (legacy loadReading posts
+  // loadAssignment without adopting into the editor model) — the editor's
+  // `active` assignment is untouched while a reading is displayed.
+  const renderReading = useMemo(() => {
+    if (!api) return undefined;
+    // Reading events attach to the READING's ids (§12; the legacy reader
+    // builds its logEvent payload from its own pair, assignment_interface.ts
+    // :266-284). One reading mounts at a time, so a shared slot suffices.
+    const readingContext = { assignmentId: null as number | null, submissionId: null as number | null };
+    const loadReading = async (id: number): Promise<ReaderLoadResult | null> => {
+      const response = await api.loadAssignment(id);
+      if (!response.success || !response.assignment) return null;
+      readingContext.assignmentId = response.assignment.id ?? id;
+      readingContext.submissionId = response.submission?.id ?? null;
+      return {
+        assignment: {
+          id: response.assignment.id ?? id,
+          name: response.assignment.name,
+          url: response.assignment.url,
+          instructions: response.assignment.instructions,
+          settings: response.assignment.settings,
+        },
+        submission: response.submission
+          ? {
+              id: response.submission.id,
+              correct: response.submission.correct,
+              dateStarted: (response.submission.raw['date_started'] as string | null) ?? null,
+              timeLimit: (response.submission.raw['time_limit'] as string | null) ?? null,
+            }
+          : null,
+      };
+    };
+    // Legacy $URL_ROOT drives the popout editUrl (assignment.ts:103-107);
+    // absent (app-owned pages without the global) the popout is hidden.
+    const urlRoot = (window as unknown as Record<string, unknown>)['$URL_ROOT'];
+    return (readingId: number) => (
+      <Reader
+        assignmentId={readingId}
+        loadAssignment={loadReading}
+        markRead={async (assignmentId, submissionId) => {
+          // reader.ts:384-398 — updateSubmission {status: 1, correct: true}
+          // with the READING's ids overriding the base payload.
+          const response = await api.updateSubmission({
+            assignment_id: assignmentId,
+            submission_id: submissionId,
+            status: 1,
+            correct: true,
+          });
+          const message = response['message'];
+          return {
+            success: response.success === true,
+            correct: response['correct'] === true,
+            submissionStatus: response['submission_status'] as string | undefined,
+            message:
+              typeof message === 'object' && message !== null
+                ? String((message as Record<string, unknown>)['message'] ?? '')
+                : typeof message === 'string'
+                  ? message
+                  : undefined,
+          };
+        }}
+        markCorrect={markCorrectEverywhere}
+        logEvent={(eventType, category, label, message, filePath) => {
+          try {
+            void api
+              .logEvent(eventType, category, label, message, filePath, false, {
+                assignment_id: readingContext.assignmentId,
+                submission_id: readingContext.submissionId,
+              })
+              .catch(() => undefined);
+          } catch {
+            // clientMayEmit refused the type — never break the reader.
+          }
+        }}
+        downloadUrl={(assignmentId, filename) =>
+          // Legacy leaves the filename unencoded (plugins.ts:272).
+          `${config.urls.downloadFile}?placement=assignment&directory=${assignmentId}&filename=${filename}`
+        }
+        {...(typeof urlRoot === 'string'
+          ? {
+              editUrl: (a: { id: number; url: string }) =>
+                urlRoot + '/assignments/reading/' + (a.url ? a.url : a.id) + '?',
+            }
+          : {})}
+        runController={runController}
+        blocklyMediaPath={paths.blocklyMedia}
+        isInstructor={() => config.display.instructor}
+        {...(api.isEndpointConnected('startAssignment')
+          ? {
+              startAssignment: async (assignmentId: number, dateStarted: string) => ({
+                success:
+                  (await api.startAssignment(assignmentId, dateStarted)).success === true,
+              }),
+            }
+          : {})}
+        onTimeLimitInfo={(info) =>
+          navStoreRef.current?.setTimeLimit({
+            timeLimit: info.timeLimit,
+            studentTimeLimit: info.studentTimeLimit,
+            dateStarted: info.dateStarted,
+          })
+        }
+      />
+    );
+  }, [
+    api,
+    markCorrectEverywhere,
+    config.urls.downloadFile,
+    config.display.instructor,
+    runController,
+    paths.blocklyMedia,
+  ]);
+
   return (
     <main>
       <p style={{ fontSize: 'smaller' }}>
@@ -542,6 +662,7 @@ export function App({ config, extras, registerActions }: AppProps) {
         typeIndex={assignment.typeIndex}
         embed={display.embed}
         loadEditorAssignment={loadAssignment}
+        renderAssignment={renderReading ? { reading: renderReading } : {}}
         onReady={(dispatch) => {
           dispatchRef.current = async (assignmentId: number) => {
             // Keep the selectors honest when the dispatch is host-driven

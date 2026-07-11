@@ -173,3 +173,23 @@ Replicate decisions (D4, D6) produce no entries — they are legacy parity.
   are now covered instead of silently untimed.
 - **Wire impact:** timed blockpy assignments now emit the `timer_*` events
   the reader/quiz paths already emitted; no new payload shapes.
+
+## LD-13 — Reading content rendered with `marked`, not markdown-it (Milestone 2.3)
+
+- **Legacy:** two markdown pipelines (A6): the client instructions pane uses
+  EasyMDE's bundled `marked` (breaks forced ON, `target="_blank"` injection),
+  while reader/quiz/explain content uses `markdown-it` (`html: true`, breaks
+  off, in-render hljs `highlight` callback, the `replace-link` download_file
+  rewrite, the runnable-fence part-id scheme).
+- **Studio:** one library (`marked`) for both, with the reader pipeline
+  (`reader/markdown.ts`) configured to replicate markdown-it's observable
+  behaviors: `breaks: false`, no `target="_blank"` injection, no
+  sanitization (D4-A), the exact fence scheme (python+part-id → runnable
+  structure, ts/r → kettle structure, known langs → hljs pre, unknown →
+  escaped `pre.hljs`), and the verbatim `startsWith("http")` link/image
+  rewrite predicate.
+- **Known deltas** (A6 open question 3): marked's GFM autolinking turns bare
+  URLs into links where markdown-it (`linkify: false`) leaves them as text;
+  header-id generation and rare typographic details may differ between the
+  libraries. No course content is known to depend on either.
+- **Wire impact:** none (client-side rendering only).

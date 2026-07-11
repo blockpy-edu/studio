@@ -52,6 +52,61 @@ const DEV_ASSIGNMENT = {
   },
 };
 
+/**
+ * The harness group's reading (id 103): markdown body with a runnable
+ * python fence (part id → Run button → minified editor), a plain fence,
+ * a relative image (download_file rewrite), and reader settings.
+ */
+const DEV_READING = {
+  success: true,
+  assignment: {
+    id: 103,
+    name: 'Reading: Variables',
+    url: 'reading_variables',
+    type: 'reading',
+    version: 1,
+    instructions: [
+      '# Variables',
+      '',
+      'A **variable** holds a value.',
+      '',
+      '```python part1',
+      'age = 5',
+      'print(age)',
+      '```',
+      '',
+      '```python',
+      'reference_only = True',
+      '```',
+      '',
+      '![diagram](variables.png)',
+      '',
+      '[dataset](data.csv)',
+    ].join('\n'),
+    starting_code: '',
+    on_run: '',
+    on_change: null,
+    on_eval: null,
+    extra_instructor_files: '',
+    extra_starting_files: '',
+    settings: JSON.stringify({ header: 'Chapter 1', summary: 'Variables hold values.' }),
+    hidden: false,
+    reviewed: false,
+    public: true,
+    points: 1,
+  },
+  submission: {
+    id: 5003,
+    code: '',
+    extra_files: '',
+    version: 1,
+    correct: false,
+    score: 0,
+    submission_status: 'Started',
+    grading_status: 'NotReady',
+  },
+};
+
 const devHistory = () => {
   const hourAgo = Date.now() - 3_600_000;
   return {
@@ -101,16 +156,23 @@ function devApi(): Plugin {
       ],
     },
   };
-  const routes: Record<string, () => unknown> = {
-    '/api/load_assignment': () => DEV_ASSIGNMENT,
+  const routes: Record<string, (params: URLSearchParams) => unknown> = {
+    '/api/load_assignment': (params) =>
+      params.get('assignment_id') === '103' ? DEV_READING : DEV_ASSIGNMENT,
     '/api/load_history': devHistory,
     '/api/save_file': () => ({ success: true }),
     '/api/log_event': () => ({ success: true }),
-    '/api/update_submission': () => ({ success: true }),
+    // markRead echoes correct/submission_status (reader.ts:399-413).
+    '/api/update_submission': (params) => ({
+      success: true,
+      correct: params.get('correct') === 'true',
+      submission_status: 'Completed',
+    }),
     '/api/update_submission_status': () => ({ success: true }),
     '/api/list_files': () => uploaded,
     '/api/upload_file': () => ({ success: true }),
     '/api/rename_file': () => ({ success: true }),
+    '/api/start_assignment': () => ({ success: true }),
     // Clock "activity" mode total (spec §9.4): 25 minutes of prior sessions.
     '/api/estimate_group_duration': () => ({ success: true, duration: 1500 }),
   };
@@ -128,8 +190,19 @@ function devApi(): Plugin {
         }
         const route = routes[path];
         if (!route) return next();
-        res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify(route()));
+        const chunks: Buffer[] = [];
+        req.on('data', (chunk: Buffer) => chunks.push(chunk));
+        req.on('end', () => {
+          const body = Buffer.concat(chunks).toString('utf8');
+          let params: URLSearchParams;
+          try {
+            params = new URLSearchParams(body);
+          } catch {
+            params = new URLSearchParams();
+          }
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(route(params)));
+        });
       });
     },
   };

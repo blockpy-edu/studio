@@ -78,6 +78,13 @@ export interface AssignmentHostProps {
   loadEditorAssignment: (assignmentId: number) => Promise<void>;
   /** Receives the dispatch function once mounted (boot glue, bridge). */
   onReady?: (dispatch: (assignmentId: number) => Promise<void>) => void;
+  /**
+   * Per-type renderers (M2.3+ packages plug in here); a type without one
+   * keeps its placeholder body. Keyed remount semantics are the host's.
+   */
+  renderAssignment?: Partial<
+    Record<Exclude<AssignmentType, 'blockpy'>, (assignmentId: number) => ReactNode>
+  >;
   /** The coding-editor surface — stays mounted, hidden for other types. */
   children: ReactNode;
 }
@@ -168,7 +175,7 @@ export function AssignmentHost(props: AssignmentHostProps) {
           key={`${activeType}-${activeId}`}
           className={`blockpy-host-type blockpy-host-${activeType}`}
         >
-          {typeBody(activeType, activeId)}
+          {props.renderAssignment?.[activeType]?.(activeId) ?? typeBody(activeType, activeId)}
         </div>
       )}
     </>

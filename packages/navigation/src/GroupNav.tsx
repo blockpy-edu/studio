@@ -34,7 +34,9 @@ export function GroupNav({ store }: GroupNavProps) {
   const atFirst = currentId === store.firstId;
   const atLast = currentId === store.lastId;
   const current = entries.find((entry) => entry.id === currentId);
-  const nextButtonClass = `btn ${nextSuccess ? 'btn-success' : 'btn-outline-secondary'} btn-sm assignment-selector-next`;
+  // markCorrect swaps btn-outline-secondary for btn-success (A7 §2) — the
+  // two are mutually exclusive, matching the legacy removeClass/addClass.
+  const nextButtonClass = `btn ${nextSuccess ? 'btn-success' : 'btn-outline-secondary'} mr-2 btn-sm assignment-selector-btn assignment-selector-next`;
 
   return (
     <div className="assignment-selector-div">
@@ -91,7 +93,7 @@ export function GroupNav({ store }: GroupNavProps) {
             </span>
             <button
               type="button"
-              className={`btn btn-outline-secondary mr-2 btn-sm assignment-selector-btn assignment-selector-next ${nextButtonClass}`}
+              className={nextButtonClass}
               disabled={atLast}
               onClick={() => store.next()}
             >
