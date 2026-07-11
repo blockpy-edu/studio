@@ -79,6 +79,61 @@ test('quick menu, footer, and highlighted instructions render per A8', async ({ 
   ).toBeVisible();
 });
 
+test('Add New menu creates and opens files (instructor view)', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.blocklySvg').first().waitFor();
+  // Students (hide_files defaults true) get no Add New dropdown.
+  await expect(page.locator('.blockpy-files .dropdown')).toHaveCount(0);
+  await page.locator('#blockpy-as-instructor').check();
+  await page.getByRole('button', { name: 'Add New' }).click();
+  // Create an instructor file through the dialog with the & namespace.
+  await page.getByRole('link', { name: 'Instructor File' }).click();
+  await page
+    .locator('.blockpy-instructor-file-dialog-filename')
+    .fill('data.csv');
+  await expect(
+    page.locator('.blockpy-instructor-file-dialog-filetype'),
+  ).toHaveText('csv');
+  await page
+    .locator('.blockpy-instructor-file-dialog-namespace')
+    .selectOption('&');
+  await page.getByRole('button', { name: 'Create' }).click();
+  // The new file opened as the active tab (read-only & space, text mode).
+  await expect(page.locator('.nav-link.active')).toHaveText('&data.csv');
+  await expect(page.locator('.blockpy-mode-set-blocks')).toHaveCount(0);
+  // On Change now exists, so it left the menu and joined the tab strip.
+  await page.getByRole('button', { name: 'Add New' }).click();
+  await page.getByRole('link', { name: 'On Change' }).click();
+  await expect(page.locator('.nav-link.active')).toHaveText('On Change');
+  await page.getByRole('button', { name: 'Add New' }).click();
+  await expect(page.getByRole('link', { name: 'On Change' })).toHaveCount(0);
+});
+
+test('History mode: toolbar + merge diff + Use adopts the old version', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.blocklySvg').first().waitFor();
+  const historyButton = page.getByRole('button', { name: 'History' });
+  await historyButton.click();
+  // History toolbar (legacy HISTORY_TOOLBAR_HTML) + the CM6 merge diff
+  // replace the dual editor; the most recent edit is selected.
+  await expect(page.locator('.blockpy-history-toolbar')).toBeVisible();
+  await expect(page.locator('.cm-mergeView')).toBeVisible();
+  await expect(page.locator('.blockpy-python-blockmirror')).toHaveCount(0);
+  await expect(historyButton).toHaveClass(/active/);
+  // Step back to the middle version (a = 0 / b = a + 1 / print(a)) — the
+  // diff's left side shows the historical code.
+  await page.getByRole('button', { name: 'Previous' }).click();
+  await expect(page.locator('.cm-mergeView')).toContainText('b = a + 1');
+  // Use adopts it: history mode exits, the dual editor returns with it.
+  await page.getByRole('button', { name: 'Use' }).click();
+  await expect(page.locator('.blockpy-history-toolbar')).toHaveCount(0);
+  await expect(
+    page.locator('.blockpy-python-blockmirror .cm-content').first(),
+  ).toContainText('b = a + 1');
+  // Blocks regenerated from the adopted version too.
+  await expect(page.locator('.blocklySvg').first()).toBeVisible();
+});
+
 test('Run boots the engine lazily; system messages go to status + dev console', async ({ page }) => {
   await page.goto('/');
   await page.locator('button.blockpy-run').click();

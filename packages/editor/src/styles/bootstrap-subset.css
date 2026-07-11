@@ -876,3 +876,26 @@ textarea.form-control {
     border: 0;
     cursor: pointer;
 }
+
+/* --------------------------------------------------------------------------
+   Inline form (.form-inline) — used by the history toolbar
+   (history.js HISTORY_TOOLBAR_HTML). Values verbatim from Bootstrap v4.6.
+   -------------------------------------------------------------------------- */
+
+.form-inline {
+    display: flex;
+    flex-flow: row wrap;
+    align-items: center;
+}
+
+@media (min-width: 576px) {
+    .form-inline .form-control {
+        display: inline-block;
+        width: auto;
+        vertical-align: middle;
+    }
+
+    .form-inline .custom-select {
+        width: auto;
+    }
+}

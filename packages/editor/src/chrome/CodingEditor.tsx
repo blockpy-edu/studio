@@ -14,9 +14,16 @@ import type { DualEditor } from '../dual/dual-editor';
 import { TOOLBOXES, type ToolboxSpec } from '../dual/toolboxes';
 import { Console } from './Console';
 import { DevConsole } from './DevConsole';
+import { Dialog } from './Dialog';
 import { Feedback } from './Feedback';
 import { FileTabs } from './FileTabs';
 import { Footer, type FooterProps } from './Footer';
+import {
+  editEvents,
+  HistoryToolbar,
+  type HistoryEntry,
+} from './History';
+import { HistoryDiffView } from '../components/HistoryDiffView';
 import { Instructions } from './Instructions';
 import { PythonToolbar } from './PythonToolbar';
 import { QuickMenu, type QuickMenuProps } from './QuickMenu';
@@ -116,6 +123,15 @@ export interface CodingEditorProps {
   instructor?: boolean;
   /** Legacy `hide_evaluate` setting: never offer the console Evaluate. */
   hideEvaluate?: boolean;
+  /** Legacy `hide_files` setting (A4: defaults TRUE) — gates Add New. */
+  hideFiles?: boolean;
+  /**
+   * Fetch the submission's event log (legacy `loadHistory` endpoint). The
+   * History button is enabled only when provided (`isHistoryAvailable`).
+   */
+  loadHistory?: () => Promise<HistoryEntry[]>;
+  /** `assignment.hidden` — filters X-Submission.LMS rows (history.js). */
+  assignmentHidden?: boolean;
   onCodeChange?: (code: string) => void;
   /** Quick-menu wiring (Row 1 right column); `onRun` is supplied here. */
   quickMenu?: Omit<QuickMenuProps, 'onRun'>;
@@ -139,6 +155,11 @@ export function CodingEditor(props: CodingEditorProps) {
   const pythonMode = useEditorChromeStore((state) => state.pythonMode);
   const traceVisible = useEditorChromeStore((state) => state.traceVisible);
   const activeConsole = useEditorChromeStore((state) => state.activeConsole);
+  const historyMode = useEditorChromeStore((state) => state.historyMode);
+  // History mode state: the loaded event log and the selected edit event.
+  const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+  const [historyError, setHistoryError] = useState(false);
 
   // Leaving instructor view forfeits the dev console slot (and keeps the
   // unseen counters coherent for the next visit).
@@ -160,8 +181,11 @@ export function CodingEditor(props: CodingEditorProps) {
       if (vfs) {
         setCode(vfs.read(legacyName) ?? '');
       }
+      // History versions are per-file (legacy isEditEvent matches
+      // display.filename()); switching files leaves history mode.
+      store.getState().setHistoryMode(false);
     },
-    [vfs],
+    [vfs, store],
   );
 
   const handleCodeChange = useCallback(
@@ -310,6 +334,51 @@ export function CodingEditor(props: CodingEditorProps) {
     store.getState().setRunState('idle');
   }, [props.runController, store]);
 
+  // Legacy toggleHistoryMode (blockpy.js:1098-1104): off is immediate; on
+  // fetches the log first and only then flips the mode (failure = dialog).
+  const handleToggleHistory = useCallback(() => {
+    const loadHistory = props.loadHistory;
+    if (!loadHistory) return;
+    if (store.getState().historyMode) {
+      store.getState().setHistoryMode(false);
+      return;
+    }
+    void loadHistory()
+      .then((entries) => {
+        setHistoryEntries(entries);
+        // Default selection: the most recent edit event (history.js:74).
+        const edits = editEvents(entries, activeFile, props.assignmentHidden);
+        setHistoryIndex(Math.max(0, edits.length - 1));
+        store.getState().setHistoryMode(true);
+      })
+      .catch(() => setHistoryError(true));
+  }, [props.loadHistory, props.assignmentHidden, activeFile, store]);
+
+  // Legacy `use` (history.js:107-114): adopt the selected version, leave
+  // history mode.
+  const handleUseHistory = useCallback(() => {
+    const edits = editEvents(historyEntries, activeFile, props.assignmentHidden);
+    const selected = edits[historyIndex];
+    if (!selected) return;
+    store.getState().setHistoryMode(false);
+    setCode(selected.message);
+    if (vfs) {
+      vfs.write(activeFile, selected.message);
+    }
+    if (activeFile === 'answer.py') {
+      store.getState().setDirtySubmission(true);
+      props.onCodeChange?.(selected.message);
+    }
+  }, [
+    historyEntries,
+    historyIndex,
+    activeFile,
+    props.assignmentHidden,
+    props.onCodeChange,
+    vfs,
+    store,
+  ]);
+
   const handleReset = useCallback(() => {
     // Reset restores answer.py to the starting code (`^starting_code.py`
     // when a VFS is attached — reset-to-`^` semantics, §7.4).
@@ -368,6 +437,10 @@ export function CodingEditor(props: CodingEditorProps) {
             role={role}
             activeFile={activeFile}
             onSelect={handleSelectFile}
+            // addIsVisible = instructor || !hideFiles (blockpy.js:916-918;
+            // hide_files defaults TRUE per A4 §5).
+            addVisible={(props.instructor ?? false) || !(props.hideFiles ?? true)}
+            instructor={props.instructor ?? false}
           />
         </div>
       )}
@@ -378,23 +451,55 @@ export function CodingEditor(props: CodingEditorProps) {
             onStop={handleStop}
             onReset={handleReset}
             enableBlocks={(props.enableBlocks ?? true) && isAnswerFile}
+            onHistory={props.loadHistory ? handleToggleHistory : undefined}
           />
-          <div className="blockpy-python-blockmirror">
-            <DualEditorView
-              mode={isAnswerFile ? pythonMode : 'text'}
-              code={code}
-              onCodeChange={handleCodeChange}
-              readOnly={fileReadOnly}
-              blocklyMediaPath={props.blocklyMediaPath}
-              toolbox={toolboxSpec}
-              height={400}
-              editorRef={(editor) => {
-                editorRef.current = editor;
-              }}
+          {historyMode && (
+            <HistoryToolbar
+              entries={historyEntries}
+              filename={activeFile}
+              index={historyIndex}
+              onSelect={setHistoryIndex}
+              onUse={handleUseHistory}
+              assignmentHidden={props.assignmentHidden}
             />
-          </div>
+          )}
+          {historyMode ? (
+            <HistoryDiffView
+              original={
+                editEvents(historyEntries, activeFile, props.assignmentHidden)[
+                  historyIndex
+                ]?.message ?? ''
+              }
+              current={code}
+              height={400}
+            />
+          ) : (
+            <div className="blockpy-python-blockmirror">
+              <DualEditorView
+                mode={isAnswerFile ? pythonMode : 'text'}
+                code={code}
+                onCodeChange={handleCodeChange}
+                readOnly={fileReadOnly}
+                blocklyMediaPath={props.blocklyMediaPath}
+                toolbox={toolboxSpec}
+                height={400}
+                editorRef={(editor) => {
+                  editorRef.current = editor;
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
+      <Dialog
+        title="Error Loading History"
+        visible={historyError}
+        onClose={() => setHistoryError(false)}
+      >
+        BlockPy encountered an error while loading your history.
+        <br />
+        Please reload the page and try again.
+      </Dialog>
       <div className="row">
         <Footer instructor={props.instructor} {...props.footer} />
       </div>

@@ -106,6 +106,7 @@ export interface EditorChromeState {
 
   setPythonMode(mode: DualEditorMode): void;
   toggleHistoryMode(): void;
+  setHistoryMode(on: boolean): void;
   setRunState(state: RunState): void;
   appendConsole(entry: ConsoleEntry): void;
   clearConsole(): void;
@@ -177,6 +178,7 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   setPythonMode: (mode) => set({ pythonMode: mode }),
   toggleHistoryMode: () =>
     set((state) => ({ historyMode: !state.historyMode })),
+  setHistoryMode: (on) => set({ historyMode: on }),
   setRunState: (runState) => set({ runState }),
   appendConsole: (entry) =>
     set((state) => ({

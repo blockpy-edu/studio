@@ -10,6 +10,7 @@
  */
 import { useEffect, useState } from 'react';
 import { parse, type Role, type Vfs } from '@blockpy/vfs';
+import { AddNewMenu } from './AddNewMenu';
 
 /** Legacy instructor tab order (files.js): [legacy name, label, hideWhenEmpty]. */
 const INSTRUCTOR_TABS: [string, string, boolean][] = [
@@ -47,7 +48,10 @@ export function computeTabs(vfs: Vfs, role: Role): FileTab[] {
     for (const [legacyName, label, hideWhenEmpty] of INSTRUCTOR_TABS) {
       claimed.add(legacyName);
       const entry = byName.get(legacyName);
-      if (hideWhenEmpty && (!entry || entry.contents === '')) continue;
+      // Legacy hides these while unconfigured (e.g. onChange === null); an
+      // EXISTING-but-empty file is configured (the post-"Add New" state,
+      // blockpy.js:965-967) and stays visible.
+      if (hideWhenEmpty && !entry) continue;
       tabs.push({
         legacyName,
         label,
@@ -75,9 +79,22 @@ export interface FileTabsProps {
   role: Role;
   activeFile: string;
   onSelect(legacyName: string): void;
+  /**
+   * Show the "Add New" dropdown (legacy `ui.files.addIsVisible` =
+   * instructor || !hideFiles). `instructor` also picks the menu variant.
+   */
+  addVisible?: boolean;
+  instructor?: boolean;
 }
 
-export function FileTabs({ vfs, role, activeFile, onSelect }: FileTabsProps) {
+export function FileTabs({
+  vfs,
+  role,
+  activeFile,
+  onSelect,
+  addVisible = false,
+  instructor = false,
+}: FileTabsProps) {
   const [, setVersion] = useState(0);
   useEffect(
     () => vfs.onChange(() => setVersion((v) => v + 1)),
@@ -115,6 +132,9 @@ export function FileTabs({ vfs, role, activeFile, onSelect }: FileTabsProps) {
             </a>
           </li>
         ))}
+        {addVisible && (
+          <AddNewMenu vfs={vfs} instructor={instructor} onAdd={onSelect} />
+        )}
       </ul>
     </div>
   );

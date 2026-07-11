@@ -15,6 +15,11 @@ export interface PythonToolbarProps {
   onReset(): void;
   /** Legacy `assignment.settings.enableBlocks` — hides the view toggle. */
   enableBlocks?: boolean;
+  /**
+   * Toggles history mode. Button enabled only when provided (legacy
+   * `isHistoryAvailable` = loadHistory endpoint connected).
+   */
+  onHistory?(): void;
 }
 
 const MODE_TABS: { name: string; iconName: IconName; mode: DualEditorMode }[] =
@@ -29,10 +34,12 @@ export function PythonToolbar({
   onStop,
   onReset,
   enableBlocks = true,
+  onHistory,
 }: PythonToolbarProps) {
   const runState = useEditorChromeStore((state) => state.runState);
   const pythonMode = useEditorChromeStore((state) => state.pythonMode);
   const setPythonMode = useEditorChromeStore((state) => state.setPythonMode);
+  const historyMode = useEditorChromeStore((state) => state.historyMode);
   const running = runState === 'running';
 
   return (
@@ -98,8 +105,16 @@ export function PythonToolbar({
           <Icon name="download" />
         </button>
       </div>
-      <div className="btn-group mr-2" role="group">
-        <button type="button" className="btn btn-outline-secondary" disabled>
+      <div className="btn-group mr-2" role="group" aria-label="History Group">
+        <button
+          type="button"
+          className={
+            'btn btn-outline-secondary' + (historyMode ? ' active' : '')
+          }
+          aria-pressed={historyMode}
+          disabled={!onHistory}
+          onClick={onHistory}
+        >
           <Icon name="history" /> History
         </button>
       </div>

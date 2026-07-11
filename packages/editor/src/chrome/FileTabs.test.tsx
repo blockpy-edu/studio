@@ -12,7 +12,8 @@ function seededVfs(): Vfs {
   vfs.write('^starting_code.py', 'a = 0');
   vfs.write('!instructions.md', 'Do it.');
   vfs.write('!on_run.py', 'from pedal import *');
-  vfs.write('!on_change.py', ''); // empty → hidden even for instructors
+  // !on_change.py deliberately ABSENT → its starred tab hides (legacy
+  // onChange === null); an existing-but-empty file would be visible.
   vfs.write('&sample_data.txt', 'x,1');
   return vfs;
 }

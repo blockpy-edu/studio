@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { CodingEditor } from '@blockpy/editor';
+import { CodingEditor, type HistoryEntry } from '@blockpy/editor';
 import { Vfs } from '@blockpy/vfs';
 import { createEngineRunController } from './engine-adapter';
 import '@blockpy/editor/styles/tokens.css';
@@ -30,6 +30,45 @@ export function App({ config }: { config: BootConfig }) {
     files.write('&sample_data.txt', 'temperature,42\nhumidity,13\n');
     return files;
   }, [instructions]);
+  // Canned event log standing in for the loadHistory endpoint until the API
+  // client joins the app (M1.6) — lets the History mode be exercised in the
+  // harness.
+  const loadHistory = useMemo(() => {
+    const hourAgo = Date.now() - 3_600_000;
+    const entries: HistoryEntry[] = [
+      {
+        event_type: 'Session.Start',
+        file_path: '',
+        client_timestamp: String(hourAgo),
+        message: '',
+      },
+      {
+        event_type: 'File.Create',
+        file_path: 'answer.py',
+        client_timestamp: String(hourAgo + 1_000),
+        message: 'a = 0\nprint(a)',
+      },
+      {
+        event_type: 'File.Edit',
+        file_path: 'answer.py',
+        client_timestamp: String(hourAgo + 60_000),
+        message: 'a = 0\nb = a + 1\nprint(a)',
+      },
+      {
+        event_type: 'Run.Program',
+        file_path: 'answer.py',
+        client_timestamp: String(hourAgo + 61_000),
+        message: '',
+      },
+      {
+        event_type: 'File.Edit',
+        file_path: 'answer.py',
+        client_timestamp: String(hourAgo + 120_000),
+        message: 'a = 0\nprint(a)',
+      },
+    ];
+    return () => Promise.resolve(entries);
+  }, []);
   const runController = useMemo(
     () =>
       createEngineRunController({
@@ -65,6 +104,7 @@ export function App({ config }: { config: BootConfig }) {
         readOnly={display.readOnly}
         blocklyMediaPath={paths.blocklyMedia}
         runController={runController}
+        loadHistory={loadHistory}
         quickMenu={{
           grader: true,
           instructor: instructorView,

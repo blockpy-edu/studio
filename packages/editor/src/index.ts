@@ -37,6 +37,7 @@ export {
   type RunOutcome,
 } from './chrome/CodingEditor';
 export { FileTabs, computeTabs, type FileTab } from './chrome/FileTabs';
+export { AddNewMenu, type AddNewMenuProps } from './chrome/AddNewMenu';
 export { TraceExplorer, typeFromRepr } from './chrome/TraceExplorer';
 export { Console } from './chrome/Console';
 export { DevConsole } from './chrome/DevConsole';
@@ -44,6 +45,16 @@ export { Feedback } from './chrome/Feedback';
 export { Instructions, renderInstructions } from './chrome/Instructions';
 export { PythonToolbar } from './chrome/PythonToolbar';
 export { Footer, type FooterIdentity, type FooterProps } from './chrome/Footer';
+export {
+  HistoryToolbar,
+  editEvents,
+  filterHistory,
+  isEditEvent,
+  prettyPrintDateTime,
+  type HistoryEntry,
+  type HistoryToolbarProps,
+} from './chrome/History';
+export { HistoryDiffView, type HistoryDiffViewProps } from './components/HistoryDiffView';
 export {
   QuickMenu,
   formatClockTime,

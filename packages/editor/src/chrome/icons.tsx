@@ -26,6 +26,9 @@
  *   fa-images        → Images         (identical glyph)
  *   fa-link          → Link           (identical glyph)
  *   fa-bug           → Bug            (identical glyph)
+ *   fa-backward      → Rewind         (identical glyph, history previous)
+ *   fa-forward       → FastForward    (identical glyph, history next)
+ *   fa-file-import   → FileInput      (identical semantics, history "Use")
  *
  * Size is fixed at 14 with the legacy 12px optical weight preserved via
  * 1.75 stroke — A8 §3.2 calls the 12px sizing layout-relevant.
@@ -43,10 +46,13 @@ import {
   EllipsisVertical,
   Expand,
   Eye,
+  FastForward,
+  FileInput,
   History,
   Images,
   LayoutGrid,
   Link,
+  Rewind,
   MessageSquareOff,
   Play,
   RefreshCw,
@@ -89,6 +95,10 @@ const ICONS = {
   images: Images,
   share: Link,
   bug: Bug,
+  // History toolbar (history.js HISTORY_TOOLBAR_HTML).
+  historyPrev: Rewind,
+  historyNext: FastForward,
+  historyUse: FileInput,
 } satisfies Record<string, ComponentType<LucideProps>>;
 
 export type IconName = keyof typeof ICONS;
