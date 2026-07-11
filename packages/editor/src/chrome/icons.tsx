@@ -20,6 +20,12 @@
  *   fa-ellipsis-v    → EllipsisVertical (identical glyph)
  *   fa-eye           → Eye            (identical glyph)
  *   fa-comment-slash → MessageSquareOff (identical semantics)
+ *   fa-expand-arrows-alt → Expand     (arrows-out fullscreen glyph)
+ *   fa-compress-arrows-alt → Shrink   (arrows-in exit-fullscreen glyph)
+ *   fa-list-alt      → ClipboardList  (boxed list = queued inputs)
+ *   fa-images        → Images         (identical glyph)
+ *   fa-link          → Link           (identical glyph)
+ *   fa-bug           → Bug            (identical glyph)
  *
  * Size is fixed at 14 with the legacy 12px optical weight preserved via
  * 1.75 stroke — A8 §3.2 calls the 12px sizing layout-relevant.
@@ -27,19 +33,25 @@
 import type { ComponentType } from 'react';
 import {
   AlignLeft,
+  Bug,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
   CloudDownload,
   Columns2,
   Download,
   EllipsisVertical,
+  Expand,
   Eye,
   History,
+  Images,
   LayoutGrid,
+  Link,
   MessageSquareOff,
   Play,
   RefreshCw,
   Save,
+  Shrink,
   SkipBack,
   SkipForward,
   Square,
@@ -70,6 +82,13 @@ const ICONS = {
   stepBack: ChevronLeft,
   stepForward: ChevronRight,
   stepLast: SkipForward,
+  // Quick menu (A8 §3.2 legacy inventory).
+  fullscreen: Expand,
+  fullscreenExit: Shrink,
+  inputs: ClipboardList,
+  images: Images,
+  share: Link,
+  bug: Bug,
 } satisfies Record<string, ComponentType<LucideProps>>;
 
 export type IconName = keyof typeof ICONS;

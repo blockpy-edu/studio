@@ -1,8 +1,12 @@
 /**
  * Feedback pane — Row 2 right (A8 §1/§4.5: category badge with the legacy
  * `label-*` classes, bold label, HTML message; aria-live like legacy).
+ * Message code blocks are highlighted on present (legacy feedback.js:218-220;
+ * dead-in-legacy, made real per LD-10).
  */
+import { useEffect, useRef } from 'react';
 import { categoryPresentation } from './categories';
+import { highlightCodeBlocks } from './highlight';
 import { Icon } from './icons';
 import { useEditorChromeStore } from './store';
 
@@ -15,6 +19,12 @@ export function Feedback({ size = 'col-md-6' }: FeedbackProps) {
   const setTraceVisible = useEditorChromeStore((state) => state.setTraceVisible);
   const hasTrace = useEditorChromeStore((state) => state.traceSteps.length > 0);
   const presentation = categoryPresentation(feedback.category);
+  const messageRef = useRef<HTMLDivElement>(null);
+
+  // Legacy highlights feedback code immediately (no debounce).
+  useEffect(() => {
+    if (messageRef.current) highlightCodeBlocks(messageRef.current);
+  }, [feedback.message]);
   return (
     <div
       className={`blockpy-feedback blockpy-panel ${size}`}
@@ -41,6 +51,7 @@ export function Feedback({ size = 'col-md-6' }: FeedbackProps) {
       </div>
       <strong className="blockpy-feedback-label">{feedback.label}</strong>
       <div
+        ref={messageRef}
         className="blockpy-feedback-message"
         // Legacy renders feedback HTML unsanitized (D4-A applies here too —
         // the message body comes from instructor Pedal scripts).

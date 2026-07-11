@@ -93,6 +93,9 @@ export function createEngineRunController(
             code,
             filename: 'answer.py',
             trace: runOptions?.trace ?? false,
+            // Queued inputs from the quick-menu dialog (compat-mode input
+            // strategy, M1.3.4: the UI collects stdin up front).
+            inputsPrefill: runOptions?.inputs,
             limits: { wallMs: options.wallMs ?? 5000 },
           },
           {
@@ -107,7 +110,13 @@ export function createEngineRunController(
         const trace = result.trace ?? [];
         if (result.success) {
           if (options.onRunScript) {
-            const graded = await gradeWithPedal(engine, code, options, handlers);
+            const graded = await gradeWithPedal(
+              engine,
+              code,
+              options,
+              handlers,
+              runOptions?.inputs,
+            );
             return { ...graded, trace };
           }
           return {
@@ -182,6 +191,7 @@ async function gradeWithPedal(
   studentCode: string,
   options: EngineAdapterOptions,
   handlers: RunHandlers,
+  inputs?: string[],
 ): Promise<RunOutcome> {
   if (!pedalReady) {
     handlers.stdout('Loading feedback engine…\n');
@@ -192,7 +202,8 @@ async function gradeWithPedal(
       phase: 'instructor.on_run',
       files: {},
       code: studentCode,
-      pedal: { onRun: options.onRunScript! },
+      // Same stdin script the student run consumed (Pedal queue_input).
+      pedal: { onRun: options.onRunScript!, inputs },
       // First grading job includes the wheel install; later ones are ~ms.
       limits: { wallMs: pedalReady ? 15_000 : 180_000 },
     },

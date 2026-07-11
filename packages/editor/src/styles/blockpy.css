@@ -835,3 +835,103 @@ body {
     stroke: var(--blockpy-neutral-400);
     transform: translate(-1px, -5px) scale(1.1, 1.5);
 }
+
+/* ==========================================================================
+   highlight.js default theme, scoped to .blockpy-content (LD-10 — legacy
+   intended hljs highlighting in instructions/feedback but never loaded the
+   library; studio bundles it, see chrome/highlight.ts). Values verbatim
+   from highlight.js styles/default.css (BSD-3).
+   ========================================================================== */
+
+.blockpy-content pre code.hljs {
+    display: block;
+    overflow-x: auto;
+    padding: 1em;
+}
+
+.blockpy-content code.hljs {
+    padding: 3px 5px;
+}
+
+.blockpy-content .hljs {
+    background: #f3f3f3;
+    color: #444;
+}
+
+.blockpy-content .hljs-comment {
+    color: #697070;
+}
+
+.blockpy-content .hljs-tag,
+.blockpy-content .hljs-punctuation {
+    color: #444a;
+}
+
+.blockpy-content .hljs-tag .hljs-name,
+.blockpy-content .hljs-tag .hljs-attr {
+    color: #444;
+}
+
+.blockpy-content .hljs-keyword,
+.blockpy-content .hljs-attribute,
+.blockpy-content .hljs-selector-tag,
+.blockpy-content .hljs-meta .hljs-keyword,
+.blockpy-content .hljs-doctag,
+.blockpy-content .hljs-name {
+    font-weight: bold;
+}
+
+.blockpy-content .hljs-type,
+.blockpy-content .hljs-string,
+.blockpy-content .hljs-number,
+.blockpy-content .hljs-selector-id,
+.blockpy-content .hljs-selector-class,
+.blockpy-content .hljs-quote,
+.blockpy-content .hljs-template-tag,
+.blockpy-content .hljs-deletion {
+    color: #880000;
+}
+
+.blockpy-content .hljs-title,
+.blockpy-content .hljs-section {
+    color: #880000;
+    font-weight: bold;
+}
+
+.blockpy-content .hljs-regexp,
+.blockpy-content .hljs-symbol,
+.blockpy-content .hljs-variable,
+.blockpy-content .hljs-template-variable,
+.blockpy-content .hljs-link,
+.blockpy-content .hljs-selector-attr,
+.blockpy-content .hljs-operator,
+.blockpy-content .hljs-selector-pseudo {
+    color: #ab5656;
+}
+
+.blockpy-content .hljs-literal {
+    color: #695;
+}
+
+.blockpy-content .hljs-built_in,
+.blockpy-content .hljs-bullet,
+.blockpy-content .hljs-code,
+.blockpy-content .hljs-addition {
+    color: #397300;
+}
+
+.blockpy-content .hljs-meta {
+    color: #1f7199;
+}
+
+.blockpy-content .hljs-meta .hljs-string {
+    color: #38a;
+}
+
+.blockpy-content .hljs-emphasis {
+    font-style: italic;
+}
+
+.blockpy-content .hljs-strong {
+    font-weight: bold;
+}

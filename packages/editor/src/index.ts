@@ -42,12 +42,27 @@ export { Console } from './chrome/Console';
 export { Feedback } from './chrome/Feedback';
 export { Instructions, renderInstructions } from './chrome/Instructions';
 export { PythonToolbar } from './chrome/PythonToolbar';
+export { Footer, type FooterIdentity, type FooterProps } from './chrome/Footer';
 export {
+  QuickMenu,
+  formatClockTime,
+  isSubmitted,
+  markSubmittedText,
+  type QuickMenuProps,
+  type SubmissionControls,
+} from './chrome/QuickMenu';
+export { Dialog, type DialogProps } from './chrome/Dialog';
+export { highlightCodeBlocks } from './chrome/highlight';
+export {
+  requestPasscode,
   useEditorChromeStore,
+  SERVER_ENDPOINTS,
   type ConsoleEntry,
   type EditorChromeState,
   type FeedbackState,
   type RunState,
+  type ServerEndpoint,
+  type ServerStatusState,
   type TraceStepView,
 } from './chrome/store';
 export { categoryPresentation } from './chrome/categories';

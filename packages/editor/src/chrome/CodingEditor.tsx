@@ -1,9 +1,8 @@
 /**
- * The coding-problem editor surface — assembles the A8 §1 rows that belong
- * to the editor: header/instructions (Row 1), console + feedback (Row 2),
- * and the Python toolbar + dual editor (Row 4), inside the parchment
- * `.blockpy-content` frame. File tabs (Row 3) and the footer (Row 5) land
- * with the VFS/file wiring.
+ * The coding-problem editor surface — assembles the A8 §1 rows: header/
+ * instructions + quick menu (Row 1), console + feedback (Row 2), file tabs
+ * (Row 3), the Python toolbar + dual editor (Row 4), and the status footer
+ * (Row 5), inside the parchment `.blockpy-content` frame.
  *
  * Execution is abstracted behind `RunController` so the chrome stays
  * engine-agnostic; the app supplies an `@blockpy/engine` adapter.
@@ -16,8 +15,10 @@ import { TOOLBOXES, type ToolboxSpec } from '../dual/toolboxes';
 import { Console } from './Console';
 import { Feedback } from './Feedback';
 import { FileTabs } from './FileTabs';
+import { Footer, type FooterProps } from './Footer';
 import { Instructions } from './Instructions';
 import { PythonToolbar } from './PythonToolbar';
+import { QuickMenu, type QuickMenuProps } from './QuickMenu';
 import { TraceExplorer } from './TraceExplorer';
 import {
   useEditorChromeStore,
@@ -56,6 +57,8 @@ export interface RunHandlers {
 export interface RunOptions {
   /** Collect the E3 trace during this run (powers the Trace explorer). */
   trace?: boolean;
+  /** Queued stdin lines replayed into the run (compat-mode input, M1.3.4). */
+  inputs?: string[];
 }
 
 export interface RunOutcome {
@@ -99,6 +102,14 @@ export interface CodingEditorProps {
   vfs?: Vfs;
   role?: Role;
   onCodeChange?: (code: string) => void;
+  /** Quick-menu wiring (Row 1 right column); `onRun` is supplied here. */
+  quickMenu?: Omit<QuickMenuProps, 'onRun'>;
+  /**
+   * Footer identity/callbacks (Row 5). The footer always renders — legacy
+   * hides it only under `small_layout`, which lands with the settings
+   * wiring.
+   */
+  footer?: FooterProps;
 }
 
 export function CodingEditor(props: CodingEditorProps) {
@@ -136,10 +147,12 @@ export function CodingEditor(props: CodingEditorProps) {
         vfs.write(activeFile, newCode);
       }
       if (activeFile === 'answer.py') {
+        // Any answer edit stales the last run's feedback (feedback.js:110).
+        store.getState().setDirtySubmission(true);
         props.onCodeChange?.(newCode);
       }
     },
-    [props.onCodeChange, vfs, activeFile, fileReadOnly],
+    [props.onCodeChange, vfs, activeFile, fileReadOnly, store],
   );
 
   // Live toolbox reload on settings change (legacy `reloadToolbox`).
@@ -177,7 +190,7 @@ export function CodingEditor(props: CodingEditorProps) {
           stdout: (text) => appendConsole({ kind: 'stdout', text }),
           stderr: (text) => appendConsole({ kind: 'stderr', text }),
         },
-        { trace: true },
+        { trace: true, inputs: store.getState().queuedInputs },
       );
       setRunState(outcome.error === null ? 'idle' : 'error');
       if (outcome.error !== null) {
@@ -186,7 +199,15 @@ export function CodingEditor(props: CodingEditorProps) {
       if (outcome.feedback) {
         setFeedback(outcome.feedback);
       }
-      store.getState().setTrace(outcome.trace ?? []);
+      const after = store.getState();
+      after.setTrace(outcome.trace ?? []);
+      // Run cycle end: feedback now matches the code (run.js:49) and queued
+      // inputs are consumed unless the reuse box is checked
+      // (configurations.js:176-181).
+      after.setDirtySubmission(false);
+      if (after.clearInputs) {
+        after.setQueuedInputs([]);
+      }
     } catch (error) {
       setRunState('error');
       appendConsole({ kind: 'stderr', text: String(error) });
@@ -257,7 +278,7 @@ export function CodingEditor(props: CodingEditorProps) {
           markdown={props.instructions ?? ''}
           assignmentName={props.assignmentName}
         />
-        <div className="col-md-3 blockpy-panel blockpy-quick-menu" role="menubar" />
+        <QuickMenu {...props.quickMenu} onRun={() => void handleRun()} />
       </div>
       <div className="row">
         <div className="col-md-12">
@@ -304,6 +325,9 @@ export function CodingEditor(props: CodingEditorProps) {
             />
           </div>
         </div>
+      </div>
+      <div className="row">
+        <Footer {...props.footer} />
       </div>
     </div>
   );

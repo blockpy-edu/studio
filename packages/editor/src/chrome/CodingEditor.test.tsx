@@ -36,6 +36,9 @@ describe('CodingEditor chrome', () => {
     expect(container.querySelector('.blockpy-python-toolbar')).not.toBeNull();
     expect(container.querySelector('.blockpy-python-blockmirror')).not.toBeNull();
     expect(container.querySelector('button.blockpy-run')).not.toBeNull();
+    // Row 1 right column and Row 5 (quick menu + status footer).
+    expect(container.querySelector('.blockpy-quick-menu')).not.toBeNull();
+    expect(container.querySelector('.blockpy-status .badge')).not.toBeNull();
     // The dual editor actually mounted (Blockly + CM6).
     expect(container.querySelector('.blocklySvg')).not.toBeNull();
     expect(container.querySelector('.cm-editor')).not.toBeNull();
@@ -115,6 +118,46 @@ describe('CodingEditor chrome', () => {
       <CodingEditor startingCode="a = 0" enableBlocks={false} />,
     );
     expect(container.querySelector('.blockpy-mode-set-blocks')).toBeNull();
+  });
+
+  it('replays queued inputs into the run and clears them after (clearInputs)', async () => {
+    const state = useEditorChromeStore.getState();
+    state.setQueuedInputs(['Ada', '42']);
+    state.setClearInputs(true);
+    const seenInputs: (string[] | undefined)[] = [];
+    const controller: RunController = {
+      async run(_code, _handlers, options) {
+        seenInputs.push(options?.inputs);
+        return { error: null };
+      },
+    };
+    render(<CodingEditor startingCode="a = 0" runController={controller} />);
+    await act(async () => {
+      screen.getByRole('button', { name: /Run/ }).click();
+    });
+    expect(seenInputs).toEqual([['Ada', '42']]);
+    // Consumed after the run cycle (configurations.js clearInput).
+    expect(useEditorChromeStore.getState().queuedInputs).toEqual([]);
+    // A clean run un-stales the submission (run.js:49).
+    expect(useEditorChromeStore.getState().dirtySubmission).toBe(false);
+  });
+
+  it('keeps queued inputs across runs when reuse is on (clearInputs=false)', async () => {
+    const state = useEditorChromeStore.getState();
+    state.setQueuedInputs(['keep me']);
+    state.setClearInputs(false);
+    const controller: RunController = {
+      async run() {
+        return { error: null };
+      },
+    };
+    render(<CodingEditor startingCode="a = 0" runController={controller} />);
+    await act(async () => {
+      screen.getByRole('button', { name: /Run/ }).click();
+    });
+    expect(useEditorChromeStore.getState().queuedInputs).toEqual(['keep me']);
+    useEditorChromeStore.getState().setQueuedInputs([]);
+    useEditorChromeStore.getState().setClearInputs(true);
   });
 });
 

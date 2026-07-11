@@ -18,6 +18,7 @@ Replicate decisions (D4, D6) produce no entries — they are legacy parity.
 | LD-3x | D3 note  | VFS/engine    | pending implementation |
 | LD-5  | D5-B     | Settings save | pending implementation |
 | LD-7  | D7-B     | Quizzer       | conditional            |
+| LD-10 | dead code | Editor chrome | implemented (M1.4)     |
 
 ---
 
@@ -122,3 +123,19 @@ Replicate decisions (D4, D6) produce no entries — they are legacy parity.
   Corpus #73 asserts otherwise and cannot pass in legacy either (same silent
   console.assert masking); Studio pins the legacy behavior as a documented
   known-delta in the §16.1.2 suite.
+
+## LD-10 — Instructions/feedback code highlighting actually renders (Milestone 1.4)
+
+- **Legacy:** `interface.js:38-47` (instructions, 400 ms debounce) and
+  `feedback.js:218-220` (feedback message) call
+  `window.hljs.highlightBlock(...)` over `pre code` blocks — but no editor
+  page template ever loads highlight.js, so `window.hljs` is undefined and
+  the calls throw silently. The intended highlighting never renders on the
+  editor page (only on server report pages that load hljs themselves).
+- **Studio:** bundles `highlight.js` (common languages) and runs the same
+  hooks — instructions highlighted 400 ms after render, feedback on present
+  — with the stock hljs default theme scoped under `.blockpy-content`
+  (`chrome/highlight.ts`; styles appended to `styles/blockpy.css`).
+- **Wire impact:** none (client-side rendering only). Visual delta: code
+  fences in instructions/feedback gain the gray background + token colors
+  legacy authors intended but never saw.

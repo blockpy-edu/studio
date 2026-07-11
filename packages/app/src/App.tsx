@@ -16,17 +16,17 @@ import type { BootConfig } from './boot-config';
 export function App({ config }: { config: BootConfig }) {
   const { user, assignment, display, paths } = config;
   const [, setCode] = useState('a = 0\nprint(a)');
+  const instructions =
+    'Print the value of `a`.\n\nUse the **Run** button to execute:\n\n' +
+    '```python\na = 0\nprint(a)\n```';
   const vfs = useMemo(() => {
     const files = new Vfs();
     files.write('answer.py', 'a = 0\nprint(a)');
     files.write('^starting_code.py', 'a = 0\nprint(a)');
-    files.write(
-      '!instructions.md',
-      'Print the value of `a`.\n\nUse the **Run** button to execute.',
-    );
+    files.write('!instructions.md', instructions);
     files.write('&sample_data.txt', 'temperature,42\nhumidity,13\n');
     return files;
-  }, []);
+  }, [instructions]);
   const runController = useMemo(
     () =>
       createEngineRunController({
@@ -54,15 +54,30 @@ export function App({ config }: { config: BootConfig }) {
       <h1 className="sr-only">BlockPy Studio</h1>
       <CodingEditor
         assignmentName="Dev Harness Problem"
-        instructions={
-          'Print the value of `a`.\n\nUse the **Run** button to execute.'
-        }
+        instructions={instructions}
         vfs={vfs}
         role={display.instructor ? 'instructor' : 'student'}
         onCodeChange={setCode}
         readOnly={display.readOnly}
         blocklyMediaPath={paths.blocklyMedia}
         runController={runController}
+        quickMenu={{
+          grader: display.instructor,
+          instructor: display.instructor,
+          hasClock: true,
+        }}
+        footer={{
+          instructor: display.instructor,
+          identity: {
+            userId: user.id ?? undefined,
+            userName: user.name,
+            userRole: user.role,
+            courseId: user.courseId ?? undefined,
+            groupId: assignment.assignmentGroupId ?? undefined,
+            assignmentId: assignment.currentAssignmentId ?? undefined,
+            editorVersion: '0.1.0',
+          },
+        }}
       />
     </main>
   );

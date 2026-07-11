@@ -50,6 +50,35 @@ test('view toggle + text edits sync to blocks', async ({ page }) => {
   await expect(page.locator('.blocklySvg').first()).toBeVisible();
 });
 
+test('quick menu, footer, and highlighted instructions render per A8', async ({ page }) => {
+  await page.goto('/');
+  // Quick menu (Row 1 right): fullscreen/inputs/images buttons + clock.
+  const menu = page.locator('.blockpy-quick-menu');
+  await expect(menu.locator('[title="Full Screen"]')).toBeVisible();
+  await expect(menu.locator('[title="Edit Inputs"]')).toBeVisible();
+  await expect(menu.locator('[title="Toggle Images"]')).toBeVisible();
+  await expect(menu.locator('.blockpy-menu-clock')).toHaveText(
+    /^\d{1,2}:\d{2}(am|pm)$/,
+  );
+  // Pink bug icon stays dead (display:none) — legacy parity.
+  await expect(menu.locator('.blockpy-student-error')).toBeHidden();
+  // Footer (Row 5): status badges default offline; identity line present.
+  const footer = page.locator('.blockpy-status');
+  await expect(footer.locator('.badge.server-status-offline')).toHaveCount(8);
+  await expect(footer).toContainText('Editor Version: 0.1.0');
+  // EDIT_INPUTS dialog round trip (queued inputs for compat-mode stdin).
+  await menu.locator('[title="Edit Inputs"]').click();
+  const dialog = page.locator('.blockpy-dialog');
+  await expect(dialog).toBeVisible();
+  await dialog.locator('textarea.blockpy-input-list').fill('Ada\n42');
+  await dialog.locator('.modal-okay').click();
+  await expect(dialog).toHaveCount(0);
+  // Instructions code fence highlighted by hljs (LD-10) after the debounce.
+  await expect(
+    page.locator('.blockpy-instructions pre code.hljs'),
+  ).toBeVisible();
+});
+
 test('Run boots the engine lazily and reports it in the console', async ({ page }) => {
   await page.goto('/');
   await page.locator('button.blockpy-run').click();
@@ -104,6 +133,18 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
     'Try printing the value of a.',
     { timeout: 60_000 },
   );
+  // Queued inputs (quick-menu dialog) replay into input() — the compat-mode
+  // stdin strategy (M1.3.4 → inputsPrefill).
+  await page.locator('[title="Edit Inputs"]').click();
+  await page.locator('textarea.blockpy-input-list').fill('Ada');
+  await page.locator('.blockpy-dialog .modal-okay').click();
+  await content.click();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.type('name = input("Who? ")\nprint("Hi", name)');
+  await page.locator('button.blockpy-run').click();
+  await expect(page.locator('.blockpy-printer')).toContainText('Hi Ada', {
+    timeout: 60_000,
+  });
 });
 
 test('layout regressions: no horizontal overflow, panels side by side, white editor', async ({ page }) => {
