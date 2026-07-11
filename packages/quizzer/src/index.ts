@@ -12,6 +12,23 @@ export {
   type QuizzerSubmission,
 } from './Quizzer';
 export { QuestionView, StatusSquare, questionStatusCode } from './QuestionView';
+export { QuizEditor, type QuizEditorMode, type QuizEditorProps } from './editor/QuizEditor';
+export { QuestionEditor } from './editor/QuestionEditor';
+export {
+  checkQuizQuestion,
+  compareStringEquality,
+  processQuiz,
+  type LocalQuizResult,
+  type QuizChecksDocument,
+} from './grading';
+export {
+  FEEDBACK_FIELDS,
+  QUESTION_TYPES,
+  QuizIssueTracker,
+  TAG_FIELDS,
+  validateQuiz,
+  type QuizIssue,
+} from './validation';
 export {
   EMPTY_QUIZ_SUBMISSION,
   SQUARE_BRACKETS,

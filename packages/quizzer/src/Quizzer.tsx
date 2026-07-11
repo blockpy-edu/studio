@@ -34,6 +34,7 @@ import {
   selectVisibleQuestions,
 } from './documents';
 import { QuestionView, StatusSquare, questionStatusCode } from './QuestionView';
+import { QuizEditor } from './editor/QuizEditor';
 import type {
   QuestionId,
   QuizInstructions,
@@ -53,6 +54,9 @@ export interface QuizzerAssignment {
   instructions: string;
   /** Assignment settings JSON (time_limit etc.). */
   settings: string;
+  /** The checks document (assignment.on_run) — blanked for students,
+   *  present for instructors; the quiz editor edits it. */
+  onRun?: string;
 }
 
 export interface QuizzerSubmission {
@@ -103,6 +107,13 @@ export interface QuizzerProps {
     studentTimeLimit: string | null;
     dateStarted: string | null;
   }) => void;
+  /** Persist the two quiz documents (!instructions.md + !on_run.py) —
+   *  enables the instructor Quiz Editor view. */
+  saveQuizAssignment?: (
+    assignmentId: number,
+    instructions: string,
+    checks: string,
+  ) => Promise<{ success: boolean }>;
 }
 
 interface LoadedQuiz {
@@ -149,6 +160,10 @@ export function Quizzer(props: QuizzerProps) {
   const [isDirty, setIsDirty] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [readingId, setReadingId] = useState<number | null>(null);
+  // Instructor view: the visual quiz editor is the normal authoring
+  // workflow; "Actual Quiz" shows the student surface.
+  const [editorView, setEditorView] = useState<'quiz' | 'editor' | null>(null);
+  const [reloadNonce, setReloadNonce] = useState(0);
 
   const propsRef = useRef(props);
   propsRef.current = props;
@@ -266,7 +281,7 @@ export function Quizzer(props: QuizzerProps) {
       cancelled = true;
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-  }, [props.assignmentId]);
+  }, [props.assignmentId, reloadNonce]);
 
   // Tab-visibility telemetry (assignment_interface.ts:134-138 — all types).
   useEffect(() => {
@@ -381,6 +396,62 @@ export function Quizzer(props: QuizzerProps) {
     return <div className="blockpy-quizzer">{errorMessage || 'Loading quiz…'}</div>;
   }
 
+  // The visual editor is the instructor's normal workflow (new requirement,
+  // 2026-07-11); "Actual Quiz" shows the student-facing surface.
+  const activeView = editorView ?? (isInstructor ? 'editor' : 'quiz');
+  const viewToggle = isInstructor && (
+    <div className="quizzer-view-toggle m-2">
+      {(
+        [
+          ['editor', 'Quiz Editor'],
+          ['quiz', 'Actual Quiz'],
+        ] as const
+      ).map(([value, label]) => (
+        <button
+          key={value}
+          type="button"
+          className={`btn btn-sm mr-1 ${activeView === value ? 'btn-success' : 'btn-outline-secondary'}`}
+          onClick={() => setEditorView(value)}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+  if (isInstructor && activeView === 'editor') {
+    const quizId = loaded.assignment.id;
+    const submissionId = loaded.submission?.id ?? null;
+    const { saveQuizAssignment, saveAnswer, submitQuiz } = props;
+    return (
+      <div className="blockpy-quizzer" style={{ backgroundColor: '#fcf8e3' }}>
+        {viewToggle}
+        <QuizEditor
+          instructions={loaded.assignment.instructions}
+          checks={loaded.assignment.onRun ?? ''}
+          onSave={async (instructionsText, checksText) => {
+            if (!saveQuizAssignment) return { success: false };
+            const result = await saveQuizAssignment(quizId, instructionsText, checksText);
+            // Reload so the student surface and Try It (remote) see the
+            // persisted documents.
+            if (result.success) setReloadNonce((nonce) => nonce + 1);
+            return result;
+          }}
+          {...(saveAnswer && submitQuiz
+            ? {
+                remoteTryOut: {
+                  saveAnswer: (code: string) => saveAnswer(quizId, submissionId, code),
+                  submitQuiz: () => submitQuiz(quizId, submissionId),
+                },
+              }
+            : {})}
+          {...(props.downloadUrl
+            ? { downloadUrl: (filename: string) => props.downloadUrl!(quizId, filename) }
+            : {})}
+        />
+      </div>
+    );
+  }
+
   const shuffleBase = poolSeed(
     loaded.instructions.settings?.poolRandomness,
     seed,
@@ -468,6 +539,7 @@ export function Quizzer(props: QuizzerProps) {
       className="blockpy-quizzer"
       style={{ backgroundColor: '#fcf8e3', paddingBottom: '1px', paddingTop: '1px' }}
     >
+      {viewToggle}
       {errorMessage.length > 0 && (
         <div className="alert alert-warning p-1 border rounded float-right">{errorMessage}</div>
       )}

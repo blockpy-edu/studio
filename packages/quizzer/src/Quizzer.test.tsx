@@ -41,7 +41,11 @@ function loadResult(code = '', instructions: unknown = INSTRUCTIONS): QuizzerLoa
 
 function renderQuizzer(props: Partial<QuizzerProps> = {}, result = loadResult()) {
   const loadAssignment = vi.fn(async () => result);
-  const saveAnswer = vi.fn(async () => ({ success: true }));
+  const saveAnswer = vi.fn(
+    async (_assignmentId: number, _submissionId: number | null, _code: string) => ({
+      success: true,
+    }),
+  );
   const view = render(
     <Quizzer
       assignmentId={102}
@@ -234,6 +238,13 @@ describe('Quizzer (quizzer.ts port, §11.3)', () => {
       pools: [{ name: 'P', amount: 1, questions: ['a', 'b'] }],
     };
     const { view } = renderQuizzer({ isInstructor: () => true }, loadResult('', pooled));
+    // Instructors default to the visual Quiz Editor (2026-07-11 requirement);
+    // the student surface is behind "Actual Quiz".
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Actual Quiz' })).toBeDefined();
+    });
+    expect(view.container.querySelector('.quizzer-quiz-editor')).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Actual Quiz' }));
     await waitFor(() => {
       expect(screen.getByLabelText('View As Student')).toBeDefined();
     });

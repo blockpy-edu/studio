@@ -649,6 +649,9 @@ export function App({ config, extras, registerActions }: AppProps) {
               url: response.assignment!.url,
               instructions: response.assignment!.instructions,
               settings: response.assignment!.settings,
+              // The checks document — the server blanks it for students
+              // (encode_quiz_json); instructors get it for the editor.
+              onRun: response.assignment!.onRun,
             },
             submission: response.submission
               ? {
@@ -710,6 +713,15 @@ export function App({ config, extras, registerActions }: AppProps) {
         // reading ABOVE itself (quiz_ui.ts:194-208).
         renderReading={(readingId) => reading(readingId, true)}
         onTimeLimitInfo={onTimeLimitInfo}
+        // Quiz editor persistence: the two documents through saveFile with
+        // the QUIZ's ids (legacy saveAssignment, quizzer.ts:195-205).
+        saveQuizAssignment={async (assignmentId, instructionsText, checksText) => {
+          const ids = { assignment_id: assignmentId };
+          const first = await api.saveFile('!instructions.md', instructionsText, ids);
+          if (first.success !== true) return { success: false };
+          const second = await api.saveFile('!on_run.py', checksText, ids);
+          return { success: second.success === true };
+        }}
       />
     );
 
