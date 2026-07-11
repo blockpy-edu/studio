@@ -59,6 +59,43 @@ describe.skipIf(!enabled)('JobRunner pedal jobs (PEDAL_IT=1)', () => {
     expect(result.feedback!.message).toContain('Try printing the value');
   }, 60_000);
 
+  // Plot-inspection (§10.2 open item): Pedal's OWN sandbox mocks
+  // matplotlib.pyplot with MockPlt by default (sandbox.py
+  // reset_default_overrides), so assert_plot reads the call log from the
+  // grader's re-execution of student code — independent of the student-run
+  // job's real Agg backend. No Studio engine shim required.
+  const PLOT_ON_RUN = `from pedal import *
+from pedal.extensions.plotting import assert_plot
+if not assert_plot('line', [1, 2, 3]):
+    set_success()
+`;
+
+  it('assert_plot sees plots via the sandbox MockPlt (§10.2)', async () => {
+    const result = await runner.execute({
+      id: 'pedal-plot-1',
+      phase: 'instructor.on_run',
+      files: {},
+      code: 'import matplotlib.pyplot as plt\nplt.plot([1, 2, 3])\nplt.show()',
+      pedal: { onRun: PLOT_ON_RUN },
+    });
+    expect(result.success).toBe(true);
+    expect(result.feedback!.success).toBe(true);
+    expect(result.feedback!.category.toLowerCase()).toBe('complete');
+  }, 300_000);
+
+  it('assert_plot rejects wrong plot data with Pedal feedback (§10.2)', async () => {
+    const result = await runner.execute({
+      id: 'pedal-plot-2',
+      phase: 'instructor.on_run',
+      files: {},
+      code: 'import matplotlib.pyplot as plt\nplt.plot([4, 5, 6])\nplt.show()',
+      pedal: { onRun: PLOT_ON_RUN },
+    });
+    expect(result.success).toBe(true);
+    expect(result.feedback!.success).toBe(false);
+    expect(result.feedback!.message).toContain('right data');
+  }, 60_000);
+
   it('normal student.run jobs still work on the same runner', async () => {
     const result = await runner.execute({
       id: 'pedal-3',

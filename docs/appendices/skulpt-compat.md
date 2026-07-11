@@ -66,8 +66,19 @@ through the Studio Pedal environment (`tools/run-grader-corpus.mjs`,
   `.status_code`, `.ok`, `.raise_for_status()`.
 - **matplotlib is real (Agg), not the Skulpt mock (§10.2).** Figures are
   snapshotted to PNGs after each run and closed; `plt.show()` is a silenced
-  no-op. Legacy's mock tracked plot CALLS for Pedal `assert_plot` graders —
-  those graders need the Pedal plot-inspection shim (open item).
+  no-op — this applies to the STUDENT run job only (see next bullet for
+  grading).
+- **`assert_plot` graders work with no engine shim (§10.2, resolved
+  2026-07-11).** `MockPlt` is Pedal-internal, not Skulpt-side: Pedal's own
+  sandbox mocks `matplotlib.pyplot` by default (`Sandbox.
+  reset_default_overrides` → `mock_module('matplotlib.pyplot', MockPlt(),
+  'plotting')`), and `pedal.extensions.plotting.assert_plot` reads
+  `get_sandbox().modules.plotting.plots` — the call log from the GRADER's
+  sandboxed re-execution of student code, entirely independent of the
+  student-run job's real Agg backend. Verified against the real pedal 3.0.1
+  wheel (`runner-pedal.test.ts`, PEDAL_IT=1): correct data → Complete,
+  wrong data → `wrong_plt_data` feedback. Side effect: the grading job
+  never imports real matplotlib, keeping Pedal runs fast.
 - **Pyodide packages auto-load from imports** (`numpy`, `matplotlib`, …)
   and are adopted into the module baseline after first import — module-level
   state in site-packages persists across runs (unlike legacy Skulpt's fully
@@ -78,9 +89,9 @@ through the Studio Pedal environment (`tools/run-grader-corpus.mjs`,
 - Float `repr`, error-message wording, and `time` behavior deltas: to be
   cataloged when the curriculum regression corpus gains real student
   submissions (§16.1.3).
-- Pedal plot-inspection shim: `assert_plot`-style graders inspected the
-  Skulpt matplotlib mock's call log; the real-Agg world needs an equivalent
-  (capture plt call metadata for Pedal, §10.2).
+- ~~Pedal plot-inspection shim~~ **RESOLVED (2026-07-11): no shim needed**
+  — see "Student-runtime behaviors" above; Pedal's own sandbox `MockPlt`
+  provides the call log during grading.
 - CORGIS dataset modules (`import weather` style) resolved through legacy
   remote files (`filesToUrls`); the Studio equivalent (VFS remote-file fetch
   into the engine mount) lands with the uploads layer (§10.4).
