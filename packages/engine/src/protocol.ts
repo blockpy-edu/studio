@@ -1,6 +1,7 @@
 /**
  * Engine job model and client↔worker protocol (spec §6.2-6.3).
  */
+import type { PedalFeedback } from './pedal';
 
 export type Phase =
   | 'student.run'
@@ -46,6 +47,23 @@ export interface EngineJob {
   limits?: { wallMs?: number; traceSteps?: number };
   /** Opt-in per run (perf) — E3. */
   trace?: boolean;
+  /**
+   * Pedal grading request (spec §10.1) — set on `instructor.on_run` /
+   * `instructor.on_eval` jobs. The job's `code` is the student submission;
+   * the S3 pipeline (set_source → queue_input → start_trace → run → tifa →
+   * exec(on_run) → resolve) runs inside the worker and the resolved final
+   * feedback comes back on `EngineResult.feedback`.
+   */
+  pedal?: PedalJobRequest;
+}
+
+export interface PedalJobRequest {
+  /** The instructor grading script (`!on_run.py`), executed unchanged. */
+  onRun: string;
+  /** Scripted stdin consumed by Pedal's sandbox (queue_input). */
+  inputs?: string[];
+  /** Override the wheel list (defaults to DEFAULT_PEDAL_PACKAGES). */
+  packages?: string[];
 }
 
 /** One compact trace event (E3): powers the Trace/State Explorer. */
@@ -83,6 +101,8 @@ export interface EngineResult {
   trace?: TraceStep[];
   /** Files created or modified by the run (LD-3x run artifacts). */
   artifacts: Record<string, string>;
+  /** Resolved Pedal feedback — present when the job carried `pedal`. */
+  feedback?: PedalFeedback;
   durationMs: number;
 }
 

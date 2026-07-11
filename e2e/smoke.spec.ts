@@ -50,19 +50,33 @@ test('Run boots the engine lazily and reports it in the console', async ({ page 
   );
 });
 
-// Full Pyodide execution downloads ~10 MB from the CDN — opt in locally with
-// PYODIDE_E2E=1 (not part of the default suite).
-test('real Pyodide run prints output and reports no errors', async ({ page }) => {
+// Full Pyodide execution downloads Pyodide + Pedal wheels from CDNs — opt in
+// locally with PYODIDE_E2E=1 (not part of the default suite).
+test('real Pyodide run executes, grades with Pedal, and shows Complete', async ({ page }) => {
   test.skip(!process.env.PYODIDE_E2E, 'set PYODIDE_E2E=1 to run');
-  test.setTimeout(180_000);
+  test.setTimeout(300_000);
   await page.goto('/');
   await page.locator('button.blockpy-run').click();
+  // Student output streams first…
   await expect(page.locator('.blockpy-printer')).toContainText('0', {
     timeout: 150_000,
   });
-  await expect(page.locator('.blockpy-feedback')).toContainText('No errors');
+  // …then the Pedal on_run grader resolves: green Complete badge (§10.1).
+  await expect(page.locator('.blockpy-feedback')).toContainText('Complete', {
+    timeout: 240_000,
+  });
   await expect(page.locator('button.blockpy-run')).not.toHaveClass(
     /blockpy-run-running/,
+  );
+  // Incorrect submission path: change the code, rerun, get the gentle hint.
+  const content = page.locator('.cm-editor .cm-content').first();
+  await content.click();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.type('a = 1\nprint(a)');
+  await page.locator('button.blockpy-run').click();
+  await expect(page.locator('.blockpy-feedback')).toContainText(
+    'Try printing the value of a.',
+    { timeout: 60_000 },
   );
 });
 

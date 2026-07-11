@@ -5,6 +5,7 @@
  * is worker termination, §6.6); the runner is single-job-at-a-time.
  */
 import { RUNTIME_PY } from './runtime.py';
+import { PedalEnvironment, type PedalPyodideLike } from './pedal';
 import type { EngineJob, EngineResult, TraceStep } from './protocol';
 
 /** The slice of the Pyodide API the runner uses (keeps tests/fakes easy). */
@@ -72,6 +73,7 @@ const toJsDeep = (proxy: PyProxy): RuntimePayload => {
 
 export class JobRunner {
   private runtime: RuntimeHandle;
+  private pedalEnv: PedalEnvironment | null = null;
 
   private constructor(
     private pyodide: PyodideLike,
@@ -92,8 +94,67 @@ export class JobRunner {
     this.runtime.clear_namespace();
   }
 
+  /** Lazy Pedal environment — wheels install on the first grading job. */
+  private async ensurePedal(packages?: string[]): Promise<PedalEnvironment> {
+    if (this.pedalEnv === null) {
+      this.pedalEnv = await PedalEnvironment.install(
+        this.pyodide as unknown as PedalPyodideLike,
+        packages,
+      );
+    }
+    return this.pedalEnv;
+  }
+
+  /**
+   * Pedal grading job (spec §10.1): the environment re-runs the student
+   * submission inside Pedal's sandbox, so no exec happens here. Grader and
+   * Pedal crashes are fail-soft inside the environment (`system_error`
+   * feedback); only wheel-install failures surface as job errors.
+   */
+  private async executePedal(job: EngineJob, started: number): Promise<EngineResult> {
+    const request = job.pedal!;
+    try {
+      const env = await this.ensurePedal(request.packages);
+      const feedback = env.grade({
+        studentCode: job.code,
+        onRun: request.onRun,
+        files: job.files,
+        inputs: request.inputs ?? job.inputsPrefill,
+      });
+      return {
+        jobId: job.id,
+        success: true,
+        stdout: '',
+        stderr: '',
+        artifacts: {},
+        feedback,
+        durationMs: Date.now() - started,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return {
+        jobId: job.id,
+        success: false,
+        stdout: '',
+        stderr: '',
+        error: {
+          type: 'PedalEnvironmentError',
+          message,
+          line: null,
+          studentLine: null,
+          traceback: message + '\n',
+        },
+        artifacts: {},
+        durationMs: Date.now() - started,
+      };
+    }
+  }
+
   async execute(job: EngineJob, streams: StreamCallbacks = {}): Promise<EngineResult> {
     const started = Date.now();
+    if (job.pedal) {
+      return this.executePedal(job, started);
+    }
     // Stage via a Python-side JSON parse to avoid proxy lifetime headaches.
     this.pyodide.runPython(
       `_studio_runtime.stage_files(__import__('json').loads(${JSON.stringify(

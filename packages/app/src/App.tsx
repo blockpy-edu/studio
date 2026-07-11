@@ -17,7 +17,18 @@ export function App({ config }: { config: BootConfig }) {
   const [code, setCode] = useState('a = 0\nprint(a)');
   const runController = useMemo(
     () =>
-      createEngineRunController({ indexURL: paths.pyodideIndexURL }),
+      createEngineRunController({
+        indexURL: paths.pyodideIndexURL,
+        // Dev-harness grader (a real `!on_run.py`-style Pedal script).
+        onRunScript: [
+          'from pedal import *',
+          'if get_output() == ["0"]:',
+          '    set_success()',
+          'else:',
+          '    gently("Try printing the value of a.", label="printing_a")',
+          '',
+        ].join('\n'),
+      }),
     [paths.pyodideIndexURL],
   );
   return (

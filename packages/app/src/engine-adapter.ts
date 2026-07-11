@@ -32,6 +32,13 @@ export interface EngineAdapterOptions {
   wallMs?: number;
   /** Called when the engine starts/finishes booting (spinner hooks). */
   onBootStateChange?: (booting: boolean) => void;
+  /**
+   * Instructor grading script (`!on_run.py`). When set, a clean student run
+   * is followed by a Pedal `instructor.on_run` job whose resolved feedback
+   * drives the pane (§10.1, §14.3). Wheels install lazily on the first
+   * grading job, so that job gets a generous wall-clock limit.
+   */
+  onRunScript?: string;
 }
 
 export function createEngineRunController(
@@ -87,6 +94,9 @@ export function createEngineRunController(
           options.onBootStateChange?.(false);
         }
         if (result.success) {
+          if (options.onRunScript) {
+            return await gradeWithPedal(engine, code, options, handlers);
+          }
           return {
             error: null,
             feedback: {
@@ -116,6 +126,57 @@ export function createEngineRunController(
       if (client !== null && activeJobId !== null) {
         client.interrupt(activeJobId);
       }
+    },
+  };
+}
+
+let pedalReady = false;
+
+/** Run the instructor grading pass and map Pedal feedback onto the pane. */
+async function gradeWithPedal(
+  engine: EngineClient,
+  studentCode: string,
+  options: EngineAdapterOptions,
+  handlers: RunHandlers,
+): Promise<RunOutcome> {
+  if (!pedalReady) {
+    handlers.stdout('Loading feedback engine…\n');
+  }
+  const result = await engine.run(
+    {
+      id: `harness-grade-${Date.now()}`,
+      phase: 'instructor.on_run',
+      files: {},
+      code: studentCode,
+      pedal: { onRun: options.onRunScript! },
+      // First grading job includes the wheel install; later ones are ~ms.
+      limits: { wallMs: pedalReady ? 15_000 : 180_000 },
+    },
+    {},
+  );
+  if (!result.success || !result.feedback) {
+    return {
+      error: result.error?.message ?? 'Grading failed.',
+      feedback: {
+        category: 'internal',
+        label: 'Internal Error',
+        message: 'The grader could not be run.',
+      },
+    };
+  }
+  pedalReady = true;
+  const feedback = result.feedback;
+  if (feedback.system_error) {
+    // Fail-soft grader crash (§10.1): log for instructors, generic category.
+    console.error('Pedal system_error:', feedback.system_error);
+  }
+  return {
+    error: null,
+    feedback: {
+      category: feedback.category,
+      label: feedback.title || feedback.label,
+      // Pedal messages may embed HTML (D4-A: rendered unsanitized).
+      message: feedback.message,
     },
   };
 }

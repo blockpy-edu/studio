@@ -10,6 +10,7 @@ export type {
   EngineJob,
   EngineMode,
   EngineResult,
+  PedalJobRequest,
   Phase,
   TraceStep,
   WorkerToClient,
