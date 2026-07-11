@@ -14,34 +14,44 @@ describe('MinifiedEditor (§8.4)', () => {
     document.body.innerHTML = '';
   });
 
-  it('renders text-only by default: CM6, collapsed blocks, no tabs, no feedback pane', async () => {
+  it('layout: console over feedback on the left, toolbar over editor on the right', async () => {
     let container!: HTMLElement;
     await act(async () => {
       ({ container } = render(<MinifiedEditor initialCode="print(1)" />));
     });
-    expect(container.querySelector('.cm-editor')).not.toBeNull();
-    // Text mode collapses the block half to 0% (the workspace node still
-    // exists — same as the full editor's text mode).
-    const blockHalf = container.querySelector<HTMLElement>(
-      '.blockpy-blocks, .blockmirror-blocks, [class*="block"]',
+    const left = container.querySelector('.blockpy-minified-left')!;
+    const right = container.querySelector('.blockpy-minified-right')!;
+    // Left column: printer first, feedback second.
+    expect(left.children[0]!.className).toContain('blockpy-minified-printer');
+    expect(left.children[1]!.className).toContain('blockpy-minified-feedback');
+    expect(left.querySelector('.blockpy-minified-feedback')!.textContent).toContain(
+      'Ready',
     );
-    if (blockHalf?.style.width) {
-      expect(blockHalf.style.width).toBe('0%');
-    }
+    // Right column: toolbar first, then the editor.
+    expect(right.children[0]!.className).toContain('blockpy-minified-toolbar');
+    expect(right.querySelector('.cm-editor')).not.toBeNull();
+    expect(runButton(container)).not.toBeNull();
+    // No full-chrome regions.
     expect(container.querySelector('.blockpy-files')).toBeNull();
     expect(container.querySelector('.blockpy-feedback')).toBeNull();
-    expect(runButton(container)).not.toBeNull();
-    // No output area until something runs.
-    expect(container.querySelector('.blockpy-minified-printer')).toBeNull();
+    // Empty console box renders (but holds no entries yet).
+    expect(
+      container.querySelector('.blockpy-minified-printer')!.textContent,
+    ).toBe('');
   });
 
-  it('Run streams output inline; errors mark the button', async () => {
+  it('Run streams output inline and presents feedback in the left column', async () => {
     const controller: RunController = {
       async run(code, handlers) {
         handlers.stdout('from ' + code);
-        return code.includes('boom')
-          ? { error: 'Traceback: boom' }
-          : { error: null };
+        return {
+          error: null,
+          feedback: {
+            category: 'complete',
+            label: 'Great!',
+            message: '<em>Nice.</em>',
+          },
+        };
       },
     };
     const { container } = render(
@@ -53,6 +63,10 @@ describe('MinifiedEditor (§8.4)', () => {
     expect(
       container.querySelector('.blockpy-minified-printer')!.textContent,
     ).toContain('from print(1)');
+    const feedback = container.querySelector('.blockpy-minified-feedback')!;
+    expect(feedback.textContent).toContain('Complete');
+    expect(feedback.textContent).toContain('Great!');
+    expect(feedback.querySelector('em')!.textContent).toBe('Nice.');
     expect(runButton(container).className).not.toContain('blockpy-run-error');
   });
 
@@ -78,7 +92,9 @@ describe('MinifiedEditor (§8.4)', () => {
     expect(
       editors[0]!.querySelector('.blockpy-minified-printer')!.textContent,
     ).toContain('alpha');
-    expect(editors[1]!.querySelector('.blockpy-minified-printer')).toBeNull();
+    expect(
+      editors[1]!.querySelector('.blockpy-minified-printer')!.textContent,
+    ).toBe('');
     expect(useEditorChromeStore.getState().console).toEqual([]);
   });
 

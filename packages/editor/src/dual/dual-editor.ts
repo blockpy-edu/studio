@@ -42,6 +42,13 @@ export interface DualEditorConfiguration {
   /** Passed through to the text→blocks converter (Image constructor etc.). */
   imageMode?: boolean;
   imageDetection?: ConverterConfiguration['imageDetection'];
+  /**
+   * Legacy text-mode indent sidebar (text_editor.js `updateGutter`): pads
+   * the text editor's left so code aligns under the block toolbox when
+   * toggling text↔split. Default true (legacy). The minified variant (§8.4)
+   * turns it off — it has no block toolbox to align with.
+   */
+  indentSidebar?: boolean;
 }
 
 export interface DualEditorChangeEvent {
@@ -106,6 +113,7 @@ export class DualEditor {
       renderer: configuration.renderer ?? 'Thrasos',
       imageMode: configuration.imageMode ?? false,
       imageDetection: configuration.imageDetection ?? 'string',
+      indentSidebar: configuration.indentSidebar ?? true,
     };
 
     this.tags = this.buildDom(this.configuration.container);
@@ -135,6 +143,7 @@ export class DualEditor {
         textSidebar: this.tags.textSidebar,
         height: this.configuration.height,
         isWide,
+        indentSidebar: this.configuration.indentSidebar,
         getBlockToolbarWidth: () => this.blockEditor.getToolbarWidth(),
         run: () => this.configuration.run(),
         onTextChanged: (newCode) => this.handleTextChanged(newCode),

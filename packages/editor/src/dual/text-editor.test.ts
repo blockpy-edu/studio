@@ -11,6 +11,7 @@ function makeHost(): TextEditorHost & { changes: string[]; runs: number } {
     textSidebar,
     height: 500,
     isWide: () => true,
+    indentSidebar: true,
     getBlockToolbarWidth: () => 100,
     changes: [] as string[],
     runs: 0,

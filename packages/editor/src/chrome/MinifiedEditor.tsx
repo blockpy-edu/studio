@@ -1,9 +1,11 @@
 /**
  * Minified editor variant (§8.4) — the compact configuration hydrated into
  * reading code blocks (§11.2, M2.3): text-only by default (blocks optional),
- * short height, inline Run + output console, no file tabs, no instructions
- * pane, no feedback pane. Save/submit endpoints are stripped (A7 §"runnable
- * code blocks").
+ * short height, no file tabs, no instructions pane. Save/submit endpoints
+ * are stripped (A7 §"runnable code blocks").
+ *
+ * Layout (maintainer, 2026-07-11): two columns — LEFT: output console above
+ * the feedback area; RIGHT: the Run/Reset toolbar above the code editor.
  *
  * Unlike `CodingEditor`, ALL state is per-instance React state — a reading
  * page hydrates many of these at once (§16.3 budgets ten), so they must not
@@ -18,9 +20,11 @@
 import { useCallback, useRef, useState } from 'react';
 import { DualEditorView } from '../components/DualEditorView';
 import type { DualEditor, DualEditorMode } from '../dual/dual-editor';
+import { categoryPresentation } from './categories';
+import { highlightCodeBlocks } from './highlight';
 import { Icon } from './icons';
 import type { RunController } from './CodingEditor';
-import type { ConsoleEntry } from './store';
+import type { ConsoleEntry, FeedbackState } from './store';
 
 export interface MinifiedEditorProps {
   /** The code block's contents (= its ephemeral `answer.py`). */
@@ -38,17 +42,26 @@ export interface MinifiedEditorProps {
 
 type MinifiedRunState = 'idle' | 'running' | 'error';
 
+const READY_FEEDBACK: FeedbackState = {
+  category: null,
+  label: '',
+  message: 'Ready',
+};
+
 export function MinifiedEditor(props: MinifiedEditorProps) {
   const [code, setCode] = useState(props.initialCode);
   const [runState, setRunState] = useState<MinifiedRunState>('idle');
   const [output, setOutput] = useState<ConsoleEntry[]>([]);
+  const [feedback, setFeedback] = useState<FeedbackState>(READY_FEEDBACK);
   const editorRef = useRef<DualEditor | null>(null);
+  const feedbackRef = useRef<HTMLDivElement>(null);
   const codeRef = useRef(code);
   codeRef.current = code;
 
   const handleRun = useCallback(async () => {
     const controller = props.runController;
     setOutput([]);
+    setFeedback(READY_FEEDBACK);
     if (!controller) {
       setOutput([
         { kind: 'stderr', text: 'No execution engine attached to this editor.' },
@@ -69,6 +82,13 @@ export function MinifiedEditor(props: MinifiedEditorProps) {
       if (outcome.error !== null) {
         append({ kind: 'stderr', text: outcome.error });
       }
+      if (outcome.feedback) {
+        setFeedback(outcome.feedback);
+        // Same LD-10 highlighting as the main feedback pane.
+        setTimeout(() => {
+          if (feedbackRef.current) highlightCodeBlocks(feedbackRef.current);
+        }, 0);
+      }
     } catch (error) {
       setRunState('error');
       append({ kind: 'stderr', text: String(error) });
@@ -87,51 +107,14 @@ export function MinifiedEditor(props: MinifiedEditorProps) {
   }, [props.initialCode, props.onCodeChange]);
 
   const running = runState === 'running';
+  const presentation = categoryPresentation(feedback.category);
   return (
     <div className="blockpy-minified">
-      <div className="blockpy-minified-toolbar btn-toolbar" role="toolbar">
-        <div className="btn-group mr-2" role="group">
-          <button
-            type="button"
-            className={
-              'btn btn-sm blockpy-run notransition' +
-              (running ? ' blockpy-run-running' : '') +
-              (runState === 'error' ? ' blockpy-run-error' : '')
-            }
-            onClick={running ? handleStop : () => void handleRun()}
-          >
-            <Icon name={running ? 'stop' : 'run'} /> {running ? 'Stop' : 'Run'}
-          </button>
-        </div>
-        <div className="btn-group" role="group">
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-secondary"
-            onClick={handleReset}
-          >
-            <Icon name="reset" /> Reset
-          </button>
-        </div>
-      </div>
-      <DualEditorView
-        mode={props.mode ?? 'text'}
-        toolbox="normal"
-        code={code}
-        onCodeChange={(newCode) => {
-          setCode(newCode);
-          props.onCodeChange?.(newCode);
-        }}
-        readOnly={props.readOnly}
-        blocklyMediaPath={props.blocklyMediaPath}
-        height={props.height ?? 120}
-        editorRef={(editor) => {
-          editorRef.current = editor;
-        }}
-      />
-      {output.length > 0 && (
+      <div className="blockpy-minified-left">
         <div
           className="blockpy-printer blockpy-printer-default blockpy-minified-printer"
           role="log"
+          aria-label="Console"
         >
           {output.map((entry, i) => (
             <div
@@ -146,7 +129,72 @@ export function MinifiedEditor(props: MinifiedEditorProps) {
             </div>
           ))}
         </div>
-      )}
+        <div
+          className="blockpy-minified-feedback"
+          aria-live="polite"
+          aria-label="Feedback"
+        >
+          <strong className="feedback-header">Feedback: </strong>
+          <span
+            className={`badge blockpy-feedback-category feedback-badge ${presentation.badgeClass}`}
+          >
+            {presentation.displayText}
+          </span>
+          {feedback.label && (
+            <strong className="blockpy-feedback-label"> {feedback.label}</strong>
+          )}
+          <div
+            ref={feedbackRef}
+            className="blockpy-feedback-message"
+            // D4-A: feedback HTML renders unsanitized, like the main pane.
+            dangerouslySetInnerHTML={{ __html: feedback.message }}
+          />
+        </div>
+      </div>
+      <div className="blockpy-minified-right">
+        <div className="blockpy-minified-toolbar btn-toolbar" role="toolbar">
+          <div className="btn-group mr-2" role="group">
+            <button
+              type="button"
+              className={
+                'btn btn-sm blockpy-run notransition' +
+                (running ? ' blockpy-run-running' : '') +
+                (runState === 'error' ? ' blockpy-run-error' : '')
+              }
+              onClick={running ? handleStop : () => void handleRun()}
+            >
+              <Icon name={running ? 'stop' : 'run'} /> {running ? 'Stop' : 'Run'}
+            </button>
+          </div>
+          <div className="btn-group" role="group">
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-secondary"
+              onClick={handleReset}
+            >
+              <Icon name="reset" /> Reset
+            </button>
+          </div>
+        </div>
+        <DualEditorView
+          mode={props.mode ?? 'text'}
+          toolbox="normal"
+          // No block toolbox to align with in the compact variant — drop the
+          // legacy text-mode indent sidebar.
+          indentSidebar={false}
+          code={code}
+          onCodeChange={(newCode) => {
+            setCode(newCode);
+            props.onCodeChange?.(newCode);
+          }}
+          readOnly={props.readOnly}
+          blocklyMediaPath={props.blocklyMediaPath}
+          height={props.height ?? 120}
+          editorRef={(editor) => {
+            editorRef.current = editor;
+          }}
+        />
+      </div>
     </div>
   );
 }

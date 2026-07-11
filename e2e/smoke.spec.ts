@@ -79,6 +79,55 @@ test('quick menu, footer, and highlighted instructions render per A8', async ({ 
   ).toBeVisible();
 });
 
+test('view-swap button toggles full and minified editors, code round-trips', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.blocklySvg').first().waitFor();
+  // Swap to the minified variant: compact chrome only — no file tabs,
+  // instructions, feedback, or footer; CM6 text editor + Run/Reset.
+  await page.getByRole('button', { name: 'Switch to minified editor' }).click();
+  await expect(page.locator('.blockpy-minified')).toBeVisible();
+  await expect(page.locator('.blockpy-content')).toHaveCount(0);
+  await expect(page.locator('.blockpy-files')).toHaveCount(0);
+  await expect(page.locator('.blockpy-minified button.blockpy-run')).toBeVisible();
+  await expect(page.locator('.blockpy-minified .cm-content')).toContainText(
+    'print(a)',
+  );
+  // Blocks side is collapsed in the minified text-only mode.
+  await expect(page.locator('.blocklySvg').first()).toBeHidden();
+  // Layout: editor column on the RIGHT of the console/feedback column;
+  // console above feedback; toolbar above the editor.
+  const consoleBox = (await page
+    .locator('.blockpy-minified-printer')
+    .boundingBox())!;
+  const feedbackBox = (await page
+    .locator('.blockpy-minified-feedback')
+    .boundingBox())!;
+  const toolbarBox = (await page
+    .locator('.blockpy-minified-toolbar')
+    .boundingBox())!;
+  const editorBox = (await page
+    .locator('.blockpy-minified-right .cm-editor')
+    .boundingBox())!;
+  expect(editorBox.x).toBeGreaterThanOrEqual(consoleBox.x + consoleBox.width - 1);
+  expect(feedbackBox.y).toBeGreaterThanOrEqual(consoleBox.y + consoleBox.height - 1);
+  expect(editorBox.y).toBeGreaterThanOrEqual(toolbarBox.y + toolbarBox.height - 1);
+  await expect(page.locator('.blockpy-minified-feedback')).toContainText(
+    'Ready',
+  );
+  // Edit in minified, swap back — the full editor picks the change up from
+  // the VFS.
+  const miniContent = page.locator('.blockpy-minified .cm-content');
+  await miniContent.click();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.type('a = 7\nprint(a)');
+  await page.getByRole('button', { name: 'Switch to full editor' }).click();
+  await expect(page.locator('.blockpy-content')).toBeVisible();
+  await expect(
+    page.locator('.blockpy-python-blockmirror .cm-content').first(),
+  ).toContainText('a = 7');
+  await expect(page.locator('.blocklySvg').first()).toBeVisible();
+});
+
 test('Add New menu creates and opens files (instructor view)', async ({ page }) => {
   await page.goto('/');
   await page.locator('.blocklySvg').first().waitFor();
@@ -270,6 +319,18 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
   await expect(page.locator('.blockpy-printer')).toContainText('Hi Ada', {
     timeout: 60_000,
   });
+  // Minified variant shares the already-booted page engine: swap views,
+  // run, and the inline output console streams the result.
+  await page.getByRole('button', { name: 'Switch to minified editor' }).click();
+  const miniContent = page.locator('.blockpy-minified .cm-content');
+  await miniContent.click();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.type('print("mini", 6 * 7)');
+  await page.locator('.blockpy-minified button.blockpy-run').click();
+  await expect(page.locator('.blockpy-minified-printer')).toContainText(
+    'mini 42',
+    { timeout: 60_000 },
+  );
 });
 
 test('layout regressions: no horizontal overflow, panels side by side, white editor', async ({ page }) => {

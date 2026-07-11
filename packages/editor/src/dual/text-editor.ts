@@ -135,6 +135,8 @@ export interface TextEditorHost {
   height: number;
   /** Responsive stacking breakpoint check (window width >= 675). */
   isWide(): boolean;
+  /** Whether the legacy text-mode indent sidebar is enabled at all. */
+  indentSidebar: boolean;
   /** Toolbar width of the block editor, for the text-mode indent sidebar. */
   getBlockToolbarWidth(): number;
   /** Run callback (legacy `config.run`, bound to Ctrl-Enter). */
@@ -282,7 +284,7 @@ export class DualTextEditor {
    */
   private updateGutter(config: TextEditorViewConfiguration): void {
     const sidebar = this.host.textSidebar.style;
-    if (config.indentSidebar && this.host.isWide()) {
+    if (config.indentSidebar && this.host.indentSidebar && this.host.isWide()) {
       const gutters = this.view.dom.querySelector<HTMLElement>('.cm-gutters');
       const gutterWidth = gutters ? gutters.offsetWidth : 0;
       const targetWidth = this.host.getBlockToolbarWidth() - gutterWidth - 2;

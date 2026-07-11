@@ -46,6 +46,7 @@ export function DualEditorView(props: DualEditorViewProps) {
       renderer: initial.renderer,
       imageMode: initial.imageMode,
       imageDetection: initial.imageDetection,
+      indentSidebar: initial.indentSidebar,
     });
     editor.current = instance;
     if (initial.code) instance.setCode(initial.code);

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { CodingEditor, type HistoryEntry } from '@blockpy/editor';
+import { CodingEditor, MinifiedEditor, type HistoryEntry } from '@blockpy/editor';
 import { Vfs } from '@blockpy/vfs';
 import { createEngineRunController } from './engine-adapter';
 import '@blockpy/editor/styles/tokens.css';
@@ -19,6 +19,10 @@ export function App({ config }: { config: BootConfig }) {
   // "View as instructor" (legacy display.instructor). The dev harness
   // always exposes the grader toggle for debugging.
   const [instructorView, setInstructorView] = useState(display.instructor);
+  // Preview toggle between the full editor and the §8.4 minified variant
+  // (the reading-embedded configuration). Code round-trips through the VFS:
+  // each view reads answer.py on mount and writes edits back.
+  const [minified, setMinified] = useState(false);
   const instructions =
     'Print the value of `a`.\n\nUse the **Run** button to execute:\n\n' +
     '```python\na = 0\nprint(a)\n```';
@@ -93,9 +97,27 @@ export function App({ config }: { config: BootConfig }) {
         Dev harness — {user.name ?? 'anonymous'} ({user.role});{' '}
         {assignment.currentAssignmentId ?? 'no assignment'};{' '}
         {display.instructor ? 'instructor' : 'student'} view. AssignmentHost
-        replaces this shell in Milestone 2.1.
+        replaces this shell in Milestone 2.1.{' '}
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-secondary blockpy-view-swap"
+          onClick={() => setMinified(!minified)}
+        >
+          {minified ? 'Switch to full editor' : 'Switch to minified editor'}
+        </button>
       </p>
       <h1 className="sr-only">BlockPy Studio</h1>
+      {minified ? (
+        <MinifiedEditor
+          initialCode={vfs.read('answer.py') ?? ''}
+          runController={runController}
+          blocklyMediaPath={paths.blocklyMedia}
+          onCodeChange={(newCode) => {
+            vfs.write('answer.py', newCode);
+            setCode(newCode);
+          }}
+        />
+      ) : (
       <CodingEditor
         assignmentName="Dev Harness Problem"
         instructions={instructions}
@@ -125,6 +147,7 @@ export function App({ config }: { config: BootConfig }) {
           },
         }}
       />
+      )}
     </main>
   );
 }

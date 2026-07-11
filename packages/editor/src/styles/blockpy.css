@@ -953,15 +953,43 @@ body {
     font-weight: bold;
 }
 
-/* Minified editor variant (§8.4) — compact reading-embedded editor: short
-   printer, tight toolbar rhythm. */
+/* Minified editor variant (§8.4) — compact reading-embedded editor.
+   Two columns: LEFT console above feedback, RIGHT toolbar above the code
+   editor; stacks below the legacy 675px responsive breakpoint. */
+.blockpy-minified {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    flex-wrap: wrap;
+}
+
+.blockpy-minified .blockpy-minified-left {
+    flex: 2 1 240px;
+    display: flex;
+    flex-direction: column;
+    min-width: 200px;
+}
+
+.blockpy-minified .blockpy-minified-right {
+    flex: 3 1 320px;
+    min-width: 260px;
+}
+
 .blockpy-minified .blockpy-minified-toolbar .btn {
     margin: 2px 0;
 }
 
 .blockpy-minified .blockpy-minified-printer {
-    height: auto;
-    max-height: 120px;
+    height: 90px;
+    resize: none;
     padding-bottom: 0;
-    margin-top: 2px;
+}
+
+.blockpy-minified .blockpy-minified-feedback {
+    flex: 1;
+    margin-top: 4px;
+    padding: 2px 6px;
+    border: 1px solid var(--blockpy-neutral-250);
+    background-color: var(--blockpy-neutral-0);
+    overflow-y: auto;
 }
