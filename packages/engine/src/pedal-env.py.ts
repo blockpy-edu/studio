@@ -84,6 +84,9 @@ def _studio_pedal_grade(student_code, on_run, files_json, inputs):
             'label': str(final.label),
             'title': str(final.title),
             'message': str(final.message),
+            # Legacy HIDE global (on_run.js:73): suppresses correctness
+            # display AND gates markCorrect in the submission POST (14.3).
+            'hide_correctness': bool(final.hide_correctness),
         }
     except BaseException:  # noqa: BLE001 - grading must fail soft
         # Grader or Pedal-internal crash (e.g. Pedal 3.0.1's syntax-error

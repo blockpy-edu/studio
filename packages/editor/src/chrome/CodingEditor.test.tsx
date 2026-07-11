@@ -71,6 +71,40 @@ describe('CodingEditor chrome', () => {
     expect(useEditorChromeStore.getState().runState).toBe('idle');
   });
 
+  it('fires the run lifecycle hooks in legacy order (§14.3)', async () => {
+    const order: string[] = [];
+    const controller: RunController = {
+      async run() {
+        order.push('run');
+        return {
+          error: null,
+          feedback: { category: 'complete', label: 'Great!', message: 'ok' },
+          grade: { success: true, score: 1, hideCorrectness: false },
+        };
+      },
+    };
+    const onRunStart = (code: string) => order.push(`start:${code}`);
+    const onGraded = () => {
+      // presentFeedback-first ordering (on_run.js:162): by the time the
+      // grade reaches the submission lifecycle, the pane already shows it.
+      order.push(`graded:${useEditorChromeStore.getState().feedback.category}`);
+    };
+    render(
+      <CodingEditor
+        startingCode="a = 0"
+        runController={controller}
+        onRunStart={onRunStart}
+        onGraded={onGraded}
+      />,
+    );
+    await act(async () => {
+      screen.getByRole('button', { name: /Run/ }).click();
+    });
+    await waitFor(() => {
+      expect(order).toEqual(['start:a = 0', 'run', 'graded:complete']);
+    });
+  });
+
   it('marks the run button with blockpy-run-error on failure', async () => {
     const controller: RunController = {
       async run() {

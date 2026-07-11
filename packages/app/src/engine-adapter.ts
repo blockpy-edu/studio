@@ -256,6 +256,13 @@ async function gradeWithPedal(
       // Pedal messages may embed HTML (D4-A: rendered unsanitized).
       message: feedback.message,
     },
+    // The SUCCESS/SCORE/HIDE triple for the §14.3 submission lifecycle —
+    // only a real resolver pass produces one (fail-softs above return none).
+    grade: {
+      success: feedback.success,
+      score: feedback.score,
+      hideCorrectness: feedback.hide_correctness === true,
+    },
   };
 }
 

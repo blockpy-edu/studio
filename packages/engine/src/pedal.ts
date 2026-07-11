@@ -28,6 +28,11 @@ export interface PedalFeedback {
   /** Rendered feedback body (may embed HTML; D4-A: rendered unsanitized). */
   message: string;
   /**
+   * Legacy `HIDE` (`final.hide_correctness`): hide the correct/incorrect
+   * verdict; also blocks the markCorrect navigation callback (§14.3).
+   */
+  hide_correctness?: boolean;
+  /**
    * Present when the grader or Pedal itself crashed (fail-soft): the full
    * Python traceback. Log as X-System.Error; never show raw to students.
    */

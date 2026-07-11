@@ -90,11 +90,23 @@ export interface RunOptions {
   graderFiles?: Record<string, string>;
 }
 
+/** Resolved grading verdict — the legacy SUCCESS/SCORE/HIDE triple (§14.3). */
+export interface GradeResult {
+  /** RAW success of THIS run (the wire `correct`; monotonic OR is display). */
+  success: boolean;
+  /** Unclamped resolver score; the submission sync clamps + maxes it. */
+  score: number;
+  /** Legacy HIDE: suppress the verdict and block markCorrect. */
+  hideCorrectness: boolean;
+}
+
 export interface RunOutcome {
   /** Traceback/error text, or null on success. */
   error: string | null;
   /** Pedal feedback to show, if the run produced any. */
   feedback?: FeedbackState | null;
+  /** Grading verdict when an instructor grader actually resolved (§14.3). */
+  grade?: GradeResult | null;
   /** Trace buffer when the run collected one. */
   trace?: TraceStepView[];
   /** Base64 PNGs of matplotlib figures the run produced (§10.2). */
@@ -149,6 +161,22 @@ export interface CodingEditorProps {
   /** `assignment.hidden` — filters X-Submission.LMS rows (history.js). */
   assignmentHidden?: boolean;
   onCodeChange?: (code: string) => void;
+  /**
+   * Any writable file changed through the editor — the autosave hook
+   * (legacy createFileSubscription, server.js:114-134).
+   */
+  onFileEdit?: (filename: string, contents: string) => void;
+  /**
+   * Run is starting: legacy saves answer.py IMMEDIATELY here (run.js:13),
+   * before execution.
+   */
+  onRunStart?: (code: string) => void;
+  /**
+   * A grader resolved for this run. Fired AFTER the feedback is presented
+   * (legacy presentFeedback-first ordering, on_run.js:162-175); the app
+   * layer runs the §14.3 updateSubmission → markCorrect sequence.
+   */
+  onGraded?: (grade: GradeResult) => void;
   /** Quick-menu wiring (Row 1 right column); `onRun` is supplied here. */
   quickMenu?: Omit<QuickMenuProps, 'onRun'>;
   /**
@@ -209,6 +237,8 @@ export function CodingEditor(props: CodingEditorProps) {
       setCode(newCode);
       if (vfs && !fileReadOnly) {
         vfs.write(activeFile, newCode);
+        // Autosave hook (legacy file subscriptions, server.js:114-134).
+        props.onFileEdit?.(activeFile, newCode);
       }
       if (activeFile === 'answer.py') {
         // Any answer edit stales the last run's feedback (feedback.js:110).
@@ -216,7 +246,7 @@ export function CodingEditor(props: CodingEditorProps) {
         props.onCodeChange?.(newCode);
       }
     },
-    [props.onCodeChange, vfs, activeFile, fileReadOnly, store],
+    [props.onCodeChange, props.onFileEdit, vfs, activeFile, fileReadOnly, store],
   );
 
   // Live toolbox reload on settings change (legacy `reloadToolbox`).
@@ -270,6 +300,8 @@ export function CodingEditor(props: CodingEditorProps) {
     // Run always executes the student's answer.py, regardless of which
     // file tab is active (legacy behavior).
     const studentCode = vfs ? (vfs.read('answer.py') ?? '') : code;
+    // Legacy saves answer.py immediately at run start (run.js:13).
+    props.onRunStart?.(studentCode);
     try {
       const outcome = await controller.run(
         studentCode,
@@ -310,6 +342,11 @@ export function CodingEditor(props: CodingEditorProps) {
       if (outcome.feedback) {
         setFeedback(outcome.feedback);
       }
+      // §14.3 ordering: the verdict reaches the submission lifecycle only
+      // AFTER the feedback is presented (on_run.js:162-175).
+      if (outcome.grade) {
+        props.onGraded?.(outcome.grade);
+      }
       const after = store.getState();
       after.setTrace(outcome.trace ?? []);
       // Run cycle end: feedback now matches the code (run.js:49).
@@ -324,7 +361,16 @@ export function CodingEditor(props: CodingEditorProps) {
       store.getState().setServerStatus('onExecution', 'failed', String(error));
       appendConsole({ kind: 'stderr', text: String(error) });
     }
-  }, [code, vfs, props.runController, props.hideEvaluate, store, handleSystem]);
+  }, [
+    code,
+    vfs,
+    props.runController,
+    props.hideEvaluate,
+    props.onRunStart,
+    props.onGraded,
+    store,
+    handleSystem,
+  ]);
 
   const handleEvaluate = useCallback(
     (expression: string) => {

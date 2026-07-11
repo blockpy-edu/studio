@@ -31,6 +31,7 @@ export {
   resolveToolboxSetting,
   type CodingEditorProps,
   type EvalOutcome,
+  type GradeResult,
   type RunController,
   type RunHandlers,
   type RunOptions,

@@ -19,6 +19,7 @@ import {
 } from '@blockpy/api';
 import { createEngineRunController } from './engine-adapter';
 import { parseAssignmentSettings, vfsFromAssignment } from './assignment-loader';
+import { SubmissionSync } from './submission-sync';
 import '@blockpy/editor/styles/tokens.css';
 import '@blockpy/editor/styles/bootstrap-subset.css';
 import '@blockpy/editor/styles/blockpy.css';
@@ -34,6 +35,20 @@ interface LoadedAssignment {
 /** Legacy settings coercion: `"" + value === "true"` (A4). */
 const settingBool = (value: unknown): boolean =>
   value === true || String(value).toLowerCase() === 'true';
+
+/**
+ * The files legacy autosaves individually through saveFile
+ * (createSubscriptions, server.js:123-134). Other files persist through
+ * the `#extra_*_files.blockpy` bundles — pending with the uploads work.
+ */
+const AUTOSAVE_FILES = new Set([
+  'answer.py',
+  '!on_run.py',
+  '!on_eval.py',
+  '!on_change.py',
+  '!instructions.md',
+  '^starting_code.py',
+]);
 
 export interface AppProps {
   config: BootConfig;
@@ -90,6 +105,18 @@ export function App({ config, extras, registerActions }: AppProps) {
     });
   }, [config, assignment, user, extras]);
 
+  // Autosave + §14.3 submission lifecycle rides the same client.
+  const sync = useMemo(() => {
+    if (!api) return null;
+    return new SubmissionSync({
+      api,
+      setStatus: (endpoint, status, message) =>
+        store.getState().setServerStatus(endpoint, status, message),
+      readOnly: () => config.display.readOnly,
+      markCorrect: extras?.markCorrect,
+    });
+  }, [api, config.display.readOnly, extras?.markCorrect, store]);
+
   // -- assignment adoption (legacy loadAssignmentData_, blockpy.js:491) ------
   const adoptAssignmentData = useCallback(
     (data: LegacyAssignmentPayload) => {
@@ -108,10 +135,13 @@ export function App({ config, extras, registerActions }: AppProps) {
         api.context.submissionId = submission?.id ?? null;
         api.context.submissionVersion = submission?.version ?? 0;
       }
+      // Monotonic score/correct state starts from the stored submission
+      // (loadSubmission, blockpy.js:473-474; wire score is a 0-1 float).
+      sync?.seed(submission?.score ?? 0, submission?.correct ?? false);
       setLoaded({ assignment: decoded, submission, vfs: vfsFromAssignment(decoded, submission ?? undefined) });
       setLoadError(null);
     },
-    [api],
+    [api, sync],
   );
 
   const loadAssignment = useCallback(
@@ -273,6 +303,18 @@ export function App({ config, extras, registerActions }: AppProps) {
           }
           assignmentHidden={active?.assignment.raw['hidden'] === true}
           runController={runController}
+          onFileEdit={(filename, contents) => {
+            if (sync && AUTOSAVE_FILES.has(filename)) {
+              sync.saveFileDebounced(filename, contents);
+            }
+          }}
+          onRunStart={(studentCode) => {
+            // run.js:13 — answer.py saves immediately when a run starts.
+            void sync?.saveFileNow('answer.py', studentCode);
+          }}
+          onGraded={(grade) => {
+            void sync?.handleGraded(grade);
+          }}
           loadHistory={loadHistory}
           quickMenu={{
             grader: true,
