@@ -39,6 +39,7 @@ export {
 export { FileTabs, computeTabs, type FileTab } from './chrome/FileTabs';
 export { TraceExplorer, typeFromRepr } from './chrome/TraceExplorer';
 export { Console } from './chrome/Console';
+export { DevConsole } from './chrome/DevConsole';
 export { Feedback } from './chrome/Feedback';
 export { Instructions, renderInstructions } from './chrome/Instructions';
 export { PythonToolbar } from './chrome/PythonToolbar';
@@ -59,6 +60,7 @@ export {
   SERVER_ENDPOINTS,
   type ConsoleEntry,
   type EditorChromeState,
+  type EvalState,
   type FeedbackState,
   type RunState,
   type ServerEndpoint,

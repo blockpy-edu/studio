@@ -8,7 +8,8 @@ import { create } from 'zustand';
 import type { DualEditorMode } from '../dual/dual-editor';
 
 export interface ConsoleEntry {
-  kind: 'stdout' | 'stderr' | 'input-prompt' | 'value' | 'image';
+  /** 'eval' = a frozen (submitted) Evaluate line, legacy disabled-input look. */
+  kind: 'stdout' | 'stderr' | 'input-prompt' | 'value' | 'image' | 'eval';
   text: string;
 }
 
@@ -21,6 +22,14 @@ export interface FeedbackState {
 }
 
 export type RunState = 'idle' | 'running' | 'error';
+
+/**
+ * The console's Evaluate affordance (legacy console.js): hidden until a run
+ * succeeds, then a `beginEval` button line (run.js:57-59, unless
+ * `hide_evaluate`); clicking it swaps in an inline "Evaluate:" input line,
+ * and every completed evaluation re-arms a fresh input (engine.js:136-156).
+ */
+export type EvalState = 'hidden' | 'button' | 'input';
 
 /** Legacy `StatusState` enum (server.js:8-14). */
 export type ServerStatusState =
@@ -79,6 +88,15 @@ export interface EditorChromeState {
    * any edit.
    */
   dirtySubmission: boolean;
+  /** Where the console's Evaluate affordance is in its lifecycle. */
+  evalState: EvalState;
+  /**
+   * Dev console (STUDIO EXTENSION, no legacy analog): a secondary,
+   * instructor-only console for system messages (engine boot, grader
+   * lifecycle) and instructor-code output, keeping the student console
+   * clean.
+   */
+  devConsole: ConsoleEntry[];
 
   setPythonMode(mode: DualEditorMode): void;
   toggleHistoryMode(): void;
@@ -100,6 +118,9 @@ export interface EditorChromeState {
   toggleRenderImages(): void;
   setPasscode(passcode: string): void;
   setDirtySubmission(dirty: boolean): void;
+  setEvalState(state: EvalState): void;
+  appendDevConsole(entry: ConsoleEntry): void;
+  clearDevConsole(): void;
 }
 
 /**
@@ -139,6 +160,8 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   renderImages: true,
   passcode: '',
   dirtySubmission: true,
+  evalState: 'hidden',
+  devConsole: [],
 
   setPythonMode: (mode) => set({ pythonMode: mode }),
   toggleHistoryMode: () =>
@@ -146,7 +169,9 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   setRunState: (runState) => set({ runState }),
   appendConsole: (entry) =>
     set((state) => ({ console: [...state.console, entry] })),
-  clearConsole: () => set({ console: [] }),
+  // Legacy clears the whole printer on each run — the beginEval button line
+  // lives inside it, so it goes too.
+  clearConsole: () => set({ console: [], evalState: 'hidden' }),
   setFeedback: (feedback) => set({ feedback }),
   clearFeedback: () => set({ feedback: EMPTY_FEEDBACK }),
   setTrace: (steps) => set({ traceSteps: steps, traceStep: 0 }),
@@ -171,4 +196,8 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
     set((state) => ({ renderImages: !state.renderImages })),
   setPasscode: (passcode) => set({ passcode }),
   setDirtySubmission: (dirty) => set({ dirtySubmission: dirty }),
+  setEvalState: (evalState) => set({ evalState }),
+  appendDevConsole: (entry) =>
+    set((state) => ({ devConsole: [...state.devConsole, entry] })),
+  clearDevConsole: () => set({ devConsole: [] }),
 }));

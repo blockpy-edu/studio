@@ -106,7 +106,7 @@ describe('CodingEditor trace + eval integration', () => {
     expect(screen.getByText(/Feedback:/)).toBeTruthy();
   });
 
-  it('Evaluate echoes the expression and prints value or error', async () => {
+  it('Evaluate lifecycle: button after run, inline input, frozen echo + value', async () => {
     const controller: RunController = {
       async run() {
         return { error: null };
@@ -118,6 +118,17 @@ describe('CodingEditor trace + eval integration', () => {
       },
     };
     render(<CodingEditor startingCode="a = 0" runController={controller} />);
+    // Before any run there is no Evaluate affordance (legacy beginEval only
+    // fires on run success).
+    expect(screen.queryByRole('button', { name: 'Evaluate' })).toBeNull();
+    await act(async () => {
+      screen.getByRole('button', { name: /Run/ }).click();
+    });
+    expect(useEditorChromeStore.getState().evalState).toBe('button');
+    // Click the pinned console button → inline "Evaluate:" input line.
+    act(() => {
+      screen.getByRole('button', { name: 'Evaluate' }).click();
+    });
     const input = screen.getByRole('textbox', {
       name: 'Evaluate expression',
     }) as HTMLInputElement;
@@ -125,12 +136,13 @@ describe('CodingEditor trace + eval integration', () => {
       fireEvent.change(input, { target: { value: 'a' } });
     });
     await act(async () => {
-      screen.getByRole('button', { name: 'Evaluate' }).click();
+      screen.getByRole('button', { name: 'Enter' }).click();
     });
-    const texts = useEditorChromeStore
-      .getState()
-      .console.map((entry) => entry.text);
-    expect(texts).toContain('>>> a');
-    expect(texts).toContain('0');
+    const entries = useEditorChromeStore.getState().console;
+    // Frozen evaluate line (legacy disabled-input echo), then the value.
+    expect(entries).toContainEqual({ kind: 'eval', text: 'a' });
+    expect(entries).toContainEqual({ kind: 'value', text: '0' });
+    // The input re-arms for the next evaluation (engine.js:152).
+    expect(useEditorChromeStore.getState().evalState).toBe('input');
   });
 });

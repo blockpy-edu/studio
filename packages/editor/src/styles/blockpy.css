@@ -165,17 +165,28 @@
     left: 20px;
 }
 
-/* Studio's Evaluate strip is an input-group UNDER the printer, not the
-   legacy button pinned inside it — neutralize the legacy pinning there so
-   the button sizes like a normal input-group addon. */
-.blockpy-console-eval .blockpy-btn-eval {
-    position: static;
-    bottom: auto;
-    left: auto;
+/* Anchor for the pinned Evaluate button (legacy relied on the nearest
+   positioned ancestor; explicit here so the button sits at the bottom-left
+   of the console panel per blockpy.css:143-147). */
+.blockpy-content .blockpy-console {
+    position: relative;
 }
 
-.blockpy-console-eval {
-    margin-top: 4px;
+/* Dev console (STUDIO EXTENSION): instructor-only secondary console for
+   system messages and instructor-code output. Shorter than the student
+   printer and visually distinct (dark, terminal-like). */
+.blockpy-dev-console .blockpy-dev-printer {
+    height: 100px;
+    padding-bottom: 0;
+    background-color: var(--blockpy-neutral-900);
+    border: 1px solid var(--blockpy-neutral-400);
+    color: var(--blockpy-neutral-0);
+    font-family: monospace;
+    font-size: 12px;
+}
+
+.blockpy-dev-console .blockpy-dev-printer .blockpy-printer-output {
+    border-bottom: none;
 }
 
 /** Feedback **/

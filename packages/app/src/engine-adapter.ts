@@ -80,7 +80,9 @@ export function createEngineRunController(
       const engine = ensureClient();
       if (!booted) {
         options.onBootStateChange?.(true);
-        handlers.stdout('Loading Python engine…\n');
+        // System message: footer status + dev console, not the student
+        // console.
+        handlers.system?.('Loading Python engine…');
       }
       const jobId = `harness-run-${++jobCounter}`;
       activeJobId = jobId;
@@ -194,7 +196,7 @@ async function gradeWithPedal(
   inputs?: string[],
 ): Promise<RunOutcome> {
   if (!pedalReady) {
-    handlers.stdout('Loading feedback engine…\n');
+    handlers.system?.('Loading feedback engine…');
   }
   const result = await engine.run(
     {
@@ -207,7 +209,12 @@ async function gradeWithPedal(
       // First grading job includes the wheel install; later ones are ~ms.
       limits: { wallMs: pedalReady ? 15_000 : 180_000 },
     },
-    {},
+    {
+      // Instructor-code output belongs to the dev console, not the
+      // student's.
+      onStdout: (chunk) => handlers.system?.(chunk),
+      onStderr: (chunk) => handlers.system?.(chunk),
+    },
   );
   if (!result.success || !result.feedback) {
     return {

@@ -142,6 +142,69 @@ describe('CodingEditor chrome', () => {
     expect(useEditorChromeStore.getState().dirtySubmission).toBe(false);
   });
 
+  it('routes system messages to the footer status + dev console, not the student console', async () => {
+    useEditorChromeStore.getState().clearDevConsole();
+    const controller: RunController = {
+      async run(_code, handlers) {
+        handlers.system?.('Loading Python engine…\n');
+        handlers.stdout('student output');
+        return { error: null };
+      },
+    };
+    const { container } = render(
+      <CodingEditor
+        startingCode="a = 0"
+        runController={controller}
+        instructor
+      />,
+    );
+    await act(async () => {
+      screen.getByRole('button', { name: /Run/ }).click();
+    });
+    const state = useEditorChromeStore.getState();
+    // Student console only has program output.
+    expect(state.console.map((e) => e.text)).toEqual(['student output']);
+    // System message landed in the dev console (newline trimmed)…
+    expect(state.devConsole.map((e) => e.text)).toEqual([
+      'Loading Python engine…',
+    ]);
+    expect(container.querySelector('.blockpy-dev-console')!.textContent).toContain(
+      'Loading Python engine…',
+    );
+    // …and the run completed with the Execution badge back to ready.
+    expect(state.serverStatus.onExecution).toBe('ready');
+  });
+
+  it('dev console is instructor-only', () => {
+    const { container, rerender } = render(<CodingEditor startingCode="a = 0" />);
+    expect(container.querySelector('.blockpy-dev-console')).toBeNull();
+    rerender(<CodingEditor startingCode="a = 0" instructor />);
+    expect(container.querySelector('.blockpy-dev-console')).not.toBeNull();
+  });
+
+  it('hide_evaluate suppresses the console Evaluate button', async () => {
+    const controller: RunController = {
+      async run() {
+        return { error: null };
+      },
+      async evaluate() {
+        return { value: '0', error: null };
+      },
+    };
+    render(
+      <CodingEditor
+        startingCode="a = 0"
+        runController={controller}
+        hideEvaluate
+      />,
+    );
+    await act(async () => {
+      screen.getByRole('button', { name: /Run/ }).click();
+    });
+    expect(useEditorChromeStore.getState().evalState).toBe('hidden');
+    expect(screen.queryByRole('button', { name: 'Evaluate' })).toBeNull();
+  });
+
   it('keeps queued inputs across runs when reuse is on (clearInputs=false)', async () => {
     const state = useEditorChromeStore.getState();
     state.setQueuedInputs(['keep me']);

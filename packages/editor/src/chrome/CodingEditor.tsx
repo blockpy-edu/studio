@@ -13,6 +13,7 @@ import { DualEditorView } from '../components/DualEditorView';
 import type { DualEditor } from '../dual/dual-editor';
 import { TOOLBOXES, type ToolboxSpec } from '../dual/toolboxes';
 import { Console } from './Console';
+import { DevConsole } from './DevConsole';
 import { Feedback } from './Feedback';
 import { FileTabs } from './FileTabs';
 import { Footer, type FooterProps } from './Footer';
@@ -52,6 +53,13 @@ export function resolveToolboxSetting(
 export interface RunHandlers {
   stdout(text: string): void;
   stderr(text: string): void;
+  /**
+   * System/diagnostic messages (engine boot, grader lifecycle) and
+   * instructor-code output — NOT student program output. Routed to the
+   * footer status area and the instructor-only dev console, never the
+   * student console.
+   */
+  system?(text: string): void;
 }
 
 export interface RunOptions {
@@ -101,6 +109,13 @@ export interface CodingEditorProps {
   /** File system driving the tab strip; `answer.py` is the working file. */
   vfs?: Vfs;
   role?: Role;
+  /**
+   * Legacy `display.instructor` (the "View as instructor" toggle): shows
+   * the dev console and the footer's force-load input.
+   */
+  instructor?: boolean;
+  /** Legacy `hide_evaluate` setting: never offer the console Evaluate. */
+  hideEvaluate?: boolean;
   onCodeChange?: (code: string) => void;
   /** Quick-menu wiring (Row 1 right column); `onRun` is supplied here. */
   quickMenu?: Omit<QuickMenuProps, 'onRun'>;
@@ -167,8 +182,22 @@ export function CodingEditor(props: CodingEditorProps) {
     }
   }, [toolboxSpec]);
 
+  // System messages (engine boot, grader lifecycle, instructor output) go
+  // to the footer status line + the instructor-only dev console — never the
+  // student console.
+  const handleSystem = useCallback(
+    (text: string) => {
+      const state = store.getState();
+      const message = text.replace(/\n+$/, '');
+      state.appendDevConsole({ kind: 'stdout', text: message });
+      state.setServerStatus('onExecution', 'active', message);
+    },
+    [store],
+  );
+
   const handleRun = useCallback(async () => {
     const controller = props.runController;
+    const hideEvaluate = props.hideEvaluate ?? false;
     const { setRunState, appendConsole, clearConsole, setFeedback } =
       store.getState();
     clearConsole();
@@ -180,6 +209,7 @@ export function CodingEditor(props: CodingEditorProps) {
       return;
     }
     setRunState('running');
+    store.getState().setServerStatus('onExecution', 'active', '');
     // Run always executes the student's answer.py, regardless of which
     // file tab is active (legacy behavior).
     const studentCode = vfs ? (vfs.read('answer.py') ?? '') : code;
@@ -189,10 +219,15 @@ export function CodingEditor(props: CodingEditorProps) {
         {
           stdout: (text) => appendConsole({ kind: 'stdout', text }),
           stderr: (text) => appendConsole({ kind: 'stderr', text }),
+          system: handleSystem,
         },
         { trace: true, inputs: store.getState().queuedInputs },
       );
-      setRunState(outcome.error === null ? 'idle' : 'error');
+      const succeeded = outcome.error === null;
+      setRunState(succeeded ? 'idle' : 'error');
+      store
+        .getState()
+        .setServerStatus('onExecution', succeeded ? 'ready' : 'failed', '');
       if (outcome.error !== null) {
         appendConsole({ kind: 'stderr', text: outcome.error });
       }
@@ -208,17 +243,24 @@ export function CodingEditor(props: CodingEditorProps) {
       if (after.clearInputs) {
         after.setQueuedInputs([]);
       }
+      // Successful run offers the console Evaluate button (run.js:57-59),
+      // unless the hide_evaluate setting is on.
+      if (succeeded && !hideEvaluate) {
+        after.setEvalState('button');
+      }
     } catch (error) {
       setRunState('error');
+      store.getState().setServerStatus('onExecution', 'failed', String(error));
       appendConsole({ kind: 'stderr', text: String(error) });
     }
-  }, [code, vfs, props.runController, store]);
+  }, [code, vfs, props.runController, props.hideEvaluate, store, handleSystem]);
 
   const handleEvaluate = useCallback(
     (expression: string) => {
+      // The submitted expression is already frozen into the printer by the
+      // Console (legacy keeps the disabled input line as the echo).
       const controller = props.runController;
-      const { appendConsole } = store.getState();
-      appendConsole({ kind: 'value', text: '>>> ' + expression });
+      const { appendConsole, setServerStatus } = store.getState();
       if (!controller?.evaluate) {
         appendConsole({
           kind: 'stderr',
@@ -226,12 +268,15 @@ export function CodingEditor(props: CodingEditorProps) {
         });
         return;
       }
+      setServerStatus('onExecution', 'active', '');
       void controller
         .evaluate(expression, {
           stdout: (text) => appendConsole({ kind: 'stdout', text }),
           stderr: (text) => appendConsole({ kind: 'stderr', text }),
+          system: handleSystem,
         })
         .then((outcome) => {
+          store.getState().setServerStatus('onExecution', 'ready', '');
           if (outcome.error !== null) {
             appendConsole({ kind: 'stderr', text: outcome.error });
           } else if (outcome.value !== null) {
@@ -239,7 +284,7 @@ export function CodingEditor(props: CodingEditorProps) {
           }
         });
     },
-    [props.runController, store],
+    [props.runController, store, handleSystem],
   );
 
   const handleTraceLine = useCallback((studentLine: number | null) => {
@@ -290,6 +335,11 @@ export function CodingEditor(props: CodingEditorProps) {
               <Feedback />
             )}
           </div>
+          {props.instructor && (
+            <div className="row">
+              <DevConsole />
+            </div>
+          )}
         </div>
       </div>
       {vfs && (
@@ -327,7 +377,7 @@ export function CodingEditor(props: CodingEditorProps) {
         </div>
       </div>
       <div className="row">
-        <Footer {...props.footer} />
+        <Footer instructor={props.instructor} {...props.footer} />
       </div>
     </div>
   );

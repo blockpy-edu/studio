@@ -79,16 +79,31 @@ test('quick menu, footer, and highlighted instructions render per A8', async ({ 
   ).toBeVisible();
 });
 
-test('Run boots the engine lazily and reports it in the console', async ({ page }) => {
+test('Run boots the engine lazily; system messages go to status + dev console', async ({ page }) => {
   await page.goto('/');
   await page.locator('button.blockpy-run').click();
-  // Engine boot is lazy (R7): the console announces the load immediately and
-  // the Run button flips to its running state.
-  await expect(page.locator('.blockpy-printer')).toContainText(
+  // Engine boot is lazy (R7). The load announcement is a SYSTEM message:
+  // footer status area, not the student console.
+  await expect(page.locator('.blockpy-status')).toContainText(
+    'Loading Python engine',
+  );
+  await expect(page.locator('.blockpy-printer')).not.toContainText(
     'Loading Python engine',
   );
   await expect(page.locator('button.blockpy-run')).toHaveClass(
     /blockpy-run-running/,
+  );
+  // The Execution badge reflects the active run.
+  await expect(
+    page.locator('.blockpy-status .badge').last(),
+  ).toHaveClass(/server-status-active/);
+  // Dev console is instructor-only: hidden for students, visible (with the
+  // system message) once the instructor view toggle is on.
+  await expect(page.locator('.blockpy-dev-console')).toHaveCount(0);
+  await page.locator('#blockpy-as-instructor').check();
+  await expect(page.locator('.blockpy-dev-console')).toBeVisible();
+  await expect(page.locator('.blockpy-dev-console')).toContainText(
+    'Loading Python engine',
   );
 });
 
@@ -116,11 +131,17 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
   await page.getByRole('button', { name: 'Last step' }).click();
   await expect(page.locator('.blockpy-trace table')).toContainText('a');
   await page.getByRole('button', { name: /Hide Trace/ }).click();
-  // REPL: evaluate an expression against the persistent namespace (§6.4).
-  await page.getByRole('textbox', { name: 'Evaluate expression' }).fill('a + 41');
-  await page.getByRole('button', { name: 'Evaluate' }).click();
-  await expect(page.locator('.blockpy-printer')).toContainText('>>> a + 41');
-  await expect(page.locator('.blockpy-printer')).toContainText('41', {
+  // REPL: the successful run pinned an Evaluate button in the console
+  // (legacy beginEval); clicking it opens the inline input line (§6.4).
+  await page.locator('button.blockpy-btn-eval').click();
+  const evalInput = page.getByRole('textbox', { name: 'Evaluate expression' });
+  await evalInput.fill('a + 41');
+  await page.getByRole('button', { name: 'Enter' }).click();
+  // Frozen echo line + the value, all inside the printer.
+  await expect(
+    page.locator('.blockpy-printer input[disabled]').first(),
+  ).toHaveValue('a + 41');
+  await expect(page.locator('.blockpy-printer code')).toContainText('41', {
     timeout: 30_000,
   });
   // Incorrect submission path: change the code, rerun, get the gentle hint.
@@ -190,16 +211,16 @@ test('layout regressions: no horizontal overflow, panels side by side, white edi
     .locator('.blockpy-feedback')
     .boundingBox())!;
   expect(badgeWidth).toBeLessThan(feedbackPane.width / 2);
-  // 7. Evaluate button sits in the input strip at input-group size (the
-  //    legacy absolute pinning must not apply in the strip).
-  const evalButton = page.locator('.blockpy-console-eval .blockpy-btn-eval');
-  const evalBox = (await evalButton.boundingBox())!;
-  const evalInput = (await page
-    .locator('.blockpy-console-eval input')
-    .boundingBox())!;
-  expect(Math.abs(evalBox.height - evalInput.height)).toBeLessThan(3);
-  expect(evalBox.width).toBeLessThan(150);
+  // 7. The dev console (instructor view) spans the console+feedback row and
+  //    uses the dark terminal styling, clearly distinct from the student
+  //    printer.
+  await page.locator('#blockpy-as-instructor').check();
+  const devPrinter = page.locator('.blockpy-dev-printer');
+  await expect(devPrinter).toBeVisible();
+  const devBox = (await devPrinter.boundingBox())!;
+  const contentBox = (await page.locator('.blockpy-content').boundingBox())!;
+  expect(devBox.width).toBeGreaterThan(contentBox.width * 0.9);
   expect(
-    await evalButton.evaluate((el) => getComputedStyle(el).position),
-  ).toBe('static');
+    await devPrinter.evaluate((el) => getComputedStyle(el).backgroundColor),
+  ).not.toBe('rgb(255, 255, 255)');
 });

@@ -16,6 +16,9 @@ import type { BootConfig } from './boot-config';
 export function App({ config }: { config: BootConfig }) {
   const { user, assignment, display, paths } = config;
   const [, setCode] = useState('a = 0\nprint(a)');
+  // "View as instructor" (legacy display.instructor). The dev harness
+  // always exposes the grader toggle for debugging.
+  const [instructorView, setInstructorView] = useState(display.instructor);
   const instructions =
     'Print the value of `a`.\n\nUse the **Run** button to execute:\n\n' +
     '```python\na = 0\nprint(a)\n```';
@@ -56,18 +59,19 @@ export function App({ config }: { config: BootConfig }) {
         assignmentName="Dev Harness Problem"
         instructions={instructions}
         vfs={vfs}
-        role={display.instructor ? 'instructor' : 'student'}
+        role={instructorView ? 'instructor' : 'student'}
+        instructor={instructorView}
         onCodeChange={setCode}
         readOnly={display.readOnly}
         blocklyMediaPath={paths.blocklyMedia}
         runController={runController}
         quickMenu={{
-          grader: display.instructor,
-          instructor: display.instructor,
+          grader: true,
+          instructor: instructorView,
+          onInstructorChange: setInstructorView,
           hasClock: true,
         }}
         footer={{
-          instructor: display.instructor,
           identity: {
             userId: user.id ?? undefined,
             userName: user.name,
