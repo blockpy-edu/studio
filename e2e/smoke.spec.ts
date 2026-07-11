@@ -238,6 +238,13 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
   test.skip(!process.env.PYODIDE_E2E, 'set PYODIDE_E2E=1 to run');
   test.setTimeout(300_000);
   await page.goto('/');
+  // The grading POST (§14.3) fires after feedback presents; it must carry
+  // the block-workspace PNG (legacy getPngFromBlocks, server.js:675-680).
+  const updatePost = page.waitForRequest(
+    (request) =>
+      request.url().includes('update_submission') && request.method() === 'POST',
+    { timeout: 240_000 },
+  );
   await page.locator('button.blockpy-run').click();
   // Student output streams first…
   await expect(page.locator('.blockpy-printer')).toContainText('0', {
@@ -247,6 +254,9 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
   await expect(page.locator('.blockpy-feedback')).toContainText('Complete', {
     timeout: 240_000,
   });
+  const updateBody = (await updatePost).postData() ?? '';
+  expect(updateBody).toContain('correct=true');
+  expect(updateBody).toContain(`image=${encodeURIComponent('data:image/png;base64,')}`);
   await expect(page.locator('button.blockpy-run')).not.toHaveClass(
     /blockpy-run-running/,
   );

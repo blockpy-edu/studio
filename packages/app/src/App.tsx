@@ -4,6 +4,7 @@ import {
   MinifiedEditor,
   requestPasscode,
   useEditorChromeStore,
+  type DualEditor,
   type HistoryEntry,
 } from '@blockpy/editor';
 import { Vfs } from '@blockpy/vfs';
@@ -82,6 +83,8 @@ export function App({ config, extras, registerActions }: AppProps) {
   const [correct, setCorrect] = useState(false);
   // §7.4 out-of-date banner: saveFile responded version_change (LD-11).
   const [versionOutdated, setVersionOutdated] = useState(false);
+  // Live dual editor — the updateSubmission block-PNG source (§14.3).
+  const dualEditorRef = useRef<DualEditor | null>(null);
   const store = useEditorChromeStore;
 
   // -- server client (spec §14): built once per mount ------------------------
@@ -129,6 +132,7 @@ export function App({ config, extras, registerActions }: AppProps) {
       readOnly: () => config.display.readOnly,
       markCorrect: extras?.markCorrect,
       onVersionChange: () => setVersionOutdated(true),
+      getImage: () => dualEditorRef.current?.blockEditor.getPng() ?? Promise.resolve(''),
     });
   }, [api, config.display.readOnly, extras?.markCorrect, store]);
 
@@ -376,6 +380,9 @@ export function App({ config, extras, registerActions }: AppProps) {
             if (grade.success) setCorrect(true);
           }}
           onLogEvent={logEvent}
+          onEditorReady={(editor) => {
+            dualEditorRef.current = editor;
+          }}
           loadHistory={loadHistory}
           quickMenu={{
             grader: true,

@@ -157,6 +157,23 @@ describe('§14.3 grading sequence (on_run.js:164-175, server.js:663-693)', () =>
     expect(sync.displayCorrect).toBe(true);
   });
 
+  it('always carries the image field: capture, empty, and fail-soft (server.js:675)', async () => {
+    const withImage = harness({ getImage: async () => 'data:image/png;base64,PNG' });
+    await withImage.sync.handleGraded({ success: true, score: 1, hideCorrectness: false });
+    expect(withImage.posted[0]!.body.get('image')).toBe('data:image/png;base64,PNG');
+    const withoutImage = harness();
+    await withoutImage.sync.handleGraded({ success: true, score: 1, hideCorrectness: false });
+    expect(withoutImage.posted[0]!.body.get('image')).toBe('');
+    const broken = harness({
+      getImage: () => Promise.reject(new Error('no canvas')),
+    });
+    await broken.sync.handleGraded({ success: true, score: 1, hideCorrectness: false });
+    expect(broken.posted[0]!.body.get('image')).toBe(''); // never blocks the POST
+    await broken.sync.forceUpdate();
+    expect(broken.posted[1]!.body.get('force_update')).toBe('true');
+    expect(broken.posted[1]!.body.get('image')).toBe('');
+  });
+
   it('display correct is a monotonic OR; the wire stays raw', async () => {
     const { sync, posted } = harness();
     await sync.handleGraded({ success: true, score: 1, hideCorrectness: false });

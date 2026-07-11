@@ -31,6 +31,12 @@ export interface SubmissionSyncOptions {
    * (legacy IGNORED the flag — ledger LD-11).
    */
   onVersionChange?: () => void;
+  /**
+   * Block-workspace PNG data URL for the updateSubmission payload —
+   * legacy getPngFromBlocks (server.js:675-680); resolves '' when there
+   * are no blocks or capture fails.
+   */
+  getImage?: () => Promise<string>;
   /** Scheduler injection for tests. */
   schedule?: (fn: () => void, ms: number) => number;
   cancel?: (timer: number) => void;
@@ -49,6 +55,15 @@ export class SubmissionSync {
     this.schedule =
       options.schedule ?? ((fn, ms) => setTimeout(fn, ms) as unknown as number);
     this.cancel = options.cancel ?? ((timer) => clearTimeout(timer));
+  }
+
+  /** Fail-soft image capture: a broken snapshot never blocks the POST. */
+  private async captureImage(): Promise<string> {
+    try {
+      return (await this.options.getImage?.()) ?? '';
+    } catch {
+      return '';
+    }
   }
 
   /** Reset the monotonic state from a freshly loaded submission. */
@@ -134,6 +149,7 @@ export class SubmissionSync {
         correct: this.correct,
         hidden_override: false,
         force_update: true,
+        image: await this.captureImage(),
       });
       this.options.setStatus(
         'updateSubmission',
@@ -169,8 +185,9 @@ export class SubmissionSync {
         correct: grade.success, // RAW success of THIS run, not the OR
         hidden_override: grade.hideCorrectness,
         force_update: false,
-        // Legacy attaches a block-workspace PNG here (getPngFromBlocks);
-        // Studio's block screenshot lands with saveImage (M1.6 pending).
+        // Legacy awaits getPngFromBlocks before POSTing (server.js:675) —
+        // the image field is always present, '' when capture yields none.
+        image: await this.captureImage(),
       });
     } catch (error) {
       this.options.setStatus('updateSubmission', 'failed', String(error));

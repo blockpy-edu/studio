@@ -117,6 +117,94 @@ export class DualBlockEditor {
     return workspaceToPython(this.workspace);
   }
 
+  /**
+   * PNG snapshot of the workspace as a data URL — the legacy
+   * `getPngFromBlocks` port (BlockMirror block_editor.js:322-384), used for
+   * the `updateSubmission` image payload (§14.3). Resolves '' for an empty
+   * workspace or on any failure (legacy fail-soft), and falls back to the
+   * SVG data URL when canvas export is blocked (legacy catch).
+   */
+  getPng(): Promise<string> {
+    return new Promise((resolve) => {
+      try {
+        const liveCanvas = this.workspace.getCanvas();
+        const blocks = liveCanvas.cloneNode(true) as SVGElement;
+        blocks.removeAttribute('width');
+        blocks.removeAttribute('height');
+        if (blocks.childNodes[0] === undefined) {
+          resolve('');
+          return;
+        }
+        // Remove tags that offset (legacy comment) — the canvas transform
+        // and up to two nested group transforms.
+        blocks.removeAttribute('transform');
+        (blocks.childNodes[0] as Element).removeAttribute?.('transform');
+        (blocks.childNodes[0]?.childNodes[0] as Element | undefined)?.removeAttribute?.(
+          'transform',
+        );
+        // Inline every Blockly-injected stylesheet (Blockly 11 registers
+        // common + renderer styles as <style id="blockly...">; media paths
+        // are already resolved, unlike legacy's <<<PATH>>> tokens).
+        const css = Array.from(document.querySelectorAll('style'))
+          .filter((element) => element.id.startsWith('blockly'))
+          .map((element) => element.textContent ?? '')
+          .join('\n');
+        const styleElement = document.createElementNS(
+          'http://www.w3.org/1999/xhtml',
+          'style',
+        );
+        styleElement.textContent = css + '\n\n';
+        blocks.insertBefore(styleElement, blocks.firstChild);
+        const bbox = liveCanvas.getBBox();
+        // The renderer/theme classes scope the inlined CSS (legacy hardcoded
+        // "Thrasos-renderer classic-theme"; read them off the live div).
+        const classes = this.workspace
+          .getInjectionDiv()
+          .className.replace('injectionDiv', '')
+          .trim();
+        const xml = new XMLSerializer().serializeToString(blocks);
+        const svg =
+          '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" ' +
+          'xmlns:xlink="http://www.w3.org/1999/xlink" ' +
+          `class="${classes}" width="${bbox.width}" height="${bbox.height}" ` +
+          `viewBox="0 0 ${bbox.width} ${bbox.height}">` +
+          '<rect width="100%" height="100%" fill="white"></rect>' +
+          xml +
+          '</svg>';
+        const url =
+          'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+        const img = document.createElement('img');
+        img.style.display = 'block';
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = bbox.width;
+          canvas.height = bbox.height;
+          if (!canvas.width || !canvas.height) {
+            resolve('');
+            return;
+          }
+          const context = canvas.getContext('2d');
+          if (!context) {
+            resolve('');
+            return;
+          }
+          context.drawImage(img, 0, 0);
+          img.onload = null;
+          try {
+            resolve(canvas.toDataURL('image/png'));
+          } catch {
+            resolve(url);
+          }
+        };
+        img.onerror = () => resolve('');
+        img.setAttribute('src', url);
+      } catch (error) {
+        console.error('PNG image creation not supported!', error);
+        resolve('');
+      }
+    });
+  }
+
   setCode(code: string, quietly = false): void {
     if (!this.isVisible()) {
       this.outOfDate_ = code;

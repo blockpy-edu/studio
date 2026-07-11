@@ -176,6 +176,17 @@ describe('CodingEditor chrome', () => {
     });
   });
 
+  it('exposes the editor for block-PNG capture; getPng fails soft in jsdom', async () => {
+    let captured: import('../dual/dual-editor').DualEditor | null = null;
+    render(
+      <CodingEditor startingCode="a = 0" onEditorReady={(editor) => (captured = editor)} />,
+    );
+    expect(captured).not.toBeNull();
+    // jsdom has no SVG layout (getBBox) — the legacy-ported fail-soft path
+    // must resolve '' instead of throwing (block_editor.js:381-383).
+    await expect(captured!.blockEditor.getPng()).resolves.toBe('');
+  });
+
   it('logs X-File.Reset on reset (blockpy.js:1046)', async () => {
     const events: string[] = [];
     render(

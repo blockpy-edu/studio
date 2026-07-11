@@ -203,6 +203,11 @@ export interface CodingEditorProps {
   onGraded?: (grade: GradeResult) => void;
   /** ProgSnap2 event stream hook (§14.4, A2) — see LogEventFn. */
   onLogEvent?: LogEventFn;
+  /**
+   * Receive the live DualEditor (null on unmount) — the app layer uses
+   * `blockEditor.getPng()` for the updateSubmission image payload (§14.3).
+   */
+  onEditorReady?: (editor: DualEditor | null) => void;
   /** Quick-menu wiring (Row 1 right column); `onRun` is supplied here. */
   quickMenu?: Omit<QuickMenuProps, 'onRun'>;
   /**
@@ -668,6 +673,7 @@ export function CodingEditor(props: CodingEditorProps) {
                 height={400}
                 editorRef={(editor) => {
                   editorRef.current = editor;
+                  props.onEditorReady?.(editor);
                 }}
               />
             </div>
