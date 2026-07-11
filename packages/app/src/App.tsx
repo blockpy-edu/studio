@@ -77,6 +77,11 @@ export function App({ config, extras, registerActions }: AppProps) {
   const [loaded, setLoaded] = useState<LoadedAssignment | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Legacy submission.submissionStatus/.correct display state (blockpy.js).
+  const [submissionStatus, setSubmissionStatus] = useState('unknown');
+  const [correct, setCorrect] = useState(false);
+  // §7.4 out-of-date banner: saveFile responded version_change (LD-11).
+  const [versionOutdated, setVersionOutdated] = useState(false);
   const store = useEditorChromeStore;
 
   // -- server client (spec §14): built once per mount ------------------------
@@ -123,6 +128,7 @@ export function App({ config, extras, registerActions }: AppProps) {
         store.getState().setServerStatus(endpoint, status, message),
       readOnly: () => config.display.readOnly,
       markCorrect: extras?.markCorrect,
+      onVersionChange: () => setVersionOutdated(true),
     });
   }, [api, config.display.readOnly, extras?.markCorrect, store]);
 
@@ -145,8 +151,11 @@ export function App({ config, extras, registerActions }: AppProps) {
         api.context.submissionVersion = submission?.version ?? 0;
       }
       // Monotonic score/correct state starts from the stored submission
-      // (loadSubmission, blockpy.js:473-474; wire score is a 0-1 float).
+      // (loadSubmission, blockpy.js:473-484; wire score is a 0-1 float).
       sync?.seed(submission?.score ?? 0, submission?.correct ?? false);
+      setCorrect(submission?.correct ?? false);
+      setSubmissionStatus(String(submission?.raw['submission_status'] ?? 'unknown'));
+      setVersionOutdated(false);
       setLoaded({ assignment: decoded, submission, vfs: vfsFromAssignment(decoded, submission ?? undefined) });
       setLoadError(null);
     },
@@ -305,6 +314,19 @@ export function App({ config, extras, registerActions }: AppProps) {
       </p>
       <h1 className="sr-only">BlockPy Studio</h1>
       {loadError !== null && <div className="alert alert-warning">{loadError}</div>}
+      {versionOutdated && (
+        <div className="alert alert-warning blockpy-version-outdated">
+          The assignment has been updated since you started working on it.
+          Reload the page to get the latest version — your code is saved.{' '}
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-secondary"
+            onClick={() => setVersionOutdated(false)}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       {bootPending || (loading && active === null) ? (
         <p>Loading! Please wait.</p>
       ) : minified ? (
@@ -350,6 +372,8 @@ export function App({ config, extras, registerActions }: AppProps) {
           }}
           onGraded={(grade) => {
             void sync?.handleGraded(grade);
+            // Display OR-chain (on_run.js:165) feeds the mark-submitted text.
+            if (grade.success) setCorrect(true);
           }}
           onLogEvent={logEvent}
           loadHistory={loadHistory}
@@ -358,8 +382,69 @@ export function App({ config, extras, registerActions }: AppProps) {
             instructor: instructorView,
             onInstructorChange: setInstructorView,
             hasClock: true,
+            // Fullscreen event stream (X-Display.Fullscreen.*, A2).
+            onLogEvent: (eventType, message) => logEvent(eventType, '', '', message, ''),
+            // Legacy canShare (blockpy.js:632-650): parts base64 → shareUrl.
+            ...(config.urls.shareUrl
+              ? {
+                  shareUrl: () => {
+                    const base = config.urls.shareUrl as string;
+                    const encoded = btoa(
+                      [
+                        'group',
+                        user.courseId,
+                        assignment.assignmentGroupId,
+                        active?.assignment.id ?? '',
+                        user.id,
+                        new Date().toISOString(),
+                      ].join('_'),
+                    );
+                    return base + (base.endsWith('/') ? '' : '/') + encoded;
+                  },
+                }
+              : {}),
+            // Mark-submitted ladder (blockpy.js:590-625) — the button shows
+            // only for reviewed/can_close assignments (QuickMenu gates it).
+            ...(active && api
+              ? {
+                  submission: {
+                    status: submissionStatus,
+                    reviewed: active.assignment.raw['reviewed'] === true,
+                    canClose: settingBool(settings['can_close'] ?? false),
+                    hidden: active.assignment.raw['hidden'] === true,
+                    correct,
+                    grouped: assignment.assignmentGroupId !== null,
+                    onUpdateStatus: (status: string) => {
+                      void api
+                        .updateSubmissionStatus(status)
+                        .then((response) => {
+                          // Legacy postStatusChange (server.js:593-597):
+                          // local status updates only on success; logical
+                          // failures are silent.
+                          if (response.success) setSubmissionStatus(status);
+                        })
+                        .catch(() => {
+                          // Legacy _postBlocking exhausts 2 attempts then
+                          // shows the error dialog (dialog.js:151-154).
+                          alert(
+                            'BlockPy encountered an error while updating your submission status.\n' +
+                              'Please reload the page and try again.',
+                          );
+                        });
+                    },
+                  },
+                }
+              : {}),
           }}
           footer={{
+            instructor: instructorView,
+            // Instructor force-load: a JSON file replaces the loaded pair
+            // (blockpy.js:1186-1200 → loadAssignmentData_).
+            onForceLoadAssignment: (data) =>
+              adoptAssignmentData(data as LegacyAssignmentPayload),
+            // Update Submission badge click re-POSTs with force_update
+            // (blockpy.js:1202-1208).
+            onForceUpdateSubmission: () => void sync?.forceUpdate(),
             identity: {
               userId: user.id ?? undefined,
               userName: user.name,

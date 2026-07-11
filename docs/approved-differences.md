@@ -139,3 +139,18 @@ Replicate decisions (D4, D6) produce no entries — they are legacy parity.
 - **Wire impact:** none (client-side rendering only). Visual delta: code
   fences in instructions/feedback gain the gray background + token colors
   legacy authors intended but never saw.
+
+## LD-11 — `version_change` out-of-date banner made real (Milestone 1.6)
+
+- **Legacy:** the `save_file` endpoint computes and returns
+  `version_change: submission.assignment.version != submission.assignment_version`
+  (blockpy-server blockpy.py:259-271), but the legacy client never reads the
+  flag — no call site anywhere in blockpy/src. Students editing a stale
+  assignment version got no notice.
+- **Studio:** the spec (§7.4) requires the UI to surface stale-version
+  warnings as the "your code is out of date / reload" banner, so the
+  submission sync checks `version_change` on every successful `saveFile`
+  response and raises a dismissible `.blockpy-version-outdated` alert. The
+  banner resets on assignment load.
+- **Wire impact:** none (the flag was already on every save response;
+  Studio just stops discarding it).

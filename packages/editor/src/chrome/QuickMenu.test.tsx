@@ -163,6 +163,40 @@ describe('QuickMenu component', () => {
     expect(statuses).toEqual(['Submitted']);
   });
 
+  it('share button opens START_SHARE with the built link + copy (dialog.js:218)', async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.assign(navigator, { clipboard: { writeText } });
+    const { container } = render(
+      <QuickMenu shareUrl={() => 'https://share.example/abc123'} />,
+    );
+    fireEvent.click(
+      container.querySelector(
+        '[title="Get Shareable Link for Instructors or TAs"]',
+      )!,
+    );
+    expect(
+      container.querySelector('.blockpy-copy-share-link-area')!.textContent,
+    ).toBe('https://share.example/abc123');
+    // QR fails soft exactly like legacy without its QRCode lib.
+    expect(
+      container.querySelector('.blockpy-copy-share-qrcode')!.textContent,
+    ).toContain('QR code generation failed');
+    const copy = container.querySelector('.blockpy-copy-share-link')!;
+    fireEvent.click(copy);
+    expect(writeText).toHaveBeenCalledWith('https://share.example/abc123');
+    await act(async () => {});
+    expect(copy.textContent).toBe('Copied!');
+  });
+
+  it('renders no share button without a shareUrl (legacy canShare)', () => {
+    const { container } = render(<QuickMenu />);
+    expect(
+      container.querySelector(
+        '[title="Get Shareable Link for Instructors or TAs"]',
+      ),
+    ).toBeNull();
+  });
+
   it('ticks the wall clock only when has_clock is on (A4 §6 inversion note)', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 6, 10, 9, 5));

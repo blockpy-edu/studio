@@ -114,6 +114,31 @@ describe('saveFile autosave (server.js:114-134, 637-655)', () => {
   });
 });
 
+describe('version_change banner (LD-11, spec §7.4)', () => {
+  it('fires onVersionChange when saveFile reports a stale version', async () => {
+    const onVersionChange = vi.fn();
+    const { sync, setResponse } = harness({ onVersionChange });
+    setResponse({ success: true, version_change: false });
+    await sync.saveFileNow('answer.py', 'v1');
+    expect(onVersionChange).not.toHaveBeenCalled();
+    setResponse({ success: true, version_change: true });
+    await sync.saveFileNow('answer.py', 'v2');
+    expect(onVersionChange).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('force update (blockpy.js:1202-1208)', () => {
+  it('re-POSTs the current display state with force_update=true', async () => {
+    const { sync, posted } = harness();
+    sync.seed(0.5, true);
+    await sync.forceUpdate();
+    expect(posted[0]!.body.get('score')).toBe('0.5');
+    expect(posted[0]!.body.get('correct')).toBe('true');
+    expect(posted[0]!.body.get('force_update')).toBe('true');
+    expect(posted[0]!.body.get('hidden_override')).toBe('false');
+  });
+});
+
 describe('§14.3 grading sequence (on_run.js:164-175, server.js:663-693)', () => {
   it('POSTs monotonic-max score with the RAW success as correct', async () => {
     const { sync, posted } = harness();

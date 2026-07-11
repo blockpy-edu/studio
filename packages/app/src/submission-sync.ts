@@ -25,6 +25,12 @@ export interface SubmissionSyncOptions {
   readOnly: () => boolean;
   /** Legacy `callback.success` — the navigation markCorrect (§15.3). */
   markCorrect?: (assignmentId: number) => void;
+  /**
+   * saveFile responded `version_change: true` — the assignment changed
+   * under this submission. Studio surfaces the §7.4 out-of-date banner
+   * (legacy IGNORED the flag — ledger LD-11).
+   */
+  onVersionChange?: () => void;
   /** Scheduler injection for tests. */
   schedule?: (fn: () => void, ms: number) => number;
   cancel?: (timer: number) => void;
@@ -102,11 +108,40 @@ export class SubmissionSync {
         );
       } else {
         this.options.setStatus('saveFile', 'ready');
+        if (response['version_change'] === true) {
+          this.options.onVersionChange?.();
+        }
       }
     } catch {
       // Transport.postRetry only rejects when a test caps retries; legacy
       // keeps retrying forever and shows RETRYING meanwhile.
       this.options.setStatus('saveFile', 'retrying');
+    }
+  }
+
+  /**
+   * The footer badge's force-update (blockpy.js:1202-1208): re-POST the
+   * current display score/correct with `force_update: true`.
+   */
+  async forceUpdate(): Promise<void> {
+    if (this.options.readOnly() || !this.options.api.isEndpointConnected('updateSubmission')) {
+      return;
+    }
+    this.options.setStatus('updateSubmission', 'active');
+    try {
+      const response = await this.options.api.updateSubmission({
+        score: this.score,
+        correct: this.correct,
+        hidden_override: false,
+        force_update: true,
+      });
+      this.options.setStatus(
+        'updateSubmission',
+        response.success ? 'ready' : 'failed',
+        response.success ? undefined : String(response['message'] ?? ''),
+      );
+    } catch (error) {
+      this.options.setStatus('updateSubmission', 'failed', String(error));
     }
   }
 

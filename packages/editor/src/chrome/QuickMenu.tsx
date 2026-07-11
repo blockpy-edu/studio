@@ -87,8 +87,11 @@ export interface QuickMenuProps {
   hasClock?: boolean;
   /** `hide_queued_inputs` setting. */
   hideQueuedInputs?: boolean;
-  /** Legacy canShare: button renders only when a share URL exists. */
-  onShare?(): void;
+  /**
+   * Legacy canShare/getShareUrl (blockpy.js:632-657): the button renders
+   * only when provided; clicking builds the link and opens START_SHARE.
+   */
+  shareUrl?(): string;
   /** Mark-submitted button — renders only when reviewed/canClose allow. */
   submission?: SubmissionControls;
   /** Legacy engine.delayedRun for the "Run" branch of mark-submitted. */
@@ -127,17 +130,39 @@ export function QuickMenu(props: QuickMenuProps) {
   const toggleFullscreen = () => {
     props.onLogEvent?.('X-Display.Fullscreen.Request', String(!fullscreen));
     if (document.fullscreenElement !== null) {
-      void document.exitFullscreen();
+      void document.exitFullscreen().then(() => {
+        props.onLogEvent?.('X-Display.Fullscreen.Exit', 'false');
+      });
       return;
     }
     // Legacy targets the container's parent (blockpy.js:1084).
     const content = rootRef.current?.closest('.blockpy-content');
     const target = content?.parentElement ?? content;
-    target?.requestFullscreen().catch((err: Error) => {
-      const message = `Error attempting to enable full-screen mode: ${err.message} (${err.name})`;
-      props.onLogEvent?.('X-Display.Fullscreen.Error', message);
-      alert(message);
-    });
+    void target
+      ?.requestFullscreen()
+      .catch((err: Error) => {
+        const message = `Error attempting to enable full-screen mode: ${err.message} (${err.name})`;
+        props.onLogEvent?.('X-Display.Fullscreen.Error', message);
+        alert(message);
+      })
+      .then(() => {
+        // Legacy quirk (interface.js:55-63): the .catch().then() chain means
+        // Success ALSO logs after the Error path handled a rejection.
+        props.onLogEvent?.('X-Display.Fullscreen.Success', '');
+      });
+  };
+
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareLink, setShareLink] = useState('');
+  const [copied, setCopied] = useState(false);
+  const openShare = () => {
+    if (!props.shareUrl) return;
+    setShareLink(props.shareUrl());
+    setCopied(false);
+    setShareOpen(true);
+  };
+  const copyShareLink = () => {
+    void navigator.clipboard.writeText(shareLink).then(() => setCopied(true));
   };
 
   const openInputsDialog = () => {
@@ -230,11 +255,11 @@ export function QuickMenu(props: QuickMenuProps) {
       >
         <Icon name="images" />
       </button>
-      {props.onShare && (
+      {props.shareUrl && (
         <button
           type="button"
           className="btn btn-outline-secondary btn-sm"
-          onClick={props.onShare}
+          onClick={openShare}
           title="Get Shareable Link for Instructors or TAs"
         >
           <Icon name="share" />
@@ -278,6 +303,44 @@ export function QuickMenu(props: QuickMenuProps) {
         Edit the inputs above to store and reuse them across multiple
         executions. Each input should be put on its own line. You do not need
         quotes; the text will be entered literally.
+      </Dialog>
+
+      {/* Legacy START_SHARE (dialog.js:218-261), unprompted variant; the
+          prompted variant attaches to feedback nudges (M2). QR rendering
+          fails soft exactly like legacy without its QRCode lib. */}
+      <Dialog
+        title="Share Your Code"
+        visible={shareOpen}
+        onClose={() => setShareOpen(false)}
+        onOkay={() => setShareOpen(false)}
+        okayLabel="Close"
+      >
+        <div className="mb-4">
+          You can quickly share your code with instructors and TAs by
+          providing them with this link:
+        </div>
+        <div className="mb-4">
+          <pre className="blockpy-copy-share-link-area">{shareLink}</pre>
+          <button
+            type="button"
+            className="btn btn-outline-secondary blockpy-copy-share-link"
+            onClick={copyShareLink}
+          >
+            {copied ? 'Copied!' : 'Copy Link'}
+          </button>
+        </div>
+        <div className="mb-4">
+          Note that you CANNOT share this link with other students, or access
+          it yourself. This is strictly for sharing with the course staff when
+          something goes wrong or you need help with your code.
+        </div>
+        <div className="mb-4">
+          The link is also available through this QR code. Do not share this
+          QR code unless your instructor or TA asks you to.
+          <div className="blockpy-copy-share-qrcode">
+            QR code generation failed.
+          </div>
+        </div>
       </Dialog>
     </div>
   );

@@ -100,7 +100,9 @@ export class ApiClient {
     );
   }
 
-  async updateSubmissionStatus(status: number): Promise<LegacyResponse> {
+  /** `status` is a STRING on the wire ("Submitted", "inProgress" — the
+   *  server passes it verbatim to grade_submission, blockpy.py:567-585). */
+  async updateSubmissionStatus(status: string): Promise<LegacyResponse> {
     if (this.guardReadOnly()) return { success: false, readOnly: true };
     return this.options.transport.postRetry(
       this.url('updateSubmissionStatus'),
