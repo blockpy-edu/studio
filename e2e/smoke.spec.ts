@@ -330,6 +330,17 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
   await expect(page.locator('.blockpy-printer')).toContainText('Hi Ada', {
     timeout: 60_000,
   });
+  // matplotlib plots render inline in the console (§10.2): the engine
+  // auto-loads the package from imports, captures Agg figures as PNGs.
+  await content.click();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.type(
+    'import matplotlib.pyplot as plt\nplt.plot([1, 2, 3])\nplt.show()',
+  );
+  await page.locator('button.blockpy-run').click();
+  const plot = page.locator('.blockpy-printer .blockpy-console-image-output img');
+  await expect(plot).toBeVisible({ timeout: 120_000 });
+  expect(await plot.getAttribute('src')).toContain('data:image/png;base64,');
   // Minified variant shares the already-booted page engine: swap views,
   // run, and the inline output console streams the result.
   await page.getByRole('button', { name: 'Switch to minified editor' }).click();

@@ -82,6 +82,9 @@ export function MinifiedEditor(props: MinifiedEditorProps) {
       if (outcome.error !== null) {
         append({ kind: 'stderr', text: outcome.error });
       }
+      for (const image of outcome.images ?? []) {
+        append({ kind: 'image', text: `data:image/png;base64,${image}` });
+      }
       if (outcome.feedback) {
         setFeedback(outcome.feedback);
         // Same LD-10 highlighting as the main feedback pane.
@@ -121,9 +124,15 @@ export function MinifiedEditor(props: MinifiedEditorProps) {
           {output.map((entry, i) => (
             <div
               key={i}
-              className={`blockpy-printer-output blockpy-printer-${entry.kind}`}
+              className={
+                entry.kind === 'image'
+                  ? 'blockpy-printer-output blockpy-console-image-output'
+                  : `blockpy-printer-output blockpy-printer-${entry.kind}`
+              }
             >
-              {entry.kind === 'stderr' ? (
+              {entry.kind === 'image' ? (
+                <img src={entry.text} alt="Plot output" />
+              ) : entry.kind === 'stderr' ? (
                 <span style={{ color: 'darkred' }}>{entry.text}</span>
               ) : (
                 entry.text

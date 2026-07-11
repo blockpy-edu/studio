@@ -97,6 +97,8 @@ export interface RunOutcome {
   feedback?: FeedbackState | null;
   /** Trace buffer when the run collected one. */
   trace?: TraceStepView[];
+  /** Base64 PNGs of matplotlib figures the run produced (§10.2). */
+  images?: string[];
 }
 
 export interface EvalOutcome {
@@ -300,6 +302,10 @@ export function CodingEditor(props: CodingEditorProps) {
         .setServerStatus('onExecution', succeeded ? 'ready' : 'failed', '');
       if (outcome.error !== null) {
         appendConsole({ kind: 'stderr', text: outcome.error });
+      }
+      // Plots print into the console flow as image lines (§10.2).
+      for (const image of outcome.images ?? []) {
+        appendConsole({ kind: 'image', text: `data:image/png;base64,${image}` });
       }
       if (outcome.feedback) {
         setFeedback(outcome.feedback);

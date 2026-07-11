@@ -63,9 +63,21 @@ function FrozenEvalLine({ expression }: { expression: string }) {
   );
 }
 
-function entryBody(entry: ConsoleEntry) {
+function entryBody(entry: ConsoleEntry, renderImages: boolean) {
   if (entry.kind === 'eval') {
     return <FrozenEvalLine expression={entry.text} />;
+  }
+  if (entry.kind === 'image') {
+    // Legacy quick-menu Toggle Images: off = the image stays "as text code".
+    return (
+      <div className="blockpy-printer-output blockpy-console-image-output">
+        {renderImages ? (
+          <img src={entry.text} alt="Plot output" />
+        ) : (
+          <code>{entry.text.slice(0, 64)}…</code>
+        )}
+      </div>
+    );
   }
   return (
     <div className={`blockpy-printer-output blockpy-printer-${entry.kind}`}>
@@ -84,6 +96,7 @@ export function Console({ size = 'col-md-6', onEvaluate, onShowDev }: ConsolePro
   const entries = useEditorChromeStore((state) => state.console);
   const evalState = useEditorChromeStore((state) => state.evalState);
   const devUnseen = useEditorChromeStore((state) => state.devUnseen);
+  const renderImages = useEditorChromeStore((state) => state.renderImages);
   const [expression, setExpression] = useState('');
   const printerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -133,7 +146,7 @@ export function Console({ size = 'col-md-6', onEvaluate, onShowDev }: ConsolePro
         role="log"
       >
         {entries.map((entry, i) => (
-          <div key={i}>{entryBody(entry)}</div>
+          <div key={i}>{entryBody(entry, renderImages)}</div>
         ))}
         {evalVisible && evalState === 'input' && (
           <div className="blockpy-printer-output">

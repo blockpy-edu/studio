@@ -99,6 +99,8 @@ export interface EngineResult {
   value?: string;
   /** Trace buffer when the job opted in (E3). */
   trace?: TraceStep[];
+  /** Base64 PNGs of matplotlib figures the run produced (spec §10.2). */
+  images?: string[];
   /** Files created or modified by the run (LD-3x run artifacts). */
   artifacts: Record<string, string>;
   /** Resolved Pedal feedback — present when the job carried `pedal`. */

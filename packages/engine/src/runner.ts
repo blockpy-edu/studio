@@ -12,6 +12,8 @@ import type { EngineJob, EngineResult, TraceStep } from './protocol';
 export interface PyodideLike {
   runPython(code: string, options?: { globals?: unknown }): unknown;
   globals: { get(name: string): unknown };
+  /** Auto-fetch Pyodide packages referenced by the code's imports. */
+  loadPackagesFromImports?(code: string): Promise<unknown>;
 }
 
 export interface StreamCallbacks {
@@ -63,6 +65,8 @@ interface RuntimePayload {
     student_line: number;
     locals?: Record<string, string>;
   }> | null;
+  /** Base64 PNGs of the run's matplotlib figures (spec §10.2). */
+  images?: string[] | null;
 }
 
 const toJsDeep = (proxy: PyProxy): RuntimePayload => {
@@ -155,6 +159,14 @@ export class JobRunner {
     if (job.pedal) {
       return this.executePedal(job, started);
     }
+    // Fetch Pyodide packages the code imports (numpy, matplotlib, …).
+    // Fail-soft: offline/unknown imports surface as the natural Python
+    // ModuleNotFoundError instead of a transport error.
+    try {
+      await this.pyodide.loadPackagesFromImports?.(job.code);
+    } catch {
+      // Ignored — the run itself reports the missing module.
+    }
     // Stage via a Python-side JSON parse to avoid proxy lifetime headaches.
     this.pyodide.runPython(
       `_studio_runtime.stage_files(__import__('json').loads(${JSON.stringify(
@@ -212,6 +224,7 @@ export class JobRunner {
             locals: step.locals,
           }))
         : undefined,
+      images: payload.images?.length ? payload.images : undefined,
       artifacts,
       durationMs: Date.now() - started,
     };

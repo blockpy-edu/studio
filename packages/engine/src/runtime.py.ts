@@ -17,9 +17,16 @@ import os
 import sys
 import traceback
 import types
+import warnings
 
 MOUNT = '/mnt/blockpy'
 TRACE_STORAGE_CAP = 10000
+
+# Plot capture (spec 10.2): headless Agg backend — figures are snapshotted
+# into PNGs after each run instead of "shown". Set before matplotlib can be
+# imported; silence Agg's "cannot be shown" warning from plt.show().
+os.environ.setdefault('MPLBACKEND', 'Agg')
+warnings.filterwarnings('ignore', message='.*non-interactive.*cannot be shown.*')
 
 
 class TraceLimitError(Exception):
@@ -84,8 +91,43 @@ class StudioRuntime:
 
     def restore_modules(self):
         for name in list(sys.modules):
-            if name not in self.baseline_modules:
-                del sys.modules[name]
+            if name in self.baseline_modules:
+                continue
+            module = sys.modules[name]
+            file = getattr(module, '__file__', '') or ''
+            if '/site-packages/' in file:
+                # Installed packages (loadPackage/micropip) are expensive to
+                # re-initialize (matplotlib takes seconds) and stateless per
+                # job in practice — adopt into the baseline. Per-job figure
+                # state is reset by capture_figures (plt.close('all')).
+                self.baseline_modules.add(name)
+                continue
+            # Stdlib, student/staged (/mnt/blockpy), and dynamic modules stay
+            # per-job (§6.2): purge so the next run reimports fresh state.
+            del sys.modules[name]
+
+    # -- plot capture (spec 10.2) --------------------------------------------
+
+    def capture_figures(self):
+        """Snapshot every open matplotlib figure to base64 PNG, then close.
+
+        Runs only when the student's code actually imported matplotlib.
+        Fail-soft: a broken figure never breaks the run result.
+        """
+        if 'matplotlib' not in sys.modules:
+            return []
+        try:
+            import base64
+            import matplotlib.pyplot as plt
+            images = []
+            for number in plt.get_fignums():
+                buffer = io.BytesIO()
+                plt.figure(number).savefig(buffer, format='png')
+                images.append(base64.b64encode(buffer.getvalue()).decode('ascii'))
+            plt.close('all')
+            return images
+        except Exception:  # noqa: BLE001
+            return []
 
     # -- tracing (E3): step events + instruction limit ------------------------
 
@@ -178,6 +220,9 @@ class StudioRuntime:
         except BaseException as exc:  # noqa: BLE001 - full error report needed
             error = self.format_error(exc, filename, prefix_lines)
         finally:
+            # Snapshot plots BEFORE the module restore unloads matplotlib —
+            # figures drawn before an error still surface (spec 10.2).
+            images = self.capture_figures()
             builtins.input = old_input
             if old_main is not None:
                 sys.modules['__main__'] = old_main
@@ -190,6 +235,7 @@ class StudioRuntime:
             'stdout': stdout.getvalue(),
             'stderr': stderr.getvalue(),
             'trace': steps if trace else None,
+            'images': images,
         }
 
     def evaluate(self, expression, on_stdout=None, on_stderr=None):

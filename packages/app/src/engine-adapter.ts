@@ -114,6 +114,7 @@ export function createEngineRunController(
           options.onBootStateChange?.(false);
         }
         const trace = result.trace ?? [];
+        const images = result.images;
         if (result.success) {
           // Per-run script (the live !on_run.py from the VFS) beats the
           // static fallback; empty/whitespace means "no grader".
@@ -130,11 +131,12 @@ export function createEngineRunController(
               runOptions?.inputs,
               runOptions?.graderFiles,
             );
-            return { ...graded, trace };
+            return { ...graded, trace, images };
           }
           return {
             error: null,
             trace,
+            images,
             feedback: {
               category: 'no errors',
               label: '',
@@ -148,6 +150,7 @@ export function createEngineRunController(
         return {
           error: error?.traceback || error?.message || 'Execution failed.',
           trace,
+          images,
           feedback: {
             category: error?.type === 'SyntaxError' ? 'syntax' : 'runtime',
             label: `${error?.type ?? 'Error'}${where}`,

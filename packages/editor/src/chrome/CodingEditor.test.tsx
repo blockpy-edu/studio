@@ -319,6 +319,32 @@ describe('CodingEditor chrome', () => {
     expect(scripts).toEqual(['']);
   });
 
+  it('plot images print into the console; Toggle Images falls back to text', async () => {
+    const controller: RunController = {
+      async run() {
+        return { error: null, images: ['AAAA'] };
+      },
+    };
+    const { container } = render(
+      <CodingEditor startingCode="a = 0" runController={controller} />,
+    );
+    await act(async () => {
+      screen.getByRole('button', { name: /Run/ }).click();
+    });
+    const image = container.querySelector<HTMLImageElement>(
+      '.blockpy-console-image-output img',
+    );
+    expect(image).not.toBeNull();
+    expect(image!.src).toBe('data:image/png;base64,AAAA');
+    // Quick-menu Toggle Images: off = image stays as text code (legacy).
+    act(() => useEditorChromeStore.getState().toggleRenderImages());
+    expect(container.querySelector('.blockpy-console-image-output img')).toBeNull();
+    expect(
+      container.querySelector('.blockpy-console-image-output code')!.textContent,
+    ).toContain('data:image/png;base64,AAAA');
+    act(() => useEditorChromeStore.getState().toggleRenderImages());
+  });
+
   it('inputs queued DURING a run survive its completion (clear-at-start)', async () => {
     const state = useEditorChromeStore.getState();
     state.setQueuedInputs([]);

@@ -70,6 +70,34 @@ describe('end-to-end through the worker protocol', () => {
     expect(last.locals?.['scaffold']).toBe('0');
   });
 
+  // Downloads matplotlib+numpy from the Pyodide CDN — opt in with MPL_IT=1.
+  it.skipIf(!process.env.MPL_IT)(
+    'captures matplotlib figures as base64 PNGs (§10.2)',
+    async () => {
+      const result = await client.run(
+        job({
+          code: [
+            'import matplotlib.pyplot as plt',
+            'plt.plot([1, 2, 3], [4, 5, 6])',
+            'plt.show()',
+            'print("done")',
+          ].join('\n'),
+        }),
+      );
+      expect(result.success).toBe(true);
+      expect(result.stdout).toBe('done\n');
+      // No Agg "cannot be shown" warning leaked to the student.
+      expect(result.stderr).toBe('');
+      expect(result.images).toHaveLength(1);
+      // PNG magic bytes in base64.
+      expect(result.images![0]!.startsWith('iVBOR')).toBe(true);
+      // Figures were closed — a following run starts clean.
+      const clean = await client.run(job({ code: 'print("next")' }));
+      expect(clean.images).toBeUndefined();
+    },
+    240_000,
+  );
+
   it('enforces the traceSteps instruction limit (execLimit mapping, §6.2)', async () => {
     const result = await client.run(
       job({
