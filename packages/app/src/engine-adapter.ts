@@ -262,6 +262,7 @@ async function gradeWithPedal(
       success: feedback.success,
       score: feedback.score,
       hideCorrectness: feedback.hide_correctness === true,
+      unitTests: feedback.unit_tests,
     },
   };
 }

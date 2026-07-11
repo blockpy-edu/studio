@@ -77,7 +77,29 @@ def _studio_pedal_grade(student_code, on_run, files_json, inputs):
         exec(compile(on_run, 'on_run.py', 'exec'), instructor_globals)
 
         final = resolve(report=MAIN_REPORT)
+        # Legacy countTestCases (feedback.js:341-368): tallies over ALL
+        # considered feedback objects; category 'specification' = test cases,
+        # inactive (condition not met) = success. bool(fb) is Pedal's
+        # _met_condition, the same check Skulpt's isTrue performed. Pedal 3
+        # files unmet feedback under ignored_feedback (legacy Pedal kept one
+        # list), so the legacy iteration covers both.
+        tests = feedback_count = successes = feedback_success = 0
+        for fb in MAIN_REPORT.feedback + MAIN_REPORT.ignored_feedback:
+            active = bool(fb)
+            if str(fb.category) == 'specification':
+                tests += 1
+                if not active:
+                    successes += 1
+            feedback_count += 1
+            if not active:
+                feedback_success += 1
         return {
+            'unit_tests': {
+                'tests': tests,
+                'feedbacks': feedback_count,
+                'successes': successes,
+                'feedbackSuccess': feedback_success,
+            },
             'success': bool(final.success),
             'score': final.score,
             'category': str(final.category),

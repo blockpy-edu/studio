@@ -32,6 +32,8 @@ export {
   type CodingEditorProps,
   type EvalOutcome,
   type GradeResult,
+  type LogEventFn,
+  type UnitTestCounts,
   type RunController,
   type RunHandlers,
   type RunOptions,

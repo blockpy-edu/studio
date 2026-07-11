@@ -33,6 +33,17 @@ export interface PedalFeedback {
    */
   hide_correctness?: boolean;
   /**
+   * Legacy countTestCases tallies (feedback.js:341-368) — the `unitTests`
+   * block of the Intervention event payload (A2). Key spelling is the
+   * legacy wire format (`feedbackSuccess` camelCase included).
+   */
+  unit_tests?: {
+    tests: number;
+    feedbacks: number;
+    successes: number;
+    feedbackSuccess: number;
+  };
+  /**
    * Present when the grader or Pedal itself crashed (fail-soft): the full
    * Python traceback. Log as X-System.Error; never show raw to students.
    */

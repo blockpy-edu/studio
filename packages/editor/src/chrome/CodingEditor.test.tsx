@@ -105,6 +105,88 @@ describe('CodingEditor chrome', () => {
     });
   });
 
+  it('logs the run event stream in legacy order (§14.4, A2)', async () => {
+    const events: Array<{ type: string; category: string; message: string; file: string }> = [];
+    const logEvent = (
+      type: string,
+      category: string,
+      _label: string,
+      message: string,
+      file: string,
+    ) => events.push({ type, category, message, file });
+    const controller: RunController = {
+      async run(_code, handlers) {
+        handlers.stdout('4\n');
+        return {
+          error: null,
+          feedback: { category: 'complete', label: 'Great!', message: 'ok' },
+          grade: {
+            success: true,
+            score: 1,
+            hideCorrectness: false,
+            unitTests: { tests: 2, feedbacks: 3, successes: 2, feedbackSuccess: 3 },
+          },
+        };
+      },
+    };
+    render(
+      <CodingEditor startingCode="print(2+2)" runController={controller} onLogEvent={logEvent} />,
+    );
+    await act(async () => {
+      screen.getByRole('button', { name: /Run/ }).click();
+    });
+    await waitFor(() => {
+      expect(events.map((e) => e.type)).toEqual(['Compile', 'Run.Program', 'Intervention']);
+    });
+    // Run.Program carries the {inputs, outputs} JSON (run.js:44-48).
+    expect(JSON.parse(events[1]!.message)).toEqual({ inputs: '', outputs: '4' });
+    // Intervention carries the feedback payload with resolver tallies
+    // (feedback.js:223-230), extended flag on the wire.
+    expect(JSON.parse(events[2]!.message)).toEqual({
+      message: 'ok',
+      syntaxError: false,
+      runtimeError: false,
+      unitTests: { tests: 2, feedbacks: 3, successes: 2, feedbackSuccess: 3 },
+    });
+    expect(events.every((e) => e.file === 'answer.py')).toBe(true);
+  });
+
+  it('logs Compile.Error for syntax failures (run.js:85)', async () => {
+    const events: string[] = [];
+    const controller: RunController = {
+      async run() {
+        return {
+          error: 'SyntaxError: bad',
+          feedback: { category: 'syntax', label: 'SyntaxError', message: 'bad' },
+        };
+      },
+    };
+    render(
+      <CodingEditor
+        startingCode="def broken(:"
+        runController={controller}
+        onLogEvent={(type) => events.push(type)}
+      />,
+    );
+    await act(async () => {
+      screen.getByRole('button', { name: /Run/ }).click();
+    });
+    await waitFor(() => {
+      expect(events).toEqual(['Compile', 'Compile.Error', 'Intervention']);
+    });
+  });
+
+  it('logs X-File.Reset on reset (blockpy.js:1046)', async () => {
+    const events: string[] = [];
+    render(
+      <CodingEditor startingCode="a = 0" onLogEvent={(type) => events.push(type)} />,
+    );
+    await act(async () => {
+      screen.getByRole('button', { name: /Reset/ }).click();
+    });
+    expect(events).toEqual(['X-File.Reset']);
+  });
+
   it('marks the run button with blockpy-run-error on failure', async () => {
     const controller: RunController = {
       async run() {

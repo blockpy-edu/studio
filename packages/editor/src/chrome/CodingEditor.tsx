@@ -90,6 +90,14 @@ export interface RunOptions {
   graderFiles?: Record<string, string>;
 }
 
+/** Legacy countTestCases tallies — the Intervention `unitTests` block (A2). */
+export interface UnitTestCounts {
+  tests: number;
+  feedbacks: number;
+  successes: number;
+  feedbackSuccess: number;
+}
+
 /** Resolved grading verdict — the legacy SUCCESS/SCORE/HIDE triple (§14.3). */
 export interface GradeResult {
   /** RAW success of THIS run (the wire `correct`; monotonic OR is display). */
@@ -98,7 +106,23 @@ export interface GradeResult {
   score: number;
   /** Legacy HIDE: suppress the verdict and block markCorrect. */
   hideCorrectness: boolean;
+  /** Feedback tallies for the Intervention event (feedback.js:341-368). */
+  unitTests?: UnitTestCounts;
 }
+
+/**
+ * Event-log hook (spec §14.4): the chrome fires this at the legacy logEvent
+ * call sites; the app layer forwards to the `logEvent` endpoint. Signature
+ * mirrors legacy `BlockPyServer.logEvent`.
+ */
+export type LogEventFn = (
+  eventType: string,
+  category: string,
+  label: string,
+  message: string,
+  filePath: string,
+  extended?: boolean,
+) => void;
 
 export interface RunOutcome {
   /** Traceback/error text, or null on success. */
@@ -177,6 +201,8 @@ export interface CodingEditorProps {
    * layer runs the §14.3 updateSubmission → markCorrect sequence.
    */
   onGraded?: (grade: GradeResult) => void;
+  /** ProgSnap2 event stream hook (§14.4, A2) — see LogEventFn. */
+  onLogEvent?: LogEventFn;
   /** Quick-menu wiring (Row 1 right column); `onRun` is supplied here. */
   quickMenu?: Omit<QuickMenuProps, 'onRun'>;
   /**
@@ -300,8 +326,10 @@ export function CodingEditor(props: CodingEditorProps) {
     // Run always executes the student's answer.py, regardless of which
     // file tab is active (legacy behavior).
     const studentCode = vfs ? (vfs.read('answer.py') ?? '') : code;
-    // Legacy saves answer.py immediately at run start (run.js:13).
+    // Legacy saves answer.py immediately at run start (run.js:13) and logs
+    // the Compile event (run.js:14).
     props.onRunStart?.(studentCode);
+    props.onLogEvent?.('Compile', '', '', '', 'answer.py');
     try {
       const outcome = await controller.run(
         studentCode,
@@ -335,12 +363,62 @@ export function CodingEditor(props: CodingEditorProps) {
       if (outcome.error !== null) {
         appendConsole({ kind: 'stderr', text: outcome.error });
       }
+      // Run outcome events (run.js:48, 83-85): success carries the
+      // {inputs, outputs} JSON; runtime errors are Run.Program with the
+      // ProgramErrorOutput category; syntax errors are Compile.Error.
+      if (succeeded) {
+        const outputs = store
+          .getState()
+          .console.filter((entry) => entry.kind === 'stdout')
+          .map((entry) => entry.text)
+          .join('')
+          .replace(/\n$/, '');
+        props.onLogEvent?.(
+          'Run.Program',
+          '',
+          '',
+          JSON.stringify({ inputs: runInputs.join('\n'), outputs }),
+          'answer.py',
+        );
+      } else if (outcome.feedback?.category === 'syntax') {
+        props.onLogEvent?.('Compile.Error', '', '', outcome.error ?? '', 'answer.py');
+      } else {
+        props.onLogEvent?.(
+          'Run.Program',
+          'ProgramErrorOutput',
+          '',
+          outcome.error ?? '',
+          'answer.py',
+        );
+      }
       // Plots print into the console flow as image lines (§10.2).
       for (const image of outcome.images ?? []) {
         appendConsole({ kind: 'image', text: `data:image/png;base64,${image}` });
       }
       if (outcome.feedback) {
         setFeedback(outcome.feedback);
+        // Intervention logs with the presentation (feedback.js:223-230);
+        // the unitTests block comes from the resolver tallies when a
+        // grader actually ran.
+        const category = outcome.feedback.category ?? '';
+        props.onLogEvent?.(
+          'Intervention',
+          category,
+          outcome.feedback.label,
+          JSON.stringify({
+            message: outcome.feedback.message,
+            syntaxError: category.toLowerCase() === 'syntax',
+            runtimeError: category.toLowerCase() === 'runtime',
+            unitTests: outcome.grade?.unitTests ?? {
+              tests: 0,
+              feedbacks: 0,
+              successes: 0,
+              feedbackSuccess: 0,
+            },
+          }),
+          'answer.py',
+          true,
+        );
       }
       // §14.3 ordering: the verdict reaches the submission lifecycle only
       // AFTER the feedback is presented (on_run.js:162-175).
@@ -368,6 +446,7 @@ export function CodingEditor(props: CodingEditorProps) {
     props.hideEvaluate,
     props.onRunStart,
     props.onGraded,
+    props.onLogEvent,
     store,
     handleSystem,
   ]);
@@ -386,6 +465,10 @@ export function CodingEditor(props: CodingEditorProps) {
         return;
       }
       setServerStatus('onExecution', 'active', '');
+      // Eval lifecycle events (eval.js:19-27): the expression joins the
+      // virtual `evaluations` file, then compiles.
+      props.onLogEvent?.('X-File.Add', '', '', expression, 'evaluations');
+      props.onLogEvent?.('Compile', '', '', expression, 'evaluations');
       void controller
         .evaluate(expression, {
           stdout: (text) => appendConsole({ kind: 'stdout', text }),
@@ -396,12 +479,17 @@ export function CodingEditor(props: CodingEditorProps) {
           store.getState().setServerStatus('onExecution', 'ready', '');
           if (outcome.error !== null) {
             appendConsole({ kind: 'stderr', text: outcome.error });
-          } else if (outcome.value !== null) {
-            appendConsole({ kind: 'value', text: outcome.value });
+            // eval.js:57 — eval errors log as Compile.Error.
+            props.onLogEvent?.('Compile.Error', '', '', outcome.error, 'evaluations');
+          } else {
+            props.onLogEvent?.('X-Evaluate.Program', '', '', '', 'evaluations');
+            if (outcome.value !== null) {
+              appendConsole({ kind: 'value', text: outcome.value });
+            }
           }
         });
     },
-    [props.runController, store, handleSystem],
+    [props.runController, props.onLogEvent, store, handleSystem],
   );
 
   const handleTraceLine = useCallback((studentLine: number | null) => {
@@ -476,7 +564,18 @@ export function CodingEditor(props: CodingEditorProps) {
       setCode(starting);
       editorRef.current?.setCode(starting);
     }
-  }, [props.startingCode, vfs, isAnswerFile]);
+    props.onLogEvent?.('X-File.Reset', '', '', '', 'answer.py');
+  }, [props.startingCode, props.onLogEvent, vfs, isAnswerFile]);
+
+  // X-View.Change on Blocks/Split/Text toggles (blockpy.js:1071-1075) —
+  // logged on changes only, not the initial mode.
+  const loggedMode = useRef(pythonMode);
+  useEffect(() => {
+    if (loggedMode.current !== pythonMode) {
+      loggedMode.current = pythonMode;
+      props.onLogEvent?.('X-View.Change', '', '', pythonMode, activeFile);
+    }
+  }, [pythonMode, activeFile, props.onLogEvent]);
 
   return (
     <div className="blockpy-content container-fluid">

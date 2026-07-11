@@ -96,6 +96,29 @@ if not assert_plot('line', [1, 2, 3]):
     expect(result.feedback!.message).toContain('right data');
   }, 60_000);
 
+  it('reports countTestCases tallies for the Intervention event (§14.4)', async () => {
+    const result = await runner.execute({
+      id: 'pedal-tallies',
+      phase: 'instructor.on_run',
+      files: {},
+      code: 'a = 0\nprint(a)',
+      pedal: {
+        onRun: [
+          'from pedal import *',
+          'from pedal.assertions import assert_equal',
+          'assert_equal(1, 1)', // passing specification feedback
+          'assert_equal(1, 2)', // failing specification feedback
+        ].join('\n'),
+      },
+    });
+    expect(result.success).toBe(true);
+    const tallies = result.feedback!.unit_tests!;
+    expect(tallies.tests).toBe(2); // both assert_equal are 'specification'
+    expect(tallies.successes).toBe(1); // only the passing one
+    expect(tallies.feedbacks).toBeGreaterThanOrEqual(2);
+    expect(result.feedback!.hide_correctness).toBe(false);
+  }, 60_000);
+
   it('normal student.run jobs still work on the same runner', async () => {
     const result = await runner.execute({
       id: 'pedal-3',

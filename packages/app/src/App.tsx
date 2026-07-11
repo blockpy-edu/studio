@@ -93,16 +93,25 @@ export function App({ config, extras, registerActions }: AppProps) {
       passcode: '',
       partId: '',
     };
+    // Late-bound so the transport's IP-change hook can log through the
+    // client it belongs to (LD-2c: detection is live on every path).
+    const holder: { client: ApiClient | null } = { client: null };
     const transport = new Transport({
       accessToken: config.accessToken,
       fetch: extras?.fetch ?? ((url, init) => fetch(url, init)),
+      onIpChange: (oldIp, newIp) => {
+        void holder.client
+          ?.logEvent('X-IP.Change', '', '', JSON.stringify({ old: oldIp, new: newIp }))
+          .catch(() => undefined);
+      },
     });
-    return new ApiClient({
+    holder.client = new ApiClient({
       urls: config.urls,
       context,
       transport,
       readOnly: () => config.display.readOnly,
     });
+    return holder.client;
   }, [config, assignment, user, extras]);
 
   // Autosave + §14.3 submission lifecycle rides the same client.
@@ -187,7 +196,34 @@ export function App({ config, extras, registerActions }: AppProps) {
       void loadAssignment(assignment.currentAssignmentId).catch(() => undefined);
     }
     if (config.passcodeProtected) requestPasscode();
+    // Drain events queued while offline (legacy checkCaches, LIFO).
+    if (api?.isEndpointConnected('logEvent')) {
+      void api.flushEventQueue().catch(() => undefined);
+    }
   }, [assignment, api, adoptAssignmentData, loadAssignment, config.passcodeProtected]);
+
+  // §14.4 event stream: the chrome fires at the legacy call sites; drop
+  // silently when no server is attached (legacy offline behavior).
+  const logEvent = useCallback(
+    (
+      eventType: string,
+      category: string,
+      label: string,
+      message: string,
+      filePath: string,
+      extended = false,
+    ) => {
+      if (!api) return;
+      try {
+        void api
+          .logEvent(eventType, category, label, message, filePath, extended)
+          .catch(() => undefined);
+      } catch {
+        // clientMayEmit refused the type — a chrome bug; never break the UI.
+      }
+    },
+    [api],
+  );
 
   // Imperative bridge for the legacy shim's BlockPy facade (§15.1).
   useEffect(() => {
@@ -315,6 +351,7 @@ export function App({ config, extras, registerActions }: AppProps) {
           onGraded={(grade) => {
             void sync?.handleGraded(grade);
           }}
+          onLogEvent={logEvent}
           loadHistory={loadHistory}
           quickMenu={{
             grader: true,
