@@ -20,6 +20,19 @@ test('coding editor chrome renders per A8 with a working dual editor', async ({ 
   await expect(page.locator('.blocklySvg').first()).toBeVisible();
   await expect(page.locator('.cm-editor .cm-content').first()).toBeVisible();
   await expect(page.locator('.blocklyDraggable').first()).toBeVisible();
+  // File tab strip: answer.py active; the & file shows as uneditable and
+  // opens read-only in text mode (D3-A/LD-3).
+  await expect(page.locator('.nav-link.active')).toHaveText('answer.py');
+  const readonlyTab = page.locator('.nav-link.uneditable');
+  await expect(readonlyTab).toHaveText('&sample_data.txt');
+  await readonlyTab.click();
+  await expect(page.locator('.cm-editor .cm-content').first()).toContainText(
+    'temperature',
+  );
+  await expect(page.locator('.blocklySvg').first()).toBeHidden();
+  await expect(page.locator('.blockpy-mode-set-blocks')).toHaveCount(0);
+  await page.locator('.nav-link', { hasText: 'answer.py' }).click();
+  await expect(page.locator('.blocklySvg').first()).toBeVisible();
 });
 
 test('view toggle + text edits sync to blocks', async ({ page }) => {

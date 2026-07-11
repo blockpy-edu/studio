@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { CodingEditor } from '@blockpy/editor';
+import { Vfs } from '@blockpy/vfs';
 import { createEngineRunController } from './engine-adapter';
 import '@blockpy/editor/styles/tokens.css';
 import '@blockpy/editor/styles/bootstrap-subset.css';
@@ -14,7 +15,18 @@ import type { BootConfig } from './boot-config';
  */
 export function App({ config }: { config: BootConfig }) {
   const { user, assignment, display, paths } = config;
-  const [code, setCode] = useState('a = 0\nprint(a)');
+  const [, setCode] = useState('a = 0\nprint(a)');
+  const vfs = useMemo(() => {
+    const files = new Vfs();
+    files.write('answer.py', 'a = 0\nprint(a)');
+    files.write('^starting_code.py', 'a = 0\nprint(a)');
+    files.write(
+      '!instructions.md',
+      'Print the value of `a`.\n\nUse the **Run** button to execute.',
+    );
+    files.write('&sample_data.txt', 'temperature,42\nhumidity,13\n');
+    return files;
+  }, []);
   const runController = useMemo(
     () =>
       createEngineRunController({
@@ -45,7 +57,8 @@ export function App({ config }: { config: BootConfig }) {
         instructions={
           'Print the value of `a`.\n\nUse the **Run** button to execute.'
         }
-        startingCode={code}
+        vfs={vfs}
+        role={display.instructor ? 'instructor' : 'student'}
         onCodeChange={setCode}
         readOnly={display.readOnly}
         blocklyMediaPath={paths.blocklyMedia}

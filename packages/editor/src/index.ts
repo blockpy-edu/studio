@@ -28,11 +28,13 @@ export { DualEditorView, type DualEditorViewProps } from './components/DualEdito
 
 export {
   CodingEditor,
+  resolveToolboxSetting,
   type CodingEditorProps,
   type RunController,
   type RunHandlers,
   type RunOutcome,
 } from './chrome/CodingEditor';
+export { FileTabs, computeTabs, type FileTab } from './chrome/FileTabs';
 export { Console } from './chrome/Console';
 export { Feedback } from './chrome/Feedback';
 export { Instructions, renderInstructions } from './chrome/Instructions';

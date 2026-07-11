@@ -8,15 +8,40 @@
  * Execution is abstracted behind `RunController` so the chrome stays
  * engine-agnostic; the app supplies an `@blockpy/engine` adapter.
  */
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Role, Vfs } from '@blockpy/vfs';
 import { DualEditorView } from '../components/DualEditorView';
 import type { DualEditor } from '../dual/dual-editor';
-import type { ToolboxSpec } from '../dual/toolboxes';
+import { TOOLBOXES, type ToolboxSpec } from '../dual/toolboxes';
 import { Console } from './Console';
 import { Feedback } from './Feedback';
+import { FileTabs } from './FileTabs';
 import { Instructions } from './Instructions';
 import { PythonToolbar } from './PythonToolbar';
 import { useEditorChromeStore, type FeedbackState } from './store';
+
+/**
+ * Resolve the legacy `toolbox` settings key (A4: enum normal/ct/ct2/minimal/
+ * full/custom, default "normal") to a toolbox spec. `custom` reads
+ * `?toolbox.blockpy` as JSON; parse failure falls back to `empty` exactly
+ * like legacy `reloadToolbox`.
+ */
+export function resolveToolboxSetting(
+  setting: string | undefined,
+  vfs?: Vfs,
+): ToolboxSpec {
+  if (!setting) return 'normal';
+  if (setting === 'custom') {
+    try {
+      const raw = vfs?.read('?toolbox.blockpy');
+      if (!raw) return 'empty';
+      return JSON.parse(raw) as ToolboxSpec;
+    } catch {
+      return 'empty';
+    }
+  }
+  return setting in TOOLBOXES ? setting : 'normal';
+}
 
 export interface RunHandlers {
   stdout(text: string): void;
@@ -44,22 +69,65 @@ export interface CodingEditorProps {
   readOnly?: boolean;
   blocklyMediaPath?: string;
   toolbox?: ToolboxSpec;
+  /** Legacy `toolbox` settings key (overrides `toolbox` when set). */
+  toolboxSetting?: string;
+  /** File system driving the tab strip; `answer.py` is the working file. */
+  vfs?: Vfs;
+  role?: Role;
   onCodeChange?: (code: string) => void;
 }
 
 export function CodingEditor(props: CodingEditorProps) {
-  const [code, setCode] = useState(props.startingCode ?? '');
+  const { vfs } = props;
+  const role: Role = props.role ?? 'student';
+  const [activeFile, setActiveFile] = useState('answer.py');
+  const [code, setCode] = useState(
+    () => vfs?.read('answer.py') ?? props.startingCode ?? '',
+  );
   const editorRef = useRef<DualEditor | null>(null);
   const store = useEditorChromeStore;
   const pythonMode = useEditorChromeStore((state) => state.pythonMode);
 
+  // Only answer.py gets the block/split modes; every other file is a plain
+  // text file (legacy python.js forces TEXT for non-answer files).
+  const isAnswerFile = activeFile === 'answer.py';
+  const fileReadOnly =
+    (props.readOnly ?? false) || (vfs ? !vfs.canEdit(activeFile, role) : false);
+
+  const handleSelectFile = useCallback(
+    (legacyName: string) => {
+      setActiveFile(legacyName);
+      if (vfs) {
+        setCode(vfs.read(legacyName) ?? '');
+      }
+    },
+    [vfs],
+  );
+
   const handleCodeChange = useCallback(
     (newCode: string) => {
       setCode(newCode);
-      props.onCodeChange?.(newCode);
+      if (vfs && !fileReadOnly) {
+        vfs.write(activeFile, newCode);
+      }
+      if (activeFile === 'answer.py') {
+        props.onCodeChange?.(newCode);
+      }
     },
-    [props.onCodeChange],
+    [props.onCodeChange, vfs, activeFile, fileReadOnly],
   );
+
+  // Live toolbox reload on settings change (legacy `reloadToolbox`).
+  const toolboxSpec = props.toolboxSetting
+    ? resolveToolboxSetting(props.toolboxSetting, vfs)
+    : (props.toolbox ?? 'normal');
+  const lastToolbox = useRef(toolboxSpec);
+  useEffect(() => {
+    if (lastToolbox.current !== toolboxSpec && editorRef.current) {
+      lastToolbox.current = toolboxSpec;
+      editorRef.current.blockEditor.remakeToolbox(toolboxSpec);
+    }
+  }, [toolboxSpec]);
 
   const handleRun = useCallback(async () => {
     const controller = props.runController;
@@ -74,8 +142,11 @@ export function CodingEditor(props: CodingEditorProps) {
       return;
     }
     setRunState('running');
+    // Run always executes the student's answer.py, regardless of which
+    // file tab is active (legacy behavior).
+    const studentCode = vfs ? (vfs.read('answer.py') ?? '') : code;
     try {
-      const outcome = await controller.run(code, {
+      const outcome = await controller.run(studentCode, {
         stdout: (text) => appendConsole({ kind: 'stdout', text }),
         stderr: (text) => appendConsole({ kind: 'stderr', text }),
       });
@@ -90,7 +161,7 @@ export function CodingEditor(props: CodingEditorProps) {
       setRunState('error');
       appendConsole({ kind: 'stderr', text: String(error) });
     }
-  }, [code, props.runController, store]);
+  }, [code, vfs, props.runController, store]);
 
   const handleStop = useCallback(() => {
     props.runController?.stop?.();
@@ -98,10 +169,19 @@ export function CodingEditor(props: CodingEditorProps) {
   }, [props.runController, store]);
 
   const handleReset = useCallback(() => {
-    const starting = props.startingCode ?? '';
-    setCode(starting);
-    editorRef.current?.setCode(starting);
-  }, [props.startingCode]);
+    // Reset restores answer.py to the starting code (`^starting_code.py`
+    // when a VFS is attached — reset-to-`^` semantics, §7.4).
+    const starting = vfs
+      ? (vfs.read('^starting_code.py') ?? props.startingCode ?? '')
+      : (props.startingCode ?? '');
+    if (vfs) {
+      vfs.write('answer.py', starting);
+    }
+    if (isAnswerFile) {
+      setCode(starting);
+      editorRef.current?.setCode(starting);
+    }
+  }, [props.startingCode, vfs, isAnswerFile]);
 
   return (
     <div className="blockpy-content container-fluid">
@@ -120,22 +200,32 @@ export function CodingEditor(props: CodingEditorProps) {
           </div>
         </div>
       </div>
+      {vfs && (
+        <div className="row">
+          <FileTabs
+            vfs={vfs}
+            role={role}
+            activeFile={activeFile}
+            onSelect={handleSelectFile}
+          />
+        </div>
+      )}
       <div className="row">
         <div className="blockpy-panel blockpy-editor col-md-12">
           <PythonToolbar
             onRun={() => void handleRun()}
             onStop={handleStop}
             onReset={handleReset}
-            enableBlocks={props.enableBlocks}
+            enableBlocks={(props.enableBlocks ?? true) && isAnswerFile}
           />
           <div className="blockpy-python-blockmirror">
             <DualEditorView
-              mode={pythonMode}
+              mode={isAnswerFile ? pythonMode : 'text'}
               code={code}
               onCodeChange={handleCodeChange}
-              readOnly={props.readOnly}
+              readOnly={fileReadOnly}
               blocklyMediaPath={props.blocklyMediaPath}
-              toolbox={props.toolbox}
+              toolbox={toolboxSpec}
               height={400}
               editorRef={(editor) => {
                 editorRef.current = editor;
