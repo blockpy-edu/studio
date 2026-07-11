@@ -74,6 +74,13 @@ export interface RunOptions {
   trace?: boolean;
   /** Queued stdin lines replayed into the run (compat-mode input, M1.3.4). */
   inputs?: string[];
+  /**
+   * The instructor grading script for THIS run — the current `!on_run.py`
+   * from the VFS, so instructor edits take effect immediately. Empty string
+   * = no grader. `undefined` = caller has no VFS; the controller may fall
+   * back to a statically configured script.
+   */
+  onRun?: string;
 }
 
 export interface RunOutcome {
@@ -254,7 +261,14 @@ export function CodingEditor(props: CodingEditorProps) {
           stderr: (text) => appendConsole({ kind: 'stderr', text }),
           system: handleSystem,
         },
-        { trace: true, inputs: store.getState().queuedInputs },
+        {
+          trace: true,
+          inputs: store.getState().queuedInputs,
+          // Grade with the CURRENT !on_run.py — instructor edits to the On
+          // Run tab apply on the very next run (§7: the VFS is the source
+          // of truth).
+          ...(vfs ? { onRun: vfs.read('!on_run.py') ?? '' } : {}),
+        },
       );
       const succeeded = outcome.error === null;
       setRunState(succeeded ? 'idle' : 'error');

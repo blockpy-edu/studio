@@ -22,14 +22,25 @@ export function App({ config }: { config: BootConfig }) {
   const instructions =
     'Print the value of `a`.\n\nUse the **Run** button to execute:\n\n' +
     '```python\na = 0\nprint(a)\n```';
+  // Dev-harness grader (a real `!on_run.py`-style Pedal script). Lives in
+  // the VFS so instructor edits to the On Run tab drive the next run.
+  const onRunScript = [
+    'from pedal import *',
+    'if get_output() == ["0"]:',
+    '    set_success()',
+    'else:',
+    '    gently("Try printing the value of a.", label="printing_a")',
+    '',
+  ].join('\n');
   const vfs = useMemo(() => {
     const files = new Vfs();
     files.write('answer.py', 'a = 0\nprint(a)');
     files.write('^starting_code.py', 'a = 0\nprint(a)');
     files.write('!instructions.md', instructions);
+    files.write('!on_run.py', onRunScript);
     files.write('&sample_data.txt', 'temperature,42\nhumidity,13\n');
     return files;
-  }, [instructions]);
+  }, [instructions, onRunScript]);
   // Canned event log standing in for the loadHistory endpoint until the API
   // client joins the app (M1.6) — lets the History mode be exercised in the
   // harness.
@@ -73,15 +84,6 @@ export function App({ config }: { config: BootConfig }) {
     () =>
       createEngineRunController({
         indexURL: paths.pyodideIndexURL,
-        // Dev-harness grader (a real `!on_run.py`-style Pedal script).
-        onRunScript: [
-          'from pedal import *',
-          'if get_output() == ["0"]:',
-          '    set_success()',
-          'else:',
-          '    gently("Try printing the value of a.", label="printing_a")',
-          '',
-        ].join('\n'),
       }),
     [paths.pyodideIndexURL],
   );

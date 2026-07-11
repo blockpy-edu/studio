@@ -39,10 +39,13 @@ export interface EngineAdapterOptions {
   /** Called when the engine starts/finishes booting (spinner hooks). */
   onBootStateChange?: (booting: boolean) => void;
   /**
-   * Instructor grading script (`!on_run.py`). When set, a clean student run
-   * is followed by a Pedal `instructor.on_run` job whose resolved feedback
-   * drives the pane (§10.1, §14.3). Wheels install lazily on the first
-   * grading job, so that job gets a generous wall-clock limit.
+   * FALLBACK instructor grading script (`!on_run.py`) for callers without a
+   * VFS. When the chrome passes a per-run `RunOptions.onRun` (the live VFS
+   * contents), that always wins — including an empty string meaning "no
+   * grader". A clean student run is followed by a Pedal `instructor.on_run`
+   * job whose resolved feedback drives the pane (§10.1, §14.3). Wheels
+   * install lazily on the first grading job, so that job gets a generous
+   * wall-clock limit.
    */
   onRunScript?: string;
 }
@@ -111,11 +114,17 @@ export function createEngineRunController(
         }
         const trace = result.trace ?? [];
         if (result.success) {
-          if (options.onRunScript) {
+          // Per-run script (the live !on_run.py from the VFS) beats the
+          // static fallback; empty/whitespace means "no grader".
+          const onRun =
+            runOptions?.onRun !== undefined
+              ? runOptions.onRun
+              : options.onRunScript;
+          if (onRun && onRun.trim() !== '') {
             const graded = await gradeWithPedal(
               engine,
               code,
-              options,
+              onRun,
               handlers,
               runOptions?.inputs,
             );
@@ -191,7 +200,7 @@ let pedalReady = false;
 async function gradeWithPedal(
   engine: EngineClient,
   studentCode: string,
-  options: EngineAdapterOptions,
+  onRunScript: string,
   handlers: RunHandlers,
   inputs?: string[],
 ): Promise<RunOutcome> {
@@ -205,7 +214,7 @@ async function gradeWithPedal(
       files: {},
       code: studentCode,
       // Same stdin script the student run consumed (Pedal queue_input).
-      pedal: { onRun: options.onRunScript!, inputs },
+      pedal: { onRun: onRunScript, inputs },
       // First grading job includes the wheel install; later ones are ~ms.
       limits: { wallMs: pedalReady ? 15_000 : 180_000 },
     },

@@ -223,6 +223,23 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
     'Try printing the value of a.',
     { timeout: 60_000 },
   );
+  // Editing !on_run.py changes grading on the very next run (the grader is
+  // read from the VFS per run, not captured at boot).
+  await page.locator('#blockpy-as-instructor').check();
+  await page.locator('.nav-link', { hasText: 'On Run' }).click();
+  const onRunContent = page.locator('.cm-editor .cm-content').first();
+  await onRunContent.click();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.type(
+    'from pedal import *\ngently("Edited grader speaking!", label="edited")',
+  );
+  await page.locator('.nav-link', { hasText: 'answer.py' }).click();
+  await page.locator('button.blockpy-run').click();
+  await expect(page.locator('.blockpy-feedback')).toContainText(
+    'Edited grader speaking!',
+    { timeout: 60_000 },
+  );
+  await page.locator('#blockpy-as-instructor').uncheck();
   // Queued inputs (quick-menu dialog) replay into input() — the compat-mode
   // stdin strategy (M1.3.4 → inputsPrefill).
   await page.locator('[title="Edit Inputs"]').click();

@@ -242,6 +242,53 @@ describe('CodingEditor chrome', () => {
     expect(screen.queryByRole('button', { name: 'Evaluate' })).toBeNull();
   });
 
+  it('each run grades with the CURRENT !on_run.py from the VFS', async () => {
+    const { Vfs } = await import('@blockpy/vfs');
+    const vfs = new Vfs();
+    vfs.write('answer.py', 'a = 0');
+    vfs.write('!on_run.py', 'from pedal import *\nset_success()');
+    const scripts: (string | undefined)[] = [];
+    const controller: RunController = {
+      async run(_code, _handlers, options) {
+        scripts.push(options?.onRun);
+        return { error: null };
+      },
+    };
+    render(
+      <CodingEditor vfs={vfs} role="instructor" runController={controller} />,
+    );
+    await act(async () => {
+      screen.getByRole('button', { name: /Run/ }).click();
+    });
+    // Simulate an instructor edit to the grader between runs.
+    vfs.write('!on_run.py', 'from pedal import *\ngently("Edited!")');
+    await act(async () => {
+      screen.getByRole('button', { name: /Run/ }).click();
+    });
+    expect(scripts).toEqual([
+      'from pedal import *\nset_success()',
+      'from pedal import *\ngently("Edited!")',
+    ]);
+  });
+
+  it('a VFS without !on_run.py passes an empty script (no grader)', async () => {
+    const { Vfs } = await import('@blockpy/vfs');
+    const vfs = new Vfs();
+    vfs.write('answer.py', 'a = 0');
+    const scripts: (string | undefined)[] = [];
+    const controller: RunController = {
+      async run(_code, _handlers, options) {
+        scripts.push(options?.onRun);
+        return { error: null };
+      },
+    };
+    render(<CodingEditor vfs={vfs} runController={controller} />);
+    await act(async () => {
+      screen.getByRole('button', { name: /Run/ }).click();
+    });
+    expect(scripts).toEqual(['']);
+  });
+
   it('keeps queued inputs across runs when reuse is on (clearInputs=false)', async () => {
     const state = useEditorChromeStore.getState();
     state.setQueuedInputs(['keep me']);
