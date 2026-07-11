@@ -86,8 +86,19 @@ test('view-swap button toggles full and minified editors, code round-trips', asy
   // instructions, feedback, or footer; CM6 text editor + Run/Reset.
   await page.getByRole('button', { name: 'Switch to minified editor' }).click();
   await expect(page.locator('.blockpy-minified')).toBeVisible();
-  await expect(page.locator('.blockpy-content')).toHaveCount(0);
+  // Full chrome gone (the minified root reuses .blockpy-content for the
+  // parchment frame + scoped colors, so check for full-editor regions).
+  await expect(page.locator('.blockpy-content.container-fluid')).toHaveCount(0);
+  await expect(page.locator('.blockpy-header')).toHaveCount(0);
   await expect(page.locator('.blockpy-files')).toHaveCount(0);
+  // Same parchment frame colors as the regular editor.
+  const frame = page.locator('.blockpy-minified');
+  expect(
+    await frame.evaluate((el) => getComputedStyle(el).backgroundColor),
+  ).toBe('rgb(252, 248, 227)');
+  expect(
+    await frame.evaluate((el) => getComputedStyle(el).borderTopColor),
+  ).toBe('rgb(250, 235, 204)');
   await expect(page.locator('.blockpy-minified button.blockpy-run')).toBeVisible();
   await expect(page.locator('.blockpy-minified .cm-content')).toContainText(
     'print(a)',
@@ -121,7 +132,7 @@ test('view-swap button toggles full and minified editors, code round-trips', asy
   await page.keyboard.press('Control+a');
   await page.keyboard.type('a = 7\nprint(a)');
   await page.getByRole('button', { name: 'Switch to full editor' }).click();
-  await expect(page.locator('.blockpy-content')).toBeVisible();
+  await expect(page.locator('.blockpy-content.container-fluid')).toBeVisible();
   await expect(
     page.locator('.blockpy-python-blockmirror .cm-content').first(),
   ).toContainText('a = 7');

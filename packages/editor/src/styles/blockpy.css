@@ -955,12 +955,15 @@ body {
 
 /* Minified editor variant (§8.4) — compact reading-embedded editor.
    Two columns: LEFT console above feedback, RIGHT toolbar above the code
-   editor; stacks below the legacy 675px responsive breakpoint. */
+   editor; stacks below the legacy 675px responsive breakpoint. The root
+   also carries .blockpy-content, so the parchment frame and every scoped
+   color rule (feedback badges, button retheme) match the full editor. */
 .blockpy-minified {
     display: flex;
     gap: 8px;
     align-items: stretch;
     flex-wrap: wrap;
+    padding: 6px 10px;
 }
 
 .blockpy-minified .blockpy-minified-left {
@@ -985,11 +988,13 @@ body {
     padding-bottom: 0;
 }
 
+/* Feedback sits on the parchment like the full editor's feedback pane
+   (no white box); the warm seam above mirrors the .blockpy-content row
+   border between console and feedback regions. */
 .blockpy-minified .blockpy-minified-feedback {
     flex: 1;
     margin-top: 4px;
     padding: 2px 6px;
-    border: 1px solid var(--blockpy-neutral-250);
-    background-color: var(--blockpy-neutral-0);
+    border-top: 1px solid var(--blockpy-border-warm);
     overflow-y: auto;
 }

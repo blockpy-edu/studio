@@ -109,7 +109,9 @@ export function MinifiedEditor(props: MinifiedEditorProps) {
   const running = runState === 'running';
   const presentation = categoryPresentation(feedback.category);
   return (
-    <div className="blockpy-minified">
+    // Carries .blockpy-content so every scoped color rule (parchment frame,
+    // feedback label-* badges, button retheme) matches the full editor.
+    <div className="blockpy-content blockpy-minified">
       <div className="blockpy-minified-left">
         <div
           className="blockpy-printer blockpy-printer-default blockpy-minified-printer"
