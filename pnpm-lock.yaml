@@ -76,9 +76,6 @@ importers:
       '@blockpy/engine':
         specifier: workspace:*
         version: link:../engine
-      '@blockpy/legacy-shim':
-        specifier: workspace:*
-        version: link:../legacy-shim
       '@blockpy/lti-embed':
         specifier: workspace:*
         version: link:../lti-embed
@@ -213,6 +210,15 @@ importers:
       '@blockpy/api':
         specifier: workspace:*
         version: link:../api
+      '@blockpy/app':
+        specifier: workspace:*
+        version: link:../app
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
 
   packages/lti-embed: {}
 

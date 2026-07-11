@@ -1,89 +1,219 @@
-import { useMemo, useState } from 'react';
-import { CodingEditor, MinifiedEditor, type HistoryEntry } from '@blockpy/editor';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  CodingEditor,
+  MinifiedEditor,
+  requestPasscode,
+  useEditorChromeStore,
+  type HistoryEntry,
+} from '@blockpy/editor';
 import { Vfs } from '@blockpy/vfs';
+import {
+  ApiClient,
+  Transport,
+  decodeAssignment,
+  decodeSubmission,
+  type ApiContext,
+  type DecodedAssignment,
+  type DecodedSubmission,
+  type RawRecord,
+} from '@blockpy/api';
 import { createEngineRunController } from './engine-adapter';
+import { parseAssignmentSettings, vfsFromAssignment } from './assignment-loader';
 import '@blockpy/editor/styles/tokens.css';
 import '@blockpy/editor/styles/bootstrap-subset.css';
 import '@blockpy/editor/styles/blockpy.css';
-import type { BootConfig } from './boot-config';
+import type { BootConfig, LegacyAssignmentPayload } from './boot-config';
+import type { MountExtras, StudioActions } from './studio-handle';
+
+interface LoadedAssignment {
+  assignment: DecodedAssignment;
+  submission: DecodedSubmission | null;
+  vfs: Vfs;
+}
+
+/** Legacy settings coercion: `"" + value === "true"` (A4). */
+const settingBool = (value: unknown): boolean =>
+  value === true || String(value).toLowerCase() === 'true';
+
+export interface AppProps {
+  config: BootConfig;
+  extras?: MountExtras;
+  /** StudioHandle bridge (mountConfig); calls queue until registration. */
+  registerActions?: (actions: StudioActions | null) => void;
+}
 
 /**
- * Application shell. Scaffold placeholder: renders a config summary plus a
- * live dual editor (Milestone 1.4 dev harness) so the pipeline can be
- * exercised end-to-end in a browser. AssignmentHost (spec §5.3) replaces
- * the body in Milestone 2.1.
+ * Application shell. Loads assignments through `@blockpy/api` when the
+ * BootConfig carries endpoints (M1.6) and falls back to a canned dev
+ * harness otherwise, so the editor pipeline stays exercisable offline.
+ * AssignmentHost (spec §5.3, type dispatch) replaces the body in
+ * Milestone 2.1 — until then the coding editor is the only renderer, which
+ * matches its legacy role as the fallback for unknown types.
  */
-export function App({ config }: { config: BootConfig }) {
+export function App({ config, extras, registerActions }: AppProps) {
   const { user, assignment, display, paths } = config;
-  const [, setCode] = useState('a = 0\nprint(a)');
-  // "View as instructor" (legacy display.instructor). The dev harness
-  // always exposes the grader toggle for debugging.
+  const [, setCode] = useState('');
+  // "View as instructor" (legacy display.instructor). The dev shell always
+  // exposes the grader toggle for debugging; real role gating (ui.role
+  // .isGrader) arrives with AssignmentHost (M2.1).
   const [instructorView, setInstructorView] = useState(display.instructor);
-  // Preview toggle between the full editor and the §8.4 minified variant
-  // (the reading-embedded configuration). Code round-trips through the VFS:
-  // each view reads answer.py on mount and writes edits back.
+  // Preview toggle between the full editor and the §8.4 minified variant.
   const [minified, setMinified] = useState(false);
-  const instructions =
-    'Print the value of `a`.\n\nUse the **Run** button to execute:\n\n' +
-    '```python\na = 0\nprint(a)\n```';
-  // Dev-harness grader (a real `!on_run.py`-style Pedal script). Lives in
-  // the VFS so instructor edits to the On Run tab drive the next run.
-  const onRunScript = [
-    'from pedal import *',
-    'if get_output() == ["0"]:',
-    '    set_success()',
-    'else:',
-    '    gently("Try printing the value of a.", label="printing_a")',
-    '',
-  ].join('\n');
-  const vfs = useMemo(() => {
+  const [loaded, setLoaded] = useState<LoadedAssignment | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const store = useEditorChromeStore;
+
+  // -- server client (spec §14): built once per mount ------------------------
+  const api = useMemo(() => {
+    if (Object.keys(config.urls).length === 0) return null;
+    const context: ApiContext = {
+      assignmentId: assignment.currentAssignmentId,
+      assignmentGroupId: assignment.assignmentGroupId,
+      courseId: user.courseId,
+      submissionId: null,
+      userId: user.id,
+      submissionVersion: 0,
+      assignmentVersion: 0,
+      passcode: '',
+      partId: '',
+    };
+    const transport = new Transport({
+      accessToken: config.accessToken,
+      fetch: extras?.fetch ?? ((url, init) => fetch(url, init)),
+    });
+    return new ApiClient({
+      urls: config.urls,
+      context,
+      transport,
+      readOnly: () => config.display.readOnly,
+    });
+  }, [config, assignment, user, extras]);
+
+  // -- assignment adoption (legacy loadAssignmentData_, blockpy.js:491) ------
+  const adoptAssignmentData = useCallback(
+    (data: LegacyAssignmentPayload) => {
+      const rawAssignment = data['assignment'];
+      if (!rawAssignment || typeof rawAssignment !== 'object') return;
+      const decoded = decodeAssignment(rawAssignment as RawRecord);
+      const submission =
+        data['submission'] && typeof data['submission'] === 'object'
+          ? decodeSubmission(data['submission'] as RawRecord)
+          : null;
+      if (api) {
+        // The wire context follows the loaded pair (legacy createServerData
+        // reads the live model): every later call carries these ids.
+        api.context.assignmentId = decoded.id;
+        api.context.assignmentVersion = decoded.version;
+        api.context.submissionId = submission?.id ?? null;
+        api.context.submissionVersion = submission?.version ?? 0;
+      }
+      setLoaded({ assignment: decoded, submission, vfs: vfsFromAssignment(decoded, submission ?? undefined) });
+      setLoadError(null);
+    },
+    [api],
+  );
+
+  const loadAssignment = useCallback(
+    async (assignmentId: number) => {
+      if (!api?.isEndpointConnected('loadAssignment')) {
+        throw new Error('BlockPy Studio: no loadAssignment endpoint configured');
+      }
+      // Legacy _postBlocking badge lifecycle: active → ready/failed.
+      store.getState().setServerStatus('loadAssignment', 'active');
+      setLoading(true);
+      try {
+        const response = await api.loadAssignment(assignmentId);
+        if (!response.success || !response.assignment) {
+          store.getState().setServerStatus('loadAssignment', 'failed');
+          setLoadError(`The assignment (${assignmentId}) failed to load.`);
+          return;
+        }
+        adoptAssignmentData(response.raw as LegacyAssignmentPayload);
+        store.getState().setServerStatus('loadAssignment', 'ready');
+      } catch (error) {
+        store.getState().setServerStatus('loadAssignment', 'failed');
+        setLoadError(`The assignment (${assignmentId}) failed to load.`);
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [api, adoptAssignmentData, store],
+  );
+
+  // Boot-time load: inline assignment_data beats the id fetch, exactly the
+  // editor.html:341-348 ordering.
+  const bootedRef = useRef(false);
+  useEffect(() => {
+    if (bootedRef.current) return;
+    bootedRef.current = true;
+    if (assignment.assignmentData) {
+      adoptAssignmentData(assignment.assignmentData);
+    } else if (
+      assignment.currentAssignmentId !== null &&
+      api?.isEndpointConnected('loadAssignment')
+    ) {
+      void loadAssignment(assignment.currentAssignmentId).catch(() => undefined);
+    }
+    if (config.passcodeProtected) requestPasscode();
+  }, [assignment, api, adoptAssignmentData, loadAssignment, config.passcodeProtected]);
+
+  // Imperative bridge for the legacy shim's BlockPy facade (§15.1).
+  useEffect(() => {
+    registerActions?.({
+      loadAssignment,
+      loadAssignmentData: adoptAssignmentData,
+      requestPasscode: () => requestPasscode(),
+    });
+    return () => registerActions?.(null);
+  }, [registerActions, loadAssignment, adoptAssignmentData]);
+
+  // -- dev-harness fallback (no server, no inline payload) --------------------
+  const harnessVfs = useMemo(() => {
     const files = new Vfs();
     files.write('answer.py', 'a = 0\nprint(a)');
     files.write('^starting_code.py', 'a = 0\nprint(a)');
-    files.write('!instructions.md', instructions);
-    files.write('!on_run.py', onRunScript);
-    files.write('&sample_data.txt', 'temperature,42\nhumidity,13\n');
+    files.write(
+      '!instructions.md',
+      'Print the value of `a`.\n\nUse the **Run** button to execute:\n\n```python\na = 0\nprint(a)\n```',
+    );
+    files.write('!on_run.py', '');
     return files;
-  }, [instructions, onRunScript]);
-  // Canned event log standing in for the loadHistory endpoint until the API
-  // client joins the app (M1.6) — lets the History mode be exercised in the
-  // harness.
-  const loadHistory = useMemo(() => {
-    const hourAgo = Date.now() - 3_600_000;
-    const entries: HistoryEntry[] = [
-      {
-        event_type: 'Session.Start',
-        file_path: '',
-        client_timestamp: String(hourAgo),
-        message: '',
-      },
-      {
-        event_type: 'File.Create',
-        file_path: 'answer.py',
-        client_timestamp: String(hourAgo + 1_000),
-        message: 'a = 0\nprint(a)',
-      },
-      {
-        event_type: 'File.Edit',
-        file_path: 'answer.py',
-        client_timestamp: String(hourAgo + 60_000),
-        message: 'a = 0\nb = a + 1\nprint(a)',
-      },
-      {
-        event_type: 'Run.Program',
-        file_path: 'answer.py',
-        client_timestamp: String(hourAgo + 61_000),
-        message: '',
-      },
-      {
-        event_type: 'File.Edit',
-        file_path: 'answer.py',
-        client_timestamp: String(hourAgo + 120_000),
-        message: 'a = 0\nprint(a)',
-      },
-    ];
-    return () => Promise.resolve(entries);
   }, []);
+
+  const active: LoadedAssignment | null = loaded;
+  // A boot-time load is coming: hold the "Loading" screen instead of
+  // flashing the offline harness for one frame (legacy delete-on-load span).
+  const bootPending =
+    active === null &&
+    loadError === null &&
+    (assignment.assignmentData !== undefined ||
+      (assignment.currentAssignmentId !== null && Boolean(config.urls.loadAssignment)));
+  const vfs = active?.vfs ?? harnessVfs;
+  const instructions = active
+    ? active.assignment.instructions
+    : (harnessVfs.read('!instructions.md') ?? '');
+
+  // A4 settings: the assignment blob under the `settings-*` overrides
+  // (§15.2 — query params are the debugging escape hatch, applied last).
+  const settings = useMemo(
+    () => ({
+      ...(active ? parseAssignmentSettings(active.assignment.settings) : {}),
+      ...config.settings,
+    }),
+    [active, config.settings],
+  );
+
+  const loadHistory = useMemo(() => {
+    if (!api?.isEndpointConnected('loadHistory')) return undefined;
+    return async () => {
+      const response = await api.loadHistory();
+      if (response.success === false) throw new Error('loadHistory failed');
+      return (response['history'] ?? []) as HistoryEntry[];
+    };
+  }, [api]);
+
   const runController = useMemo(
     () =>
       createEngineRunController({
@@ -91,11 +221,12 @@ export function App({ config }: { config: BootConfig }) {
       }),
     [paths.pyodideIndexURL],
   );
+
   return (
     <main>
       <p style={{ fontSize: 'smaller' }}>
         Dev harness — {user.name ?? 'anonymous'} ({user.role});{' '}
-        {assignment.currentAssignmentId ?? 'no assignment'};{' '}
+        {active?.assignment.name ?? assignment.currentAssignmentId ?? 'no assignment'};{' '}
         {display.instructor ? 'instructor' : 'student'} view. AssignmentHost
         replaces this shell in Milestone 2.1.{' '}
         <button
@@ -107,7 +238,10 @@ export function App({ config }: { config: BootConfig }) {
         </button>
       </p>
       <h1 className="sr-only">BlockPy Studio</h1>
-      {minified ? (
+      {loadError !== null && <div className="alert alert-warning">{loadError}</div>}
+      {bootPending || (loading && active === null) ? (
+        <p>Loading! Please wait.</p>
+      ) : minified ? (
         <MinifiedEditor
           initialCode={vfs.read('answer.py') ?? ''}
           runController={runController}
@@ -118,35 +252,46 @@ export function App({ config }: { config: BootConfig }) {
           }}
         />
       ) : (
-      <CodingEditor
-        assignmentName="Dev Harness Problem"
-        instructions={instructions}
-        vfs={vfs}
-        role={instructorView ? 'instructor' : 'student'}
-        instructor={instructorView}
-        onCodeChange={setCode}
-        readOnly={display.readOnly}
-        blocklyMediaPath={paths.blocklyMedia}
-        runController={runController}
-        loadHistory={loadHistory}
-        quickMenu={{
-          grader: true,
-          instructor: instructorView,
-          onInstructorChange: setInstructorView,
-          hasClock: true,
-        }}
-        footer={{
-          identity: {
-            userId: user.id ?? undefined,
-            userName: user.name,
-            userRole: user.role,
-            courseId: user.courseId ?? undefined,
-            groupId: assignment.assignmentGroupId ?? undefined,
-            assignmentId: assignment.currentAssignmentId ?? undefined,
-            editorVersion: '0.1.0',
-          },
-        }}
-      />
+        <CodingEditor
+          key={active?.assignment.id ?? 'harness'}
+          assignmentName={active?.assignment.name ?? 'Dev Harness Problem'}
+          instructions={instructions}
+          vfs={vfs}
+          role={instructorView ? 'instructor' : 'student'}
+          instructor={instructorView}
+          onCodeChange={setCode}
+          readOnly={display.readOnly}
+          blocklyMediaPath={paths.blocklyMedia}
+          toolboxSetting={typeof settings['toolbox'] === 'string' ? settings['toolbox'] : undefined}
+          hideFiles={
+            settings['hide_files'] !== undefined ? settingBool(settings['hide_files']) : undefined
+          }
+          hideEvaluate={
+            settings['hide_evaluate'] !== undefined
+              ? settingBool(settings['hide_evaluate'])
+              : undefined
+          }
+          assignmentHidden={active?.assignment.raw['hidden'] === true}
+          runController={runController}
+          loadHistory={loadHistory}
+          quickMenu={{
+            grader: true,
+            instructor: instructorView,
+            onInstructorChange: setInstructorView,
+            hasClock: true,
+          }}
+          footer={{
+            identity: {
+              userId: user.id ?? undefined,
+              userName: user.name,
+              userRole: user.role,
+              courseId: user.courseId ?? undefined,
+              groupId: assignment.assignmentGroupId ?? undefined,
+              assignmentId: active?.assignment.id ?? assignment.currentAssignmentId ?? undefined,
+              editorVersion: '0.1.0',
+            },
+          }}
+        />
       )}
     </main>
   );

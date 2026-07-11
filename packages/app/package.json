@@ -20,7 +20,6 @@
     "@blockpy/blocks": "workspace:*",
     "@blockpy/editor": "workspace:*",
     "@blockpy/engine": "workspace:*",
-    "@blockpy/legacy-shim": "workspace:*",
     "@blockpy/lti-embed": "workspace:*",
     "@blockpy/navigation": "workspace:*",
     "@blockpy/quizzer": "workspace:*",

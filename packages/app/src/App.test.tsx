@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { expect, it, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import { App } from './App';
 import type { BootConfig } from './boot-config';
 
@@ -28,7 +28,95 @@ const minimalConfig: BootConfig = {
   corgisUrl: '',
 };
 
+const RAW_PAYLOAD = {
+  assignment: {
+    id: 101,
+    name: 'Server Problem',
+    url: 'server_problem',
+    type: 'blockpy',
+    version: 3,
+    instructions: 'Fetched instructions.',
+    starting_code: 'x = 1',
+    on_run: '',
+    on_change: null,
+    on_eval: null,
+    extra_instructor_files: '',
+    extra_starting_files: '',
+    settings: '{}',
+  },
+  submission: {
+    id: 5001,
+    code: 'x = 2',
+    extra_files: '',
+    version: 7,
+    correct: false,
+    score: 0,
+  },
+};
+
 it('renders the shell from a minimal BootConfig', () => {
   render(<App config={minimalConfig} />);
   expect(screen.getByRole('heading', { name: 'BlockPy Studio' })).toBeDefined();
+});
+
+it('adopts inline assignment_data at boot (editor.html:341-342 path)', async () => {
+  render(
+    <App
+      config={{
+        ...minimalConfig,
+        assignment: { ...minimalConfig.assignment, assignmentData: RAW_PAYLOAD },
+      }}
+    />,
+  );
+  await waitFor(() => {
+    expect(screen.getAllByText(/Server Problem/).length).toBeGreaterThan(0);
+  });
+  expect(screen.getByText('Fetched instructions.')).toBeDefined();
+});
+
+it('fetches the boot assignment through the ApiClient (§14.2)', async () => {
+  const fetchStub = vi.fn(async (url: string) => ({
+    ok: true,
+    json: async () =>
+      url.includes('load_assignment') ? { success: true, ...RAW_PAYLOAD } : { success: true },
+  })) as unknown as typeof fetch;
+  render(
+    <App
+      config={{
+        ...minimalConfig,
+        urls: { loadAssignment: '/api/load_assignment' },
+        assignment: { ...minimalConfig.assignment, currentAssignmentId: 101 },
+      }}
+      extras={{ fetch: fetchStub }}
+    />,
+  );
+  await waitFor(() => {
+    expect(screen.getAllByText(/Server Problem/).length).toBeGreaterThan(0);
+  });
+  // The wire call carried the assignment id (createServerData base fields).
+  const [, init] = (fetchStub as unknown as ReturnType<typeof vi.fn>).mock.calls[0]! as [
+    string,
+    { body: string },
+  ];
+  expect(init.body).toContain('assignment_id=101');
+});
+
+it('surfaces a load failure without crashing (legacy fallback renderer)', async () => {
+  const fetchStub = vi.fn(async () => ({
+    ok: true,
+    json: async () => ({ success: false }),
+  })) as unknown as typeof fetch;
+  render(
+    <App
+      config={{
+        ...minimalConfig,
+        urls: { loadAssignment: '/api/load_assignment' },
+        assignment: { ...minimalConfig.assignment, currentAssignmentId: 999 },
+      }}
+      extras={{ fetch: fetchStub }}
+    />,
+  );
+  await waitFor(() => {
+    expect(screen.getByText(/failed to load/)).toBeDefined();
+  });
 });

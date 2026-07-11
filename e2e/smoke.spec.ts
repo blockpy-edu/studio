@@ -62,9 +62,11 @@ test('quick menu, footer, and highlighted instructions render per A8', async ({ 
   );
   // Pink bug icon stays dead (display:none) — legacy parity.
   await expect(menu.locator('.blockpy-student-error')).toBeHidden();
-  // Footer (Row 5): status badges default offline; identity line present.
+  // Footer (Row 5): the boot load marks Assignment ready (legacy
+  // _postBlocking lifecycle); untouched endpoints stay offline.
   const footer = page.locator('.blockpy-status');
-  await expect(footer.locator('.badge.server-status-offline')).toHaveCount(8);
+  await expect(footer.locator('.badge.server-status-ready')).toHaveCount(1);
+  await expect(footer.locator('.badge.server-status-offline')).toHaveCount(7);
   await expect(footer).toContainText('Editor Version: 0.1.0');
   // EDIT_INPUTS dialog round trip (queued inputs for compat-mode stdin).
   await menu.locator('[title="Edit Inputs"]').click();

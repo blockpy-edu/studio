@@ -1,8 +1,9 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// Embeddable single-file build for third-party pages (spec §4): everything
-// bundled (including React), exposed as window.BlockPyStudio.
+// Single-file drop-in for UNMODIFIED server templates (spec §15.1):
+// publishes window.blockpy.BlockPy at load. Everything bundled, like the
+// app's blockpy-studio.iife.js.
 export default defineConfig({
   plugins: [react()],
   define: {
@@ -14,10 +15,10 @@ export default defineConfig({
   build: {
     outDir: 'dist-lib',
     lib: {
-      entry: 'src/index.ts',
-      name: 'BlockPyStudio',
+      entry: 'src/global.ts',
+      name: 'BlockPyLegacyShim',
       formats: ['iife'],
-      fileName: () => 'blockpy-studio.iife.js',
+      fileName: () => 'blockpy-studio-legacy.iife.js',
     },
   },
 });
