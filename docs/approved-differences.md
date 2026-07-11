@@ -89,16 +89,23 @@ Replicate decisions (D4, D6) produce no entries — they are legacy parity.
 - **Wire impact:** saved settings blobs may contain keys the legacy client
   would have dropped — strictly closer to what the server already stores.
 
-## LD-7 — Hidden pool answers preserved (D7-B, Milestone 2.4) — CONDITIONAL
+## LD-7 — Hidden pool answers preserved (D7-B, Milestone 2.4) — RESOLVED
 
 - **Legacy:** quiz saves serialize only visible questions' answers; answers
-  to pool-hidden questions are dropped from the stored answer JSON.
-- **Studio:** new answers merge over the previously stored answer map, so
-  hidden-question answers survive.
-- **Condition:** confirm with the Milestone 2.4 fixtures that the server's
-  `process_quiz` tolerates extra answer keys (expected per A3). If not,
-  revert to legacy behavior and mark this entry rejected.
-- **Wire impact:** same JSON shape with more keys.
+  to pool-hidden questions are dropped from the stored answer JSON
+  (quiz.ts:304-311).
+- **Condition check (2026-07-11):** the original plan (merge extra keys into
+  `studentAnswers`) FAILS — `process_quiz` grades every answered question
+  and counts its points toward the total (quizzes.py:72-79), so extra keys
+  would change scores.
+- **Studio (revised):** hidden answers persist under a NEW additive
+  top-level key `hiddenAnswers` in the submission document. `process_quiz`
+  reads only `studentAnswers` (quizzes.py:60) and `regrade_if_quiz`
+  round-trips unknown top-level keys (submission.py:743-750), so grading is
+  untouched. When a pooled question becomes visible again, its stashed
+  answer moves back into `studentAnswers`.
+- **Wire impact:** one additive, server-ignored key in `submission.code`;
+  grading payloads and scores identical to legacy.
 
 ## LD-8 — Multi-dim all-index subscripts round-trip losslessly (Milestone 1.4)
 

@@ -22,6 +22,7 @@ import {
 } from '@blockpy/api';
 import { GroupNav, createGroupNavStore, type GroupNavStore } from '@blockpy/navigation';
 import { Reader, type ReaderLoadResult } from '@blockpy/reader';
+import { Quizzer } from '@blockpy/quizzer';
 import { createEngineRunController } from './engine-adapter';
 import { parseAssignmentSettings, vfsFromAssignment } from './assignment-loader';
 import { AssignmentHost } from './AssignmentHost';
@@ -510,28 +511,72 @@ export function App({ config, extras, registerActions }: AppProps) {
     [paths.pyodideIndexURL],
   );
 
-  // -- reading slot (spec §11.2, M2.3) -----------------------------------------
-  // The reader keeps its OWN loaded pair (legacy loadReading posts
-  // loadAssignment without adopting into the editor model) — the editor's
-  // `active` assignment is untouched while a reading is displayed.
-  const renderReading = useMemo(() => {
+  // -- reading + quiz slots (spec §11.2/§11.3, M2.3/M2.4) -----------------------
+  // Each component keeps its OWN loaded pair (legacy posts loadAssignment
+  // without adopting into the editor model) — the editor's `active`
+  // assignment is untouched while a reading/quiz is displayed. Their events
+  // and persistence carry their OWN ids over the base payload (§12; the
+  // legacy AssignmentInterface builds payloads from its own pair).
+  const assignmentRenderers = useMemo(() => {
     if (!api) return undefined;
-    // Reading events attach to the READING's ids (§12; the legacy reader
-    // builds its logEvent payload from its own pair, assignment_interface.ts
-    // :266-284). One reading mounts at a time, so a shared slot suffices.
-    const readingContext = { assignmentId: null as number | null, submissionId: null as number | null };
-    const loadReading = async (id: number): Promise<ReaderLoadResult | null> => {
+    // One reading/quiz mounts at a time, so shared id slots suffice.
+    const surfaceContext = {
+      assignmentId: null as number | null,
+      submissionId: null as number | null,
+    };
+    const loadPair = async (id: number) => {
       const response = await api.loadAssignment(id);
       if (!response.success || !response.assignment) return null;
-      readingContext.assignmentId = response.assignment.id ?? id;
-      readingContext.submissionId = response.submission?.id ?? null;
+      surfaceContext.assignmentId = response.assignment.id ?? id;
+      surfaceContext.submissionId = response.submission?.id ?? null;
+      return response;
+    };
+    const surfaceLogEvent = (
+      eventType: string,
+      category: string,
+      label: string,
+      message: string,
+      filePath: string,
+    ) => {
+      try {
+        void api
+          .logEvent(eventType, category, label, message, filePath, false, {
+            assignment_id: surfaceContext.assignmentId,
+            submission_id: surfaceContext.submissionId,
+          })
+          .catch(() => undefined);
+      } catch {
+        // clientMayEmit refused the type — never break the surface.
+      }
+    };
+    const downloadUrl = (assignmentId: number, filename: string) =>
+      // Legacy leaves the filename unencoded (plugins.ts:272).
+      `${config.urls.downloadFile}?placement=assignment&directory=${assignmentId}&filename=${filename}`;
+    const extractMessage = (message: unknown): string | undefined =>
+      typeof message === 'object' && message !== null
+        ? String((message as Record<string, unknown>)['message'] ?? '')
+        : typeof message === 'string'
+          ? message
+          : undefined;
+    const onTimeLimitInfo = (info: {
+      timeLimit: string | null;
+      studentTimeLimit: string | null;
+      dateStarted: string | null;
+    }) => navStoreRef.current?.setTimeLimit(info);
+    // Legacy $URL_ROOT drives the popout editUrl (assignment.ts:103-107);
+    // absent (app-owned pages without the global) the popout is hidden.
+    const urlRoot = (window as unknown as Record<string, unknown>)['$URL_ROOT'];
+
+    const loadReading = async (id: number): Promise<ReaderLoadResult | null> => {
+      const response = await loadPair(id);
+      if (!response) return null;
       return {
         assignment: {
-          id: response.assignment.id ?? id,
-          name: response.assignment.name,
-          url: response.assignment.url,
-          instructions: response.assignment.instructions,
-          settings: response.assignment.settings,
+          id: response.assignment!.id ?? id,
+          name: response.assignment!.name,
+          url: response.assignment!.url,
+          instructions: response.assignment!.instructions,
+          settings: response.assignment!.settings,
         },
         submission: response.submission
           ? {
@@ -543,12 +588,11 @@ export function App({ config, extras, registerActions }: AppProps) {
           : null,
       };
     };
-    // Legacy $URL_ROOT drives the popout editUrl (assignment.ts:103-107);
-    // absent (app-owned pages without the global) the popout is hidden.
-    const urlRoot = (window as unknown as Record<string, unknown>)['$URL_ROOT'];
-    return (readingId: number) => (
+
+    const reading = (readingId: number, preamble = false) => (
       <Reader
         assignmentId={readingId}
+        asPreamble={preamble}
         loadAssignment={loadReading}
         markRead={async (assignmentId, submissionId) => {
           // reader.ts:384-398 — updateSubmission {status: 1, correct: true}
@@ -559,36 +603,18 @@ export function App({ config, extras, registerActions }: AppProps) {
             status: 1,
             correct: true,
           });
-          const message = response['message'];
           return {
             success: response.success === true,
             correct: response['correct'] === true,
             submissionStatus: response['submission_status'] as string | undefined,
-            message:
-              typeof message === 'object' && message !== null
-                ? String((message as Record<string, unknown>)['message'] ?? '')
-                : typeof message === 'string'
-                  ? message
-                  : undefined,
+            message: extractMessage(response['message']),
           };
         }}
-        markCorrect={markCorrectEverywhere}
-        logEvent={(eventType, category, label, message, filePath) => {
-          try {
-            void api
-              .logEvent(eventType, category, label, message, filePath, false, {
-                assignment_id: readingContext.assignmentId,
-                submission_id: readingContext.submissionId,
-              })
-              .catch(() => undefined);
-          } catch {
-            // clientMayEmit refused the type — never break the reader.
-          }
-        }}
-        downloadUrl={(assignmentId, filename) =>
-          // Legacy leaves the filename unencoded (plugins.ts:272).
-          `${config.urls.downloadFile}?placement=assignment&directory=${assignmentId}&filename=${filename}`
-        }
+        // A preamble reading never touches navigation — the legacy quizzer
+        // passes markCorrect: ()=>{} to it (quiz_ui.ts:201).
+        markCorrect={preamble ? () => undefined : markCorrectEverywhere}
+        logEvent={surfaceLogEvent}
+        downloadUrl={downloadUrl}
         {...(typeof urlRoot === 'string'
           ? {
               editUrl: (a: { id: number; url: string }) =>
@@ -606,15 +632,88 @@ export function App({ config, extras, registerActions }: AppProps) {
               }),
             }
           : {})}
-        onTimeLimitInfo={(info) =>
-          navStoreRef.current?.setTimeLimit({
-            timeLimit: info.timeLimit,
-            studentTimeLimit: info.studentTimeLimit,
-            dateStarted: info.dateStarted,
-          })
-        }
+        onTimeLimitInfo={onTimeLimitInfo}
       />
     );
+
+    const quiz = (quizId: number) => (
+      <Quizzer
+        assignmentId={quizId}
+        loadAssignment={async (id) => {
+          const response = await loadPair(id);
+          if (!response) return null;
+          return {
+            assignment: {
+              id: response.assignment!.id ?? id,
+              name: response.assignment!.name,
+              url: response.assignment!.url,
+              instructions: response.assignment!.instructions,
+              settings: response.assignment!.settings,
+            },
+            submission: response.submission
+              ? {
+                  id: response.submission.id,
+                  code: response.submission.code,
+                  correct: response.submission.correct,
+                  dateStarted:
+                    (response.submission.raw['date_started'] as string | null) ?? null,
+                  timeLimit: (response.submission.raw['time_limit'] as string | null) ?? null,
+                }
+              : null,
+          };
+        }}
+        saveAnswer={async (assignmentId, submissionId, code) => {
+          // quizzer.ts:143-153 — the whole submission JSON as answer.py,
+          // with the QUIZ's ids riding over the base payload.
+          const response = await api.saveFile('answer.py', code, {
+            assignment_id: assignmentId,
+            submission_id: submissionId,
+          });
+          return { success: response.success === true };
+        }}
+        submitQuiz={async (assignmentId, submissionId) => {
+          // quizzer.ts:207-244 — status: 0, correct: false; the server
+          // grades (regrade_if_quiz) and returns the feedbacks map.
+          const response = await api.updateSubmission({
+            assignment_id: assignmentId,
+            submission_id: submissionId,
+            status: 0,
+            correct: false,
+          });
+          const message = response['message'];
+          const messageText = extractMessage(message);
+          // Legacy quirk: feedbacks apply on success OR the specific LTI
+          // failure message (quizzer.ts:226-229).
+          const includeFeedbacks =
+            response.success === true ||
+            messageText === 'Generic LTI Failure - perhaps not logged into LTI session?';
+          const feedbacks =
+            (response['feedbacks'] as Record<string, never> | undefined) ??
+            (typeof message === 'object' && message !== null
+              ? ((message as Record<string, unknown>)['feedbacks'] as
+                  | Record<string, never>
+                  | undefined)
+              : undefined);
+          return {
+            success: response.success === true,
+            correct: response['correct'] === true,
+            ...(includeFeedbacks && feedbacks ? { feedbacks } : {}),
+            submissionStatus: response['submission_status'] as string | undefined,
+            message: messageText,
+          };
+        }}
+        markCorrect={markCorrectEverywhere}
+        logEvent={surfaceLogEvent}
+        downloadUrl={downloadUrl}
+        isInstructor={() => config.display.instructor}
+        // Subordinate-reading preamble beneath no one: the quiz renders the
+        // reading ABOVE itself (quiz_ui.ts:194-208).
+        renderReading={(readingId) => reading(readingId, true)}
+        onTimeLimitInfo={onTimeLimitInfo}
+      />
+    );
+
+    return { reading: (id: number) => reading(id), quiz };
   }, [
     api,
     markCorrectEverywhere,
@@ -662,7 +761,11 @@ export function App({ config, extras, registerActions }: AppProps) {
         typeIndex={assignment.typeIndex}
         embed={display.embed}
         loadEditorAssignment={loadAssignment}
-        renderAssignment={renderReading ? { reading: renderReading } : {}}
+        renderAssignment={
+          assignmentRenderers
+            ? { reading: assignmentRenderers.reading, quiz: assignmentRenderers.quiz }
+            : {}
+        }
         onReady={(dispatch) => {
           dispatchRef.current = async (assignmentId: number) => {
             // Keep the selectors honest when the dispatch is host-driven

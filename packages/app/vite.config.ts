@@ -107,6 +107,66 @@ const DEV_READING = {
   },
 };
 
+/**
+ * The harness group's (subordinate) quiz, id 102: two fixed questions plus
+ * a two-question pool showing one (seeded by submission id 5002). The
+ * checks document stays server-side — the stub grades every submit as
+ * fully correct.
+ */
+const DEV_QUIZ = {
+  success: true,
+  assignment: {
+    id: 102,
+    name: 'Quiz: Variables',
+    url: 'quiz_variables',
+    type: 'quiz',
+    version: 1,
+    instructions: JSON.stringify({
+      questions: {
+        tf1: { type: 'true_false_question', body: 'Variables can change.', points: 1 },
+        mcq1: {
+          type: 'multiple_choice_question',
+          body: 'Which keyword prints?',
+          points: 2,
+          answers: ['`print`', '`echo`', '`say`'],
+        },
+        pool_a: { type: 'short_answer_question', body: 'Name a variable.', points: 1 },
+        pool_b: { type: 'short_answer_question', body: 'Name another variable.', points: 1 },
+      },
+      settings: { attemptLimit: 3, feedbackType: 'IMMEDIATE', poolRandomness: 'SEED' },
+      pools: [{ name: 'Naming', amount: 1, questions: ['pool_a', 'pool_b'] }],
+    }),
+    starting_code: '',
+    on_run: '',
+    on_change: null,
+    on_eval: null,
+    extra_instructor_files: '',
+    extra_starting_files: '',
+    settings: '{}',
+    hidden: false,
+    reviewed: false,
+    public: true,
+    points: 1,
+  },
+  submission: {
+    id: 5002,
+    code: '',
+    extra_files: '',
+    version: 1,
+    correct: false,
+    score: 0,
+    submission_status: 'Started',
+    grading_status: 'NotReady',
+  },
+};
+
+const QUIZ_FEEDBACKS = {
+  tf1: { message: 'Right!', correct: true, score: 1, status: 'graded' },
+  mcq1: { message: 'print it is.', correct: true, score: 1, status: 'graded' },
+  pool_a: { message: 'Good name.', correct: true, score: 1, status: 'graded' },
+  pool_b: { message: 'Good name.', correct: true, score: 1, status: 'graded' },
+};
+
 const devHistory = () => {
   const hourAgo = Date.now() - 3_600_000;
   return {
@@ -158,16 +218,29 @@ function devApi(): Plugin {
   };
   const routes: Record<string, (params: URLSearchParams) => unknown> = {
     '/api/load_assignment': (params) =>
-      params.get('assignment_id') === '103' ? DEV_READING : DEV_ASSIGNMENT,
+      params.get('assignment_id') === '103'
+        ? DEV_READING
+        : params.get('assignment_id') === '102'
+          ? DEV_QUIZ
+          : DEV_ASSIGNMENT,
     '/api/load_history': devHistory,
     '/api/save_file': () => ({ success: true }),
     '/api/log_event': () => ({ success: true }),
-    // markRead echoes correct/submission_status (reader.ts:399-413).
-    '/api/update_submission': (params) => ({
-      success: true,
-      correct: params.get('correct') === 'true',
-      submission_status: 'Completed',
-    }),
+    // markRead echoes correct/submission_status (reader.ts:399-413); quiz
+    // submits get the server-graded feedbacks map (regrade_if_quiz).
+    '/api/update_submission': (params) =>
+      params.get('assignment_id') === '102'
+        ? {
+            success: true,
+            correct: true,
+            feedbacks: QUIZ_FEEDBACKS,
+            submission_status: 'Completed',
+          }
+        : {
+            success: true,
+            correct: params.get('correct') === 'true',
+            submission_status: 'Completed',
+          },
     '/api/update_submission_status': () => ({ success: true }),
     '/api/list_files': () => uploaded,
     '/api/upload_file': () => ({ success: true }),

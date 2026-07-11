@@ -68,12 +68,19 @@ export class ApiClient {
   /**
    * Persist one legacy-named file. The response's `version_change: true`
    * drives the "your code is out of date / reload" banner (spec §7.4).
+   * `overrides` lets non-editor surfaces (quiz autosave) attach their own
+   * ids, mirroring the AssignmentInterface's hand-built payload
+   * (assignment_interface.ts:287-341).
    */
-  async saveFile(filename: string, code: string): Promise<LegacyResponse> {
+  async saveFile(
+    filename: string,
+    code: string,
+    overrides: WirePayload = {},
+  ): Promise<LegacyResponse> {
     if (this.guardReadOnly()) return { success: false, readOnly: true };
     return this.options.transport.postRetry(
       this.url('saveFile'),
-      this.buildPayload({ filename, code }),
+      this.buildPayload({ filename, code, ...overrides }),
     );
   }
 

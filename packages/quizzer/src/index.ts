@@ -1,6 +1,32 @@
 /**
- * @blockpy/quizzer — Quiz assignments with pooling, attempts, and engine preprocessing (spec §11.3). Implementation: Milestone 2.4.
- *
- * Scaffold placeholder; see DEVELOPMENT_PLAN.md for the milestone checklist.
+ * @blockpy/quizzer — quiz assignments: the A3 frozen schema, seeded pools,
+ * attempt lifecycle, and server-graded submission flow (spec §11.3).
  */
-export const PACKAGE_NAME = '@blockpy/quizzer';
+export {
+  Quizzer,
+  attemptsLeftText,
+  type QuizMode,
+  type QuizzerAssignment,
+  type QuizzerLoadResult,
+  type QuizzerProps,
+  type QuizzerSubmission,
+} from './Quizzer';
+export { QuestionView, StatusSquare, questionStatusCode } from './QuestionView';
+export {
+  EMPTY_QUIZ_SUBMISSION,
+  SQUARE_BRACKETS,
+  buildSubmissionDocument,
+  defaultAnswer,
+  fillInMissingQuizInstructionFields,
+  fillInMissingQuizSubmissionFields,
+  getBracketed,
+  isAnswered,
+  parseQuizInstructions,
+  parseQuizSubmission,
+  poolByQuestion,
+  poolSeed,
+  seededShuffle,
+  selectVisibleQuestions,
+  subsetRandomly,
+} from './documents';
+export type * from './types';

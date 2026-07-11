@@ -329,6 +329,71 @@ test('reading assignment: content, load⇒correct, runnable block (§11.2)', asy
   await expect(page.locator('.blocklySvg').first()).toBeVisible();
 });
 
+test('quiz assignment: attempt lifecycle, autosave, server grading (§11.3)', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.blocklySvg').first().waitFor();
+  // Quiz 102 is subordinate (not in the nav selector) — dispatch through
+  // the host global, like the legacy loadAssignmentWrapper path.
+  await page.evaluate(() =>
+    (window as never as { altAssignmentChangingFunction(id: number): Promise<void> })
+      .altAssignmentChangingFunction(102),
+  );
+  const quiz = page.locator('.blockpy-host-quiz');
+  await expect(quiz).toBeVisible();
+  // READY: dual attempt bars, attempts-left text, content hidden pre-attempt.
+  await expect(quiz.getByRole('button', { name: 'Start Quiz' })).toHaveCount(2);
+  await expect(quiz.getByText('3 attempts left.').first()).toBeVisible();
+  await expect(quiz.getByText('Variables can change.')).toHaveCount(0);
+  await quiz.getByRole('button', { name: 'Start Quiz' }).first().click();
+  // ATTEMPTING: questions render — 2 fixed + 1 of the 2-question pool.
+  await expect(quiz.getByText('Quiz In Progress!').first()).toBeVisible();
+  await expect(quiz.locator('.quizzer-question-card')).toHaveCount(3);
+  await expect(quiz.getByText('Variables can change.')).toBeVisible();
+  // Answer + autosave: the save_file POST carries the QUIZ's ids and the
+  // whole submission JSON document.
+  // Match the ANSWER save by content — the Start-triggered attempt save
+  // races with this listener ('+' is a space in urlencoded bodies).
+  const decodeForm = (body: string) => decodeURIComponent(body.replace(/\+/g, ' '));
+  const savePost = page.waitForRequest(
+    (request) =>
+      request.url().includes('save_file') &&
+      (request.postData() ?? '').includes('assignment_id=102') &&
+      decodeForm(request.postData() ?? '').includes('"tf1": "true"'),
+  );
+  await quiz.getByLabel('True').check();
+  const saveBody = (await savePost).postData() ?? '';
+  expect(saveBody).toContain('filename=answer.py');
+  // Submit: updateSubmission {status: 0, correct: false}; the stub grades
+  // fully correct and returns the feedbacks map.
+  const submitPost = page.waitForRequest(
+    (request) =>
+      request.url().includes('update_submission') &&
+      (request.postData() ?? '').includes('assignment_id=102'),
+  );
+  const submitButton = quiz.getByRole('button', { name: 'Submit answer' }).first();
+  await expect(submitButton).toBeEnabled();
+  await submitButton.click();
+  const submitBody = (await submitPost).postData() ?? '';
+  expect(submitBody).toContain('status=0');
+  expect(submitBody).toContain('correct=false');
+  // COMPLETED: per-question feedback boxes + green/incorrect status squares.
+  await expect(quiz.getByText(/You have completed the quiz/).first()).toBeVisible();
+  await expect(quiz.getByText('Right!')).toBeVisible();
+  await expect(quiz.locator('.quizzer-feedback.bg-success').first()).toBeVisible();
+  // markCorrect(102): subordinate id — the numerator bumps with no ✔
+  // anywhere (the legacy unknown-option quirk, A7 §2).
+  const header = page.locator('.assignment-selector-div').first();
+  await expect(header.locator('.completion-rate')).toHaveText('1');
+  await expect(header.locator('option[value="101"]')).toHaveText('Hello World');
+  await expect(header.locator('.assignment-selector-next')).toHaveClass(/btn-success/);
+  // Back to the editor.
+  await page.evaluate(() =>
+    (window as never as { altAssignmentChangingFunction(id: number): Promise<void> })
+      .altAssignmentChangingFunction(101),
+  );
+  await expect(page.locator('.blockpy-host-editor')).toBeVisible();
+});
+
 test('History mode: toolbar + merge diff + Use adopts the old version', async ({ page }) => {
   await page.goto('/');
   await page.locator('.blocklySvg').first().waitFor();
