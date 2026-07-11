@@ -952,3 +952,16 @@ body {
 .blockpy-content .hljs-strong {
     font-weight: bold;
 }
+
+/* Minified editor variant (§8.4) — compact reading-embedded editor: short
+   printer, tight toolbar rhythm. */
+.blockpy-minified .blockpy-minified-toolbar .btn {
+    margin: 2px 0;
+}
+
+.blockpy-minified .blockpy-minified-printer {
+    height: auto;
+    max-height: 120px;
+    padding-bottom: 0;
+    margin-top: 2px;
+}

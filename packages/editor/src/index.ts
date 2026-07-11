@@ -38,6 +38,7 @@ export {
 } from './chrome/CodingEditor';
 export { FileTabs, computeTabs, type FileTab } from './chrome/FileTabs';
 export { AddNewMenu, type AddNewMenuProps } from './chrome/AddNewMenu';
+export { MinifiedEditor, type MinifiedEditorProps } from './chrome/MinifiedEditor';
 export { TraceExplorer, typeFromRepr } from './chrome/TraceExplorer';
 export { Console } from './chrome/Console';
 export { DevConsole } from './chrome/DevConsole';

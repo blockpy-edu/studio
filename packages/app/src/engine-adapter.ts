@@ -94,7 +94,8 @@ export function createEngineRunController(
           {
             id: jobId,
             phase: 'student.run',
-            files: {},
+            // The student search-order view of the VFS (open() targets).
+            files: runOptions?.files ?? {},
             code,
             filename: 'answer.py',
             trace: runOptions?.trace ?? false,
@@ -127,6 +128,7 @@ export function createEngineRunController(
               onRun,
               handlers,
               runOptions?.inputs,
+              runOptions?.graderFiles,
             );
             return { ...graded, trace };
           }
@@ -203,6 +205,7 @@ async function gradeWithPedal(
   onRunScript: string,
   handlers: RunHandlers,
   inputs?: string[],
+  graderFiles?: Record<string, string>,
 ): Promise<RunOutcome> {
   if (!pedalReady) {
     handlers.system?.('Loading feedback engine…');
@@ -211,7 +214,8 @@ async function gradeWithPedal(
     {
       id: `harness-grade-${Date.now()}`,
       phase: 'instructor.on_run',
-      files: {},
+      // The instructor view of the VFS (grader helper imports, A1 §3).
+      files: graderFiles ?? {},
       code: studentCode,
       // Same stdin script the student run consumed (Pedal queue_input).
       pedal: { onRun: onRunScript, inputs },

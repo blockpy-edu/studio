@@ -159,6 +159,29 @@ export class Vfs {
     return undefined;
   }
 
+  /**
+   * The engine-staging view: every basename reachable through the role's
+   * search order (A1 §4a), resolved to its winning contents and keyed by
+   * PREFIX-STRIPPED basename — exactly what `EngineJob.files` /
+   * `PedalGradeOptions.files` stage into the run's working directory.
+   * Remote files are URLs, not contents, so they are not staged here.
+   */
+  stageFiles(role: Role): Record<string, string> {
+    const order =
+      role === 'instructor' ? INSTRUCTOR_EVERYWHERE_ORDER : STUDENT_ORDER;
+    const staged: Record<string, string> = {};
+    // Walk the order from LOWEST priority to highest so higher-priority
+    // spaces overwrite (the search order lists highest first).
+    for (const space of [...order].reverse()) {
+      const files = this.spaces.get(space);
+      if (!files) continue;
+      for (const [basename, contents] of files) {
+        staged[basename] = contents;
+      }
+    }
+    return staged;
+  }
+
   /** Register uploaded/remote files (consulted last in every search order). */
   setRemoteFiles(files: Record<string, string>): void {
     this.remoteFiles = new Map(Object.entries(files));

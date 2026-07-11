@@ -136,7 +136,7 @@ describe('CodingEditor chrome', () => {
       screen.getByRole('button', { name: /Run/ }).click();
     });
     expect(seenInputs).toEqual([['Ada', '42']]);
-    // Consumed after the run cycle (configurations.js clearInput).
+    // Consumed at run START (run.js:37 → clearInput), not completion.
     expect(useEditorChromeStore.getState().queuedInputs).toEqual([]);
     // A clean run un-stales the submission (run.js:49).
     expect(useEditorChromeStore.getState().dirtySubmission).toBe(false);
@@ -271,6 +271,36 @@ describe('CodingEditor chrome', () => {
     ]);
   });
 
+  it('runs stage the VFS: student view for the run, instructor view for grading', async () => {
+    const { Vfs } = await import('@blockpy/vfs');
+    const vfs = new Vfs();
+    vfs.write('answer.py', 'a = 0');
+    vfs.write('&sample_data.txt', 'temperature,42');
+    vfs.write('!helper.py', 'def check(): pass');
+    const captured: Array<{
+      files?: Record<string, string>;
+      graderFiles?: Record<string, string>;
+    }> = [];
+    const controller: RunController = {
+      async run(_code, _handlers, options) {
+        captured.push({ files: options?.files, graderFiles: options?.graderFiles });
+        return { error: null };
+      },
+    };
+    render(<CodingEditor vfs={vfs} runController={controller} />);
+    await act(async () => {
+      screen.getByRole('button', { name: /Run/ }).click();
+    });
+    // Student staging: prefix-stripped, no instructor-only files.
+    expect(captured[0]!.files).toMatchObject({
+      'sample_data.txt': 'temperature,42',
+      'answer.py': 'a = 0',
+    });
+    expect(captured[0]!.files!['helper.py']).toBeUndefined();
+    // Grader staging: instructor view includes the helper.
+    expect(captured[0]!.graderFiles!['helper.py']).toBe('def check(): pass');
+  });
+
   it('a VFS without !on_run.py passes an empty script (no grader)', async () => {
     const { Vfs } = await import('@blockpy/vfs');
     const vfs = new Vfs();
@@ -287,6 +317,32 @@ describe('CodingEditor chrome', () => {
       screen.getByRole('button', { name: /Run/ }).click();
     });
     expect(scripts).toEqual(['']);
+  });
+
+  it('inputs queued DURING a run survive its completion (clear-at-start)', async () => {
+    const state = useEditorChromeStore.getState();
+    state.setQueuedInputs([]);
+    state.setClearInputs(true);
+    let finish!: () => void;
+    const running = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    const controller: RunController = {
+      async run() {
+        await running;
+        return { error: null };
+      },
+    };
+    render(<CodingEditor startingCode="a = 0" runController={controller} />);
+    const clicked = act(async () => {
+      screen.getByRole('button', { name: /Run/ }).click();
+      // While the run is in flight, the user queues inputs for the NEXT run.
+      useEditorChromeStore.getState().setQueuedInputs(['Ada']);
+      finish();
+      await running;
+    });
+    await clicked;
+    expect(useEditorChromeStore.getState().queuedInputs).toEqual(['Ada']);
   });
 
   it('keeps queued inputs across runs when reuse is on (clearInputs=false)', async () => {

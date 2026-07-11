@@ -55,6 +55,28 @@ describe('search order (files.js:563-599, A1 §4a)', () => {
     });
   });
 
+  it('stageFiles: student view resolves shadowing, strips prefixes, skips instructor spaces', () => {
+    vfs.write('data.txt', 'student');
+    vfs.write('?data.txt', 'hidden'); // wins for students
+    vfs.write('&extra.csv', 'x,1');
+    vfs.write('!secret.py', 'answer = 42'); // instructor-only: not staged
+    vfs.write('^starting_code.py', 'a = 0');
+    const staged = vfs.stageFiles('student');
+    expect(staged).toEqual({
+      'data.txt': 'hidden',
+      'extra.csv': 'x,1',
+    });
+  });
+
+  it('stageFiles: instructor view includes !/^ spaces with EVERYWHERE precedence', () => {
+    vfs.write('!helper.py', 'def check(): pass');
+    vfs.write('?data.txt', 'hidden');
+    vfs.write('&data.txt', 'amp'); // & outranks ? for instructors
+    const staged = vfs.stageFiles('instructor');
+    expect(staged['helper.py']).toBe('def check(): pass');
+    expect(staged['data.txt']).toBe('amp');
+  });
+
   it('remote/uploaded files are consulted last for every role', () => {
     vfs.setRemoteFiles({ 'data.txt': 'https://example.com/data.txt' });
     expect(vfs.searchForFile('data.txt', 'student')).toEqual({

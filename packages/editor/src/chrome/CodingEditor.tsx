@@ -81,6 +81,13 @@ export interface RunOptions {
    * back to a statically configured script.
    */
   onRun?: string;
+  /**
+   * Files staged into the student run's working directory, prefix-stripped
+   * (the student search-order view, A1 §4a — what `open()` can reach).
+   */
+  files?: Record<string, string>;
+  /** Files staged for the grading job (instructor view; A1 §3). */
+  graderFiles?: Record<string, string>;
 }
 
 export interface RunOutcome {
@@ -250,6 +257,14 @@ export function CodingEditor(props: CodingEditorProps) {
     }
     setRunState('running');
     store.getState().setServerStatus('onExecution', 'active', '');
+    // Snapshot the queued inputs for THIS run, then clear the queue
+    // immediately unless reuse is on — legacy clears at run START
+    // (run.js:37 → configurations.js clearInput), so inputs queued while a
+    // run is in flight are never wiped by its completion.
+    const runInputs = store.getState().queuedInputs;
+    if (store.getState().clearInputs) {
+      store.getState().setQueuedInputs([]);
+    }
     // Run always executes the student's answer.py, regardless of which
     // file tab is active (legacy behavior).
     const studentCode = vfs ? (vfs.read('answer.py') ?? '') : code;
@@ -263,11 +278,19 @@ export function CodingEditor(props: CodingEditorProps) {
         },
         {
           trace: true,
-          inputs: store.getState().queuedInputs,
+          inputs: runInputs,
           // Grade with the CURRENT !on_run.py — instructor edits to the On
           // Run tab apply on the very next run (§7: the VFS is the source
-          // of truth).
-          ...(vfs ? { onRun: vfs.read('!on_run.py') ?? '' } : {}),
+          // of truth) — and stage the live VFS into both jobs: the student
+          // search-order view for open() etc., the instructor view for
+          // grader helper imports (A1 §3/§4a).
+          ...(vfs
+            ? {
+                onRun: vfs.read('!on_run.py') ?? '',
+                files: vfs.stageFiles('student'),
+                graderFiles: vfs.stageFiles('instructor'),
+              }
+            : {}),
         },
       );
       const succeeded = outcome.error === null;
@@ -283,13 +306,8 @@ export function CodingEditor(props: CodingEditorProps) {
       }
       const after = store.getState();
       after.setTrace(outcome.trace ?? []);
-      // Run cycle end: feedback now matches the code (run.js:49) and queued
-      // inputs are consumed unless the reuse box is checked
-      // (configurations.js:176-181).
+      // Run cycle end: feedback now matches the code (run.js:49).
       after.setDirtySubmission(false);
-      if (after.clearInputs) {
-        after.setQueuedInputs([]);
-      }
       // Successful run offers the console Evaluate button (run.js:57-59),
       // unless the hide_evaluate setting is on.
       if (succeeded && !hideEvaluate) {

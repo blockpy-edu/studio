@@ -1,0 +1,152 @@
+/**
+ * Minified editor variant (§8.4) — the compact configuration hydrated into
+ * reading code blocks (§11.2, M2.3): text-only by default (blocks optional),
+ * short height, inline Run + output console, no file tabs, no instructions
+ * pane, no feedback pane. Save/submit endpoints are stripped (A7 §"runnable
+ * code blocks").
+ *
+ * Unlike `CodingEditor`, ALL state is per-instance React state — a reading
+ * page hydrates many of these at once (§16.3 budgets ten), so they must not
+ * share the singleton chrome store. They DO share the page's engine through
+ * a common `RunController`; each run executes in a detached namespace (the
+ * engine gives every `student.run` job a fresh `__main__`, §6.4/M1.3.3).
+ *
+ * Event logging attaches to the READING assignment id — wired with the M2.3
+ * reader (the logger does not exist in the chrome yet). The ephemeral-VFS
+ * file staging for readings that reference data files also lands there.
+ */
+import { useCallback, useRef, useState } from 'react';
+import { DualEditorView } from '../components/DualEditorView';
+import type { DualEditor, DualEditorMode } from '../dual/dual-editor';
+import { Icon } from './icons';
+import type { RunController } from './CodingEditor';
+import type { ConsoleEntry } from './store';
+
+export interface MinifiedEditorProps {
+  /** The code block's contents (= its ephemeral `answer.py`). */
+  initialCode: string;
+  /** The page-shared engine controller. */
+  runController?: RunController;
+  /** Blocks are optional in readings (§8.4); default text-only. */
+  mode?: DualEditorMode;
+  /** Editor height — short by default. */
+  height?: number;
+  readOnly?: boolean;
+  blocklyMediaPath?: string;
+  onCodeChange?: (code: string) => void;
+}
+
+type MinifiedRunState = 'idle' | 'running' | 'error';
+
+export function MinifiedEditor(props: MinifiedEditorProps) {
+  const [code, setCode] = useState(props.initialCode);
+  const [runState, setRunState] = useState<MinifiedRunState>('idle');
+  const [output, setOutput] = useState<ConsoleEntry[]>([]);
+  const editorRef = useRef<DualEditor | null>(null);
+  const codeRef = useRef(code);
+  codeRef.current = code;
+
+  const handleRun = useCallback(async () => {
+    const controller = props.runController;
+    setOutput([]);
+    if (!controller) {
+      setOutput([
+        { kind: 'stderr', text: 'No execution engine attached to this editor.' },
+      ]);
+      return;
+    }
+    setRunState('running');
+    const append = (entry: ConsoleEntry) =>
+      setOutput((existing) => [...existing, entry]);
+    try {
+      const outcome = await controller.run(codeRef.current, {
+        stdout: (text) => append({ kind: 'stdout', text }),
+        stderr: (text) => append({ kind: 'stderr', text }),
+        // System messages have no dev console here; drop them quietly.
+        system: () => {},
+      });
+      setRunState(outcome.error === null ? 'idle' : 'error');
+      if (outcome.error !== null) {
+        append({ kind: 'stderr', text: outcome.error });
+      }
+    } catch (error) {
+      setRunState('error');
+      append({ kind: 'stderr', text: String(error) });
+    }
+  }, [props.runController]);
+
+  const handleStop = useCallback(() => {
+    props.runController?.stop?.();
+    setRunState('idle');
+  }, [props.runController]);
+
+  const handleReset = useCallback(() => {
+    setCode(props.initialCode);
+    editorRef.current?.setCode(props.initialCode);
+    props.onCodeChange?.(props.initialCode);
+  }, [props.initialCode, props.onCodeChange]);
+
+  const running = runState === 'running';
+  return (
+    <div className="blockpy-minified">
+      <div className="blockpy-minified-toolbar btn-toolbar" role="toolbar">
+        <div className="btn-group mr-2" role="group">
+          <button
+            type="button"
+            className={
+              'btn btn-sm blockpy-run notransition' +
+              (running ? ' blockpy-run-running' : '') +
+              (runState === 'error' ? ' blockpy-run-error' : '')
+            }
+            onClick={running ? handleStop : () => void handleRun()}
+          >
+            <Icon name={running ? 'stop' : 'run'} /> {running ? 'Stop' : 'Run'}
+          </button>
+        </div>
+        <div className="btn-group" role="group">
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-secondary"
+            onClick={handleReset}
+          >
+            <Icon name="reset" /> Reset
+          </button>
+        </div>
+      </div>
+      <DualEditorView
+        mode={props.mode ?? 'text'}
+        toolbox="normal"
+        code={code}
+        onCodeChange={(newCode) => {
+          setCode(newCode);
+          props.onCodeChange?.(newCode);
+        }}
+        readOnly={props.readOnly}
+        blocklyMediaPath={props.blocklyMediaPath}
+        height={props.height ?? 120}
+        editorRef={(editor) => {
+          editorRef.current = editor;
+        }}
+      />
+      {output.length > 0 && (
+        <div
+          className="blockpy-printer blockpy-printer-default blockpy-minified-printer"
+          role="log"
+        >
+          {output.map((entry, i) => (
+            <div
+              key={i}
+              className={`blockpy-printer-output blockpy-printer-${entry.kind}`}
+            >
+              {entry.kind === 'stderr' ? (
+                <span style={{ color: 'darkred' }}>{entry.text}</span>
+              ) : (
+                entry.text
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

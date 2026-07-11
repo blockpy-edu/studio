@@ -240,6 +240,16 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
     { timeout: 60_000 },
   );
   await page.locator('#blockpy-as-instructor').uncheck();
+  // Student programs can open() staged VFS files (student search-order view,
+  // prefix-stripped: '&sample_data.txt' → 'sample_data.txt').
+  await content.click();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.type("print(open('sample_data.txt').read())");
+  await page.locator('button.blockpy-run').click();
+  await expect(page.locator('.blockpy-printer')).toContainText(
+    'temperature,42',
+    { timeout: 60_000 },
+  );
   // Queued inputs (quick-menu dialog) replay into input() — the compat-mode
   // stdin strategy (M1.3.4 → inputsPrefill).
   await page.locator('[title="Edit Inputs"]').click();
@@ -248,7 +258,15 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
   await content.click();
   await page.keyboard.press('Control+a');
   await page.keyboard.type('name = input("Who? ")\nprint("Hi", name)');
+  await expect(content).toContainText('Who?'); // typed text landed in CM
+  await expect(page.locator('button.blockpy-run')).not.toHaveClass(
+    /blockpy-run-running/,
+  );
+  await expect(page.locator('button.blockpy-run')).toContainText('Run');
   await page.locator('button.blockpy-run').click();
+  await expect(page.locator('.blockpy-printer')).toContainText('Who?', {
+    timeout: 60_000,
+  });
   await expect(page.locator('.blockpy-printer')).toContainText('Hi Ada', {
     timeout: 60_000,
   });
