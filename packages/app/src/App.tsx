@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { CodingEditor } from '@blockpy/editor';
+import { createEngineRunController } from './engine-adapter';
 import '@blockpy/editor/styles/tokens.css';
 import '@blockpy/editor/styles/bootstrap-subset.css';
 import '@blockpy/editor/styles/blockpy.css';
@@ -14,6 +15,11 @@ import type { BootConfig } from './boot-config';
 export function App({ config }: { config: BootConfig }) {
   const { user, assignment, display, paths } = config;
   const [code, setCode] = useState('a = 0\nprint(a)');
+  const runController = useMemo(
+    () =>
+      createEngineRunController({ indexURL: paths.pyodideIndexURL }),
+    [paths.pyodideIndexURL],
+  );
   return (
     <main>
       <p style={{ fontSize: 'smaller' }}>
@@ -32,6 +38,7 @@ export function App({ config }: { config: BootConfig }) {
         onCodeChange={setCode}
         readOnly={display.readOnly}
         blocklyMediaPath={paths.blocklyMedia}
+        runController={runController}
       />
     </main>
   );

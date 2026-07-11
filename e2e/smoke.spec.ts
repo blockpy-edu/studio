@@ -37,11 +37,32 @@ test('view toggle + text edits sync to blocks', async ({ page }) => {
   await expect(page.locator('.blocklySvg').first()).toBeVisible();
 });
 
-test('Run without an engine reports it in the console', async ({ page }) => {
+test('Run boots the engine lazily and reports it in the console', async ({ page }) => {
   await page.goto('/');
   await page.locator('button.blockpy-run').click();
+  // Engine boot is lazy (R7): the console announces the load immediately and
+  // the Run button flips to its running state.
   await expect(page.locator('.blockpy-printer')).toContainText(
-    'No execution engine attached',
+    'Loading Python engine',
+  );
+  await expect(page.locator('button.blockpy-run')).toHaveClass(
+    /blockpy-run-running/,
+  );
+});
+
+// Full Pyodide execution downloads ~10 MB from the CDN — opt in locally with
+// PYODIDE_E2E=1 (not part of the default suite).
+test('real Pyodide run prints output and reports no errors', async ({ page }) => {
+  test.skip(!process.env.PYODIDE_E2E, 'set PYODIDE_E2E=1 to run');
+  test.setTimeout(180_000);
+  await page.goto('/');
+  await page.locator('button.blockpy-run').click();
+  await expect(page.locator('.blockpy-printer')).toContainText('0', {
+    timeout: 150_000,
+  });
+  await expect(page.locator('.blockpy-feedback')).toContainText('No errors');
+  await expect(page.locator('button.blockpy-run')).not.toHaveClass(
+    /blockpy-run-running/,
   );
 });
 
