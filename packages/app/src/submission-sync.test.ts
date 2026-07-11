@@ -139,6 +139,20 @@ describe('force update (blockpy.js:1202-1208)', () => {
   });
 });
 
+describe('instructor reset (blockpy.js:784-788)', () => {
+  it('zeroes the display state and POSTs hidden+forced', async () => {
+    const { sync, posted } = harness();
+    sync.seed(0.8, true);
+    await sync.resetScore();
+    expect(sync.displayScore).toBe(0);
+    expect(sync.displayCorrect).toBe(false);
+    expect(posted[0]!.body.get('score')).toBe('0');
+    expect(posted[0]!.body.get('correct')).toBe('false');
+    expect(posted[0]!.body.get('hidden_override')).toBe('true');
+    expect(posted[0]!.body.get('force_update')).toBe('true');
+  });
+});
+
 describe('§14.3 grading sequence (on_run.js:164-175, server.js:663-693)', () => {
   it('POSTs monotonic-max score with the RAW success as correct', async () => {
     const { sync, posted } = harness();

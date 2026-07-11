@@ -162,6 +162,36 @@ export class SubmissionSync {
   }
 
   /**
+   * Instructor "reset" on the feedback header (blockpy.js:784-788):
+   * zero the display state, then POST score=0/correct=false with
+   * hidden_override AND force_update both true.
+   */
+  async resetScore(): Promise<void> {
+    this.score = 0;
+    this.correct = false;
+    if (this.options.readOnly() || !this.options.api.isEndpointConnected('updateSubmission')) {
+      return;
+    }
+    this.options.setStatus('updateSubmission', 'active');
+    try {
+      const response = await this.options.api.updateSubmission({
+        score: 0,
+        correct: false,
+        hidden_override: true,
+        force_update: true,
+        image: await this.captureImage(),
+      });
+      this.options.setStatus(
+        'updateSubmission',
+        response.success ? 'ready' : 'failed',
+        response.success ? undefined : String(response['message'] ?? ''),
+      );
+    } catch (error) {
+      this.options.setStatus('updateSubmission', 'failed', String(error));
+    }
+  }
+
+  /**
    * The §14.3 grading sequence (on_run.js:164-175 + server.js:663-693).
    * Call AFTER the feedback pane presented.
    */

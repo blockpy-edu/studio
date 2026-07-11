@@ -78,9 +78,10 @@ export function App({ config, extras, registerActions }: AppProps) {
   const [loaded, setLoaded] = useState<LoadedAssignment | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  // Legacy submission.submissionStatus/.correct display state (blockpy.js).
+  // Legacy submission.submissionStatus/.correct/.score display state.
   const [submissionStatus, setSubmissionStatus] = useState('unknown');
   const [correct, setCorrect] = useState(false);
+  const [score, setScore] = useState(0);
   // §7.4 out-of-date banner: saveFile responded version_change (LD-11).
   const [versionOutdated, setVersionOutdated] = useState(false);
   // Live dual editor — the updateSubmission block-PNG source (§14.3).
@@ -158,6 +159,7 @@ export function App({ config, extras, registerActions }: AppProps) {
       // (loadSubmission, blockpy.js:473-484; wire score is a 0-1 float).
       sync?.seed(submission?.score ?? 0, submission?.correct ?? false);
       setCorrect(submission?.correct ?? false);
+      setScore(submission?.score ?? 0);
       setSubmissionStatus(String(submission?.raw['submission_status'] ?? 'unknown'));
       setVersionOutdated(false);
       setLoaded({ assignment: decoded, submission, vfs: vfsFromAssignment(decoded, submission ?? undefined) });
@@ -376,12 +378,22 @@ export function App({ config, extras, registerActions }: AppProps) {
           }}
           onGraded={(grade) => {
             void sync?.handleGraded(grade);
-            // Display OR-chain (on_run.js:165) feeds the mark-submitted text.
+            // Display OR-chain (on_run.js:165) feeds the mark-submitted
+            // text; the monotonic score feeds the instructor header.
             if (grade.success) setCorrect(true);
+            if (sync) setScore(sync.displayScore);
           }}
           onLogEvent={logEvent}
           onEditorReady={(editor) => {
             dualEditorRef.current = editor;
+          }}
+          // Ratings render unless the assignment is hidden (blockpy.js:789).
+          provideRatings={active ? active.assignment.raw['hidden'] !== true : true}
+          submissionScore={score}
+          onResetScore={() => {
+            void sync?.resetScore();
+            setScore(0);
+            setCorrect(false);
           }}
           loadHistory={loadHistory}
           quickMenu={{

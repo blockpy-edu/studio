@@ -155,15 +155,35 @@ export function QuickMenu(props: QuickMenuProps) {
   const [shareOpen, setShareOpen] = useState(false);
   const [shareLink, setShareLink] = useState('');
   const [copied, setCopied] = useState(false);
-  const openShare = () => {
+  const [sharePrompted, setSharePrompted] = useState(false);
+  const openShare = (wasPrompted = false) => {
     if (!props.shareUrl) return;
     setShareLink(props.shareUrl());
     setCopied(false);
+    setSharePrompted(wasPrompted);
     setShareOpen(true);
   };
   const copyShareLink = () => {
     void navigator.clipboard.writeText(shareLink).then(() => setCopied(true));
   };
+  // A feedback rating requested the prompted variant (legacy rate →
+  // startShare(true), blockpy.js:808-812) — the Feedback pane raises the
+  // store flag; this menu owns the dialog.
+  const promptedShareRequested = useEditorChromeStore(
+    (state) => state.promptedShare,
+  );
+  const shareUrlRef = useRef(props.shareUrl);
+  shareUrlRef.current = props.shareUrl;
+  useEffect(() => {
+    if (!promptedShareRequested) return;
+    store.getState().clearPromptedShare();
+    if (shareUrlRef.current) {
+      setShareLink(shareUrlRef.current());
+      setCopied(false);
+      setSharePrompted(true);
+      setShareOpen(true);
+    }
+  }, [promptedShareRequested, store]);
 
   const openInputsDialog = () => {
     const { queuedInputs, clearInputs } = store.getState();
@@ -259,7 +279,7 @@ export function QuickMenu(props: QuickMenuProps) {
         <button
           type="button"
           className="btn btn-outline-secondary btn-sm"
-          onClick={openShare}
+          onClick={() => openShare()}
           title="Get Shareable Link for Instructors or TAs"
         >
           <Icon name="share" />
@@ -316,8 +336,14 @@ export function QuickMenu(props: QuickMenuProps) {
         okayLabel="Close"
       >
         <div className="mb-4">
-          You can quickly share your code with instructors and TAs by
-          providing them with this link:
+          {sharePrompted
+            ? 'It looks like you are having some trouble with this problem, ' +
+              'your code, or this feedback. If you plan to reach out for help ' +
+              'from the course staff, then we recommend you include this link ' +
+              'in your message. It will make it much easier for them to help ' +
+              'you quickly.'
+            : 'You can quickly share your code with instructors and TAs by ' +
+              'providing them with this link:'}
         </div>
         <div className="mb-4">
           <pre className="blockpy-copy-share-link-area">{shareLink}</pre>

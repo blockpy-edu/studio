@@ -29,6 +29,11 @@
  *   fa-backward      → Rewind         (identical glyph, history previous)
  *   fa-forward       → FastForward    (identical glyph, history next)
  *   fa-file-import   → FileInput      (identical semantics, history "Use")
+ *   fa-thumbs-up/-down → ThumbsUp/ThumbsDown (identical glyphs, feedback
+ *                       rating; legacy's rated state swapped solid→regular —
+ *                       Lucide has no solid pair, so rated dims instead)
+ *   fa-minus-square/fa-plus-square → SquareMinus/SquarePlus (identical
+ *                       glyphs, rating region collapse/expand)
  *
  * Size is fixed at 14 with the legacy 12px optical weight preserved via
  * 1.75 stroke — A8 §3.2 calls the 12px sizing layout-relevant.
@@ -61,6 +66,10 @@ import {
   SkipBack,
   SkipForward,
   Square,
+  SquareMinus,
+  SquarePlus,
+  ThumbsDown,
+  ThumbsUp,
   Trash2,
   Upload,
   type LucideProps,
@@ -99,6 +108,11 @@ const ICONS = {
   historyPrev: Rewind,
   historyNext: FastForward,
   historyUse: FileInput,
+  // Feedback rating region (feedback.js:46-74).
+  thumbsUp: ThumbsUp,
+  thumbsDown: ThumbsDown,
+  rateCollapse: SquareMinus,
+  rateExpand: SquarePlus,
 } satisfies Record<string, ComponentType<LucideProps>>;
 
 export type IconName = keyof typeof ICONS;

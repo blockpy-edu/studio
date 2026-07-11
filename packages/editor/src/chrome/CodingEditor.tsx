@@ -208,6 +208,12 @@ export interface CodingEditorProps {
    * `blockEditor.getPng()` for the updateSubmission image payload (§14.3).
    */
   onEditorReady?: (editor: DualEditor | null) => void;
+  /** Legacy provideRatings (= !assignment.hidden) — feedback thumbs. */
+  provideRatings?: boolean;
+  /** submission.score (0-1) for the instructor feedback header. */
+  submissionScore?: number;
+  /** Legacy ui.feedback.resetScore (blockpy.js:784-788). */
+  onResetScore?: () => void;
   /** Quick-menu wiring (Row 1 right column); `onRun` is supplied here. */
   quickMenu?: Omit<QuickMenuProps, 'onRun'>;
   /**
@@ -613,7 +619,27 @@ export function CodingEditor(props: CodingEditorProps) {
             {traceVisible ? (
               <TraceExplorer onStepLine={handleTraceLine} />
             ) : (
-              <Feedback />
+              <Feedback
+                instructor={props.instructor}
+                score={props.submissionScore}
+                onResetScore={props.onResetScore}
+                onRate={
+                  props.provideRatings
+                    ? (rating) => {
+                        // X-Rating carries the presented feedback's
+                        // category/label (blockpy.js:797-800).
+                        const current = store.getState().feedback;
+                        props.onLogEvent?.(
+                          'X-Rating',
+                          current.category ?? '',
+                          current.label,
+                          rating,
+                          '',
+                        );
+                      }
+                    : undefined
+                }
+              />
             )}
           </div>
         </div>
@@ -662,7 +688,27 @@ export function CodingEditor(props: CodingEditorProps) {
               height={400}
             />
           ) : (
-            <div className="blockpy-python-blockmirror">
+            <div
+              className="blockpy-python-blockmirror"
+              // X-Editor.Paste (python.js:238-248) with REAL character
+              // counts — legacy's shadowed `const characters` always
+              // logged {characters: 0} (LD-2a; trustworthy from Studio on).
+              onPaste={(event) => {
+                let characters = 0;
+                try {
+                  characters = event.clipboardData.getData('Text').length;
+                } catch {
+                  // Clipboard unreadable — log the 0 like legacy's catch.
+                }
+                props.onLogEvent?.(
+                  'X-Editor.Paste',
+                  '',
+                  '',
+                  JSON.stringify({ characters }),
+                  activeFile,
+                );
+              }}
+            >
               <DualEditorView
                 mode={isAnswerFile ? pythonMode : 'text'}
                 code={code}

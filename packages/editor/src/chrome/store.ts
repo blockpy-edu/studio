@@ -103,6 +103,12 @@ export interface EditorChromeState {
   consoleUnseen: number;
   /** Entries appended to the dev console while the student one is shown. */
   devUnseen: number;
+  /**
+   * A feedback rating asked for the PROMPTED share dialog (legacy
+   * rate → startShare(true), blockpy.js:797-813). QuickMenu owns the
+   * dialog and clears the flag.
+   */
+  promptedShare: boolean;
 
   setPythonMode(mode: DualEditorMode): void;
   toggleHistoryMode(): void;
@@ -130,6 +136,8 @@ export interface EditorChromeState {
   clearDevConsole(): void;
   /** Swap the console slot; clears the shown console's unseen counter. */
   setActiveConsole(which: 'student' | 'dev'): void;
+  requestPromptedShare(): void;
+  clearPromptedShare(): void;
 }
 
 /**
@@ -174,6 +182,7 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   activeConsole: 'student',
   consoleUnseen: 0,
   devUnseen: 0,
+  promptedShare: false,
 
   setPythonMode: (mode) => set({ pythonMode: mode }),
   toggleHistoryMode: () =>
@@ -232,4 +241,6 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
         ? { activeConsole: which, devUnseen: 0 }
         : { activeConsole: which, consoleUnseen: 0 },
     ),
+  requestPromptedShare: () => set({ promptedShare: true }),
+  clearPromptedShare: () => set({ promptedShare: false }),
 }));
