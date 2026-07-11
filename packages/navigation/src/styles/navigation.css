@@ -14,8 +14,8 @@
  * scroll).
  */
 .assignment-selector-div {
-  padding-left: 15px;
-  padding-right: 15px;
+  /* padding-left: 15px;
+  padding-right: 15px; */
 }
 
 .assignment-selector-div *,
@@ -33,4 +33,14 @@
 
 .assignment-selector {
   overflow-y: auto;
+}
+
+.assignment-selector-btn {
+  background-color: white;
+  color: black;
+}
+
+.assignment-selector-btn:disabled {
+  background-color: #e0e0e0;
+  color: black;
 }

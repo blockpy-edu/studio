@@ -43,7 +43,7 @@ export function GroupNav({ store }: GroupNavProps) {
           <div className="center-block">
             <button
               type="button"
-              className="btn btn-outline-secondary btn-sm mr-1 assignment-selector-first"
+              className="btn btn-outline-secondary btn-sm mr-2 assignment-selector-btn assignment-selector-first"
               disabled={atFirst}
               onClick={() => store.first()}
             >
@@ -51,7 +51,7 @@ export function GroupNav({ store }: GroupNavProps) {
             </button>
             <button
               type="button"
-              className="btn btn-outline-secondary btn-sm assignment-selector-back"
+              className="btn btn-outline-secondary btn-sm mr-2 assignment-selector-btn assignment-selector-back"
               disabled={atFirst}
               onClick={() => store.back()}
             >
@@ -86,13 +86,12 @@ export function GroupNav({ store }: GroupNavProps) {
               })}
             </select>
             <span className="completion-box m-1" onClick={() => store.toggleExpansion()}>
-              (
-              <span className="completion-rate">{anySecretive ? '??' : numerator}</span>/
+              (<span className="completion-rate">{anySecretive ? '??' : numerator}</span>/
               {entries.length} completed)
             </span>
             <button
               type="button"
-              className={nextButtonClass}
+              className={`btn btn-outline-secondary mr-2 btn-sm assignment-selector-btn assignment-selector-next ${nextButtonClass}`}
               disabled={atLast}
               onClick={() => store.next()}
             >
@@ -100,7 +99,7 @@ export function GroupNav({ store }: GroupNavProps) {
             </button>
             <button
               type="button"
-              className="btn btn-outline-secondary btn-sm assignment-selector-last"
+              className="btn btn-outline-secondary btn-sm assignment-selector-btn assignment-selector-last"
               disabled={atLast}
               onClick={() => store.last()}
             >
