@@ -81,6 +81,10 @@ const STRING_SETTINGS: [key: string, label: string, doc: string][] = [
   ['datasets', 'Preloaded Datasets', 'The current list of datasets available on load as a comma-separated string.'],
   ['preload_files', 'Preloaded Files', 'A JSON structure representing the files that should be loaded on start from the remote, as if they were local.'],
   ['part_id', 'Part ID', 'The Part ID of an Assignment that this editor is responsible for. Assignments can have regions ("Parts") that behave independently to the user but all correspond to the same assignment on the backend. Blank corresponds to the full document.'],
+  // Studio extension (M4.3, LD-25): course reference document for the
+  // right-hand docs panel. No legacy analog; legacy clients drop the key
+  // on instructor saves (the LD-5 legacy bug).
+  ['docs_url', 'Docs URL', 'A URL to a markdown reference document shown in the collapsible Docs panel beside the editor. Blank hides the panel. (Studio extension.)'],
 ];
 
 const TOOLBOXES = ['normal', 'ct', 'ct2', 'minimal', 'full', 'empty', 'custom'];

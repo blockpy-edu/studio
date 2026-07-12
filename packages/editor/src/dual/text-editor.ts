@@ -45,7 +45,43 @@ import {
 import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
 import { linter, type Diagnostic } from '@codemirror/lint';
 import { python } from '@codemirror/lang-python';
+import { HighlightStyle } from '@codemirror/language';
+import { tags } from '@lezer/highlight';
 import { parseSource } from '@blockpy/blocks';
+
+/** Themes the dual editor understands (M4.1; store `ThemeName` values —
+ * win2000 is a chrome-only skin, so the code surface treats it as light). */
+export type EditorTheme = 'light' | 'dark' | 'win2000';
+
+/**
+ * Dark syntax colors (M4.1, LD-23). NOT legacy-normative — themes are a
+ * Studio extension; palette is the familiar One-Dark family for AA contrast
+ * on the #1e1e1e surface (themes.css owns the editor chrome colors).
+ */
+const darkHighlightStyle = HighlightStyle.define([
+  { tag: tags.keyword, color: '#c678dd' },
+  {
+    tag: [tags.name, tags.deleted, tags.character, tags.propertyName],
+    color: '#e06c75',
+  },
+  { tag: [tags.function(tags.variableName), tags.labelName], color: '#61afef' },
+  {
+    tag: [tags.color, tags.constant(tags.name), tags.standard(tags.name)],
+    color: '#d19a66',
+  },
+  { tag: [tags.definition(tags.name), tags.separator], color: '#abb2bf' },
+  {
+    tag: [tags.typeName, tags.className, tags.number, tags.self, tags.namespace],
+    color: '#e5c07b',
+  },
+  {
+    tag: [tags.operator, tags.operatorKeyword, tags.escape, tags.regexp],
+    color: '#56b6c2',
+  },
+  { tag: [tags.meta, tags.comment], color: '#7d8799' },
+  { tag: [tags.string, tags.special(tags.string)], color: '#98c379' },
+  { tag: tags.invalid, color: '#ffffff' },
+]);
 
 /** Marks programmatic `setCode(..., quietly=true)` transactions. */
 const silentSet = Annotation.define<boolean>();
@@ -159,6 +195,7 @@ export class DualTextEditor {
   private readonly host: TextEditorHost;
   private readonly readOnly = new Compartment();
   private readonly autocomplete = new Compartment();
+  private readonly theme = new Compartment();
   private mode_: keyof typeof DualTextEditor.VIEW_CONFIGURATIONS = 'split';
   /** Code stashed while hidden, applied on next show (legacy `outOfDate_`). */
   private outOfDate_: string | null = null;
@@ -180,6 +217,8 @@ export class DualTextEditor {
           // OFF by default (M3.3): legacy CM5 had no autocomplete, and the
           // popup distracts novices. A toolbar toggle reconfigures it live.
           this.autocomplete.of([]),
+          // Empty = light (parity default). Reconfigured by setTheme (M4.1).
+          this.theme.of([]),
           pythonSyntaxLinter(),
           highlightField,
           highlightPlugin,
@@ -309,6 +348,22 @@ export class DualTextEditor {
   setAutocomplete(enabled: boolean): void {
     this.view.dispatch({
       effects: this.autocomplete.reconfigure(enabled ? autocompletion() : []),
+    });
+  }
+
+  /**
+   * Live-swap the code surface theme (M4.1). Dark flags CM6's dark base
+   * (selection/panel defaults) and swaps in the dark HighlightStyle — the
+   * `fallback: true` default style yields to it automatically. Light and
+   * win2000 (chrome-only skin) leave the parity defaults in place.
+   */
+  setTheme(theme: EditorTheme): void {
+    this.view.dispatch({
+      effects: this.theme.reconfigure(
+        theme === 'dark'
+          ? [EditorView.theme({}, { dark: true }), syntaxHighlighting(darkHighlightStyle)]
+          : [],
+      ),
     });
   }
 

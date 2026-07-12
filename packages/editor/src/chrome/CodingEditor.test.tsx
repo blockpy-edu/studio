@@ -1,6 +1,13 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { CodingEditor, type RunController } from './CodingEditor';
 import { renderInstructions } from './Instructions';
 import { categoryPresentation } from './categories';
@@ -12,6 +19,8 @@ function resetStore() {
   state.clearFeedback();
   state.setRunState('idle');
   state.setPythonMode('split');
+  state.setFocusedMode(false);
+  if (state.docsPanel) state.toggleDocsPanel();
 }
 
 describe('CodingEditor chrome', () => {
@@ -19,6 +28,10 @@ describe('CodingEditor chrome', () => {
     document.body.innerHTML = '';
     resetStore();
   });
+
+  // RTL auto-cleanup is off (no vitest globals) — unmount stale editors so
+  // their window-level listeners (focused-mode keys, M4.2) don't stack.
+  afterEach(cleanup);
 
   it('renders the A8 row structure with legacy class hooks', () => {
     const { container } = render(
@@ -238,6 +251,116 @@ describe('CodingEditor chrome', () => {
     );
     expect(activeLabels).toHaveLength(1);
     expect(activeLabels[0]!.textContent).toContain('Text');
+  });
+
+  it('focused mode (M4.2): chrome hides, drawer serves feedback, Esc exits', () => {
+    const events: string[] = [];
+    const { container } = render(
+      <CodingEditor
+        assignmentName="Focus Test"
+        instructions="Solve it."
+        startingCode="a = 0"
+        onLogEvent={(eventType) => events.push(eventType)}
+      />,
+    );
+    // Enter via the toolbar button.
+    const focusButton = container.querySelector<HTMLButtonElement>(
+      '.blockpy-toggle-focus',
+    )!;
+    act(() => void fireEvent.click(focusButton));
+    expect(useEditorChromeStore.getState().focusedMode).toBe(true);
+    expect(events).toContain('X-Display.Focus.Enter');
+    // Instructions pane, quick menu, and file strip are gone; toolbar stays.
+    expect(container.querySelector('.blockpy-header')).toBeNull();
+    expect(container.querySelector('.blockpy-quick-menu')).toBeNull();
+    expect(container.querySelector('.blockpy-python-toolbar')).not.toBeNull();
+    // Drawer: collapsed by default, badge visible; clicking it expands the
+    // console + feedback pair.
+    expect(container.querySelector('.blockpy-focus-drawer')).not.toBeNull();
+    expect(container.querySelector('.blockpy-printer')).toBeNull();
+    const badge = container.querySelector<HTMLElement>(
+      '.blockpy-focus-feedback-badge',
+    )!;
+    expect(badge.textContent).toBe('Ready');
+    act(() => void fireEvent.click(badge));
+    expect(container.querySelector('.blockpy-printer')).not.toBeNull();
+    expect(container.querySelector('.blockpy-feedback')).not.toBeNull();
+    // Instructions stay reachable through the overlay toggle.
+    act(() =>
+      void fireEvent.click(
+        container.querySelector('.blockpy-focus-instructions')!,
+      ),
+    );
+    expect(container.querySelector('.blockpy-dialog')).not.toBeNull();
+    // Esc restores the normal chrome and logs the exit.
+    act(() => void fireEvent.keyDown(window, { key: 'Escape' }));
+    expect(useEditorChromeStore.getState().focusedMode).toBe(false);
+    expect(events).toContain('X-Display.Focus.Exit');
+    expect(container.querySelector('.blockpy-header')).not.toBeNull();
+    expect(container.querySelector('.blockpy-focus-drawer')).toBeNull();
+  });
+
+  it('focused mode: Ctrl+Alt+F enters from the keyboard (M4.2)', () => {
+    render(<CodingEditor startingCode="a = 0" />);
+    act(() =>
+      void fireEvent.keyDown(window, { key: 'f', ctrlKey: true, altKey: true }),
+    );
+    expect(useEditorChromeStore.getState().focusedMode).toBe(true);
+    act(() =>
+      void fireEvent.keyDown(window, { key: 'F', ctrlKey: true, altKey: true }),
+    );
+    expect(useEditorChromeStore.getState().focusedMode).toBe(false);
+  });
+
+  it('docs panel (M4.3): docs_url exposes the toolbar toggle; opening shrinks the editor', async () => {
+    const fetchMock = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        text: () => Promise.resolve('# Reference\nUseful facts.'),
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      // No docs_url → no toggle at all.
+      const bare = render(<CodingEditor startingCode="a = 0" />);
+      expect(bare.container.querySelector('.blockpy-toggle-docs')).toBeNull();
+      cleanup();
+
+      const { container } = render(
+        <CodingEditor
+          startingCode="a = 0"
+          docsUrl="https://example.com/ref.md"
+        />,
+      );
+      expect(container.querySelector('.blockpy-editor')!.className).toContain(
+        'col-md-12',
+      );
+      await act(async () =>
+        void fireEvent.click(
+          container.querySelector('.blockpy-toggle-docs')!,
+        ),
+      );
+      expect(container.querySelector('.blockpy-docs-rail')).not.toBeNull();
+      expect(container.querySelector('.blockpy-editor')!.className).toContain(
+        'col-md-9',
+      );
+      expect(
+        container.querySelector('.blockpy-docs-body')!.textContent,
+      ).toContain('Useful facts.');
+      // Collapse from the panel header restores full width.
+      await act(async () =>
+        void fireEvent.click(
+          container.querySelector('[title="Hide docs panel"]')!,
+        ),
+      );
+      expect(container.querySelector('.blockpy-docs-rail')).toBeNull();
+      expect(container.querySelector('.blockpy-editor')!.className).toContain(
+        'col-md-12',
+      );
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('hides the view toggle when blocks are disabled (enableBlocks)', () => {

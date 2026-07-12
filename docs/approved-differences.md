@@ -349,3 +349,80 @@ Replicate decisions (D4, D6) produce no entries — they are legacy parity.
   now vary questions per submission id where legacy showed everyone the
   same pool pick. Course authors relying (unknowingly) on the frozen
   selection will see per-student variation — the documented intent.
+
+## LD-23 — Color themes: dark & Windows-2000 opt-ins (Milestone 4.1)
+
+- **Legacy:** no theming of any kind — one hard-coded parchment look.
+- **Studio:** a `data-theme` scope system over the tokens.css variables
+  (`[data-theme='dark']` / `[data-theme='win2000']`, styles/themes.css)
+  plus a CM6 dark HighlightStyle + dark-base flag, a Blockly
+  `componentStyles` dark workspace theme, and a win2000 cosmetic skin
+  (box-shadow bevels — never border-width changes — square corners,
+  Tahoma-era font stack; layout/metrics identical). A quick-menu palette
+  button cycles light → dark → win2000; the choice persists at
+  `BLOCKPY_display.theme` (showRating pattern).
+- **Parity stance:** LIGHT REMAINS THE DEFAULT AND NORMATIVE LOOK (B6).
+  Themes bind only on explicit user opt-in; `prefers-color-scheme` is
+  deliberately ignored so an OS-dark student still boots into the parity
+  default. Dark palette values are NOT legacy-derived — chosen for WCAG AA
+  contrast on the dark surfaces (§16.3); the neutral token ramp inverts
+  wholesale, so any future rule built on tokens themes for free.
+- **Wire impact:** none — display-only; nothing new is logged or saved
+  server-side (localStorage only, like showRating).
+
+## LD-24 — Focused editor mode (Milestone 4.2)
+
+- **Legacy:** no equivalent — the closest affordance was browser fullscreen
+  (interface.js:50-71), which kept the whole chrome.
+- **Studio:** an exam-friendly display mode that maximizes the editor:
+  instructions pane, quick menu, file strip/tree, and the app's group-nav
+  headers all hide; the Run/Stop/Reset toolbar stays; console + feedback
+  move into a slim collapsible bottom drawer whose feedback badge (legacy
+  label-* colors) stays visible while collapsed. Instructions remain
+  reachable through a dialog overlay toggle. Enter via toolbar button or
+  Ctrl+Alt+F; exit via the button or Esc. Composes with browser fullscreen
+  (independent states). NOT persisted — every page load starts in the
+  normal parity chrome, so B6 holds by default.
+- **Telemetry:** new extension events `X-Display.Focus.Enter` /
+  `X-Display.Focus.Exit` (A2 §5.1) fire on user enter/exit only; an
+  assignment switch silently restores the chrome without logging an exit.
+- **Wire impact:** the two new event rows only; display state is
+  client-side.
+
+## LD-25 — Docs browser panel + `docs_url` setting (Milestone 4.3)
+
+- **Legacy:** no reference-document affordance of any kind.
+- **Studio:** a new `docs_url` assignment-settings key (raw string, A4
+  Studio-extensions table) drives a collapsible right-hand Docs panel
+  beside the editor: markdown fetched once per session per URL, rendered
+  through the A6 instructions pipeline (marked breaks + unsanitized HTML
+  per D4-A + target=_blank + 400 ms hljs pass), heading-derived TOC with a
+  filter box and scroll anchors, and an explicit raw-file download link.
+  Toolbar "Docs" toggle appears only when the setting is present; the
+  expand state persists (`BLOCKPY_display.docsPanel`). Width rides the
+  M3.7 grid (3 columns from the editor; composes with the file tree:
+  3+6+3). Hidden entirely in focused mode (LD-24).
+- **Wire impact:** one additive settings-blob key. The server ignores it;
+  a legacy-client instructor SAVE drops it (LD-5's registry-rebuild bug),
+  Studio saves round-trip it. Fetching the document is a plain browser GET
+  to the instructor-chosen URL (CORS applies; failure fails soft with a
+  direct link).
+
+## LD-26 — CSV grid & JSON editors (Milestone 4.4)
+
+- **Legacy:** every non-Python file opened in the same CodeMirror text
+  editor (JSON files had a JSON_EDITOR_HTML variant for a few magic names,
+  but plain `.json`/`.csv` working files were raw text).
+- **Studio:** extension-based dispatch in the CodingEditor tab body (third
+  special case beside `images.blockpy` and the settings form): `.csv` tabs
+  get a grid editor (RFC-4180-ish parse, header-row toggle, add/remove
+  rows/columns, cell editing; ragged rows pad to a rectangle visibly);
+  `.json` tabs get a CM6 editor with the JSON language, a synchronous
+  validity badge + message, the jsonParseLinter gutter, and a collapsible
+  tree view. Both serialize through the normal code-change path (VFS
+  write → autosave → dirty tracking) and offer a "Raw Text" escape with a
+  "Back to Grid/JSON Editor" return; unparseable CSV degrades straight to
+  the text editor. `&`-space stays read-only in every mode (D3-A).
+- **Wire impact:** none — same files, same save channels; only the editing
+  surface changed. CSV serialization normalizes CRLF to LF and pads
+  ragged rows (visible in the very first save after a grid edit).

@@ -282,29 +282,29 @@ The grammar already parses `match`/`case` (@lezer/python 1.1.19 has `MatchStatem
 
 All additive with no legacy analog (or explicitly superseding a legacy screen); each ships opt-in per the §17.5 discipline, with defaults preserving the B6 visual-parity mandate.
 
-### Milestone 4.1 — Theme system: light (default) / dark / Windows-2000
+### Milestone 4.1 — Theme system: light (default) / dark / Windows-2000 ✅ (landed 2026-07-12, LD-23)
 
-- [ ] Mechanism: `tokens.css` already centralizes the normative colors — add `[data-theme="dark"]` / `[data-theme="win2000"]` scopes overriding tokens; unthemed = today's values. Light stays the parity default and themes are explicit user opt-in, so B6 holds (approved-differences entry for the capability itself).
-- [ ] Dark needs more than tokens: a CM6 dark highlight style, a Blockly `Theme` for workspace/toolbox, and a console/feedback/badge contrast pass (WCAG AA per §16.3).
-- [ ] Windows-2000: cosmetic skin only — system-gray `#c0c0c0` surfaces, 2px outset/inset bevels, square corners, an MS-Sans-Serif-ish stack; identical layout/metrics.
-- [ ] Toggle in the quick menu; persisted (`BLOCKPY_display.theme` localStorage, showRating pattern); `prefers-color-scheme` is ignored — the parity default wins until the user chooses.
+- [x] Mechanism: `styles/themes.css` adds `[data-theme="dark"]` / `[data-theme="win2000"]` scopes overriding the tokens; unthemed = today's values. Light stays the parity default; themes are explicit user opt-in (LD-23).
+- [x] Dark beyond tokens: CM6 dark HighlightStyle + `EditorView.theme({}, {dark:true})` via a theme Compartment (`DualTextEditor.setTheme`); Blockly `blockpyDark` componentStyles theme (`DualBlockEditor.setTheme`, workspace live-swaps); badge/accent contrast overrides (darkred/black/offline badges, positive-green/alert-red text accents) — full AA audit rides the Phase 6 pass. Every `DualEditorView` follows the store, so minified editors theme too.
+- [x] Windows-2000: cosmetic skin only — `#c0c0c0` surfaces, box-shadow bevels (NOT border-width changes, keeping metrics identical), square corners, Tahoma/MS-Sans-Serif stack, navy title-bar dialogs.
+- [x] Palette button in the quick menu cycles light→dark→win2000; persisted (`BLOCKPY_display.theme`); `prefers-color-scheme` ignored — parity default until the user chooses.
 
-### Milestone 4.2 — Focused editor mode (exam-friendly)
+### Milestone 4.2 — Focused editor mode (exam-friendly) ✅ (landed 2026-07-12, LD-24)
 
-- [ ] A store-level display mode maximizing the editor: hide instructions pane, file strip, group-nav headers, and the quick menu; keep — the Run/Stop/Reset toolbar, the editor at full width/height, and a slim collapsible bottom drawer housing console + feedback (the feedback badge stays visible even when the drawer is collapsed, so students can't miss grading). Instructions reachable via a temporary overlay toggle rather than gone entirely.
-- [ ] Enter/exit must be trivial: toolbar button, `Esc` to leave, keyboard shortcut to enter; composes with browser fullscreen (reuses the M3.3-fixed fullscreen path).
-- [ ] Log `X-Display.Focus.Enter`/`X-Display.Focus.Exit` (registry additions) — exam telemetry.
-- [ ] Playwright: enter → editor grows; drawer expands on new feedback badge click; Esc restores; state survives run/feedback cycles.
+- [x] `focusedMode` store flag (not persisted — loads start in parity chrome): instructions pane, quick menu, file strip/tree, and App's group-nav headers hide; toolbar stays; editor col-md-12 and remounts taller (`innerHeight - 220`, floor 500); console + feedback render in a collapsible bottom drawer with the `label-*` feedback badge always visible; Instructions reachable via a Dialog overlay toggle in the drawer bar.
+- [x] Toolbar Focus button, `Esc` leaves, `Ctrl+Alt+F` toggles; browser fullscreen composes (independent state, QuickMenu path untouched).
+- [x] `X-Display.Focus.Enter`/`.Exit` logged on user enter/exit (assignment switch restores silently) — registered in A2 §5.1 (new Studio-extensions table, which also back-fills the M3.7 `X-File.*` events).
+- [x] Playwright (smoke.spec): enter → CM surface grows and rises; drawer expands from the badge; instructions overlay opens; Esc restores; run cycle inside focus mode keeps state. Unit: CodingEditor focused-mode + keyboard tests.
 
-### Milestone 4.3 — Docs browser (right-hand panel)
+### Milestone 4.3 — Docs browser (right-hand panel) ✅ (landed 2026-07-12, LD-25)
 
-- [ ] Collapsible right-hand panel beside the editor rendering a course reference document. Source = new `docs_url` setting (raw string per A4 semantics; per-assignment, typically identical across a course) pointing at a downloadable markdown file; fetched once per session; rendered through the existing marked + hljs pipeline (A6 parity rules).
-- [ ] TOC generated from headings + a text filter box; expand/collapse state persisted; explicit "download" link to the raw file. Width negotiation with the editor column rides the M3.7 grid generalization.
+- [x] `DocsPanel` in a col-md-3 right rail beside the editor; source = new `docs_url` setting (raw string, A4 Studio-extensions table + SettingsEditor string row); fetched once per session per URL (module cache; failures don't poison it); rendered through the A6 marked + hljs pipeline (`renderInstructions` + 400 ms highlight).
+- [x] TOC from headings (post-render id assignment, level-indented, scroll anchors) + text filter box; expand state persisted (`BLOCKPY_display.docsPanel`); explicit download link. Grid negotiation: editor is `12 − 3·(tree) − 3·(docs)`; hidden in focused mode. Toolbar "Docs" toggle renders only when the setting exists.
 
-### Milestone 4.4 — CSV & JSON editors
+### Milestone 4.4 — CSV & JSON editors ✅ (landed 2026-07-12, LD-26)
 
-- [ ] Extension-based dispatch in the CodingEditor tab body (third special case beside images/settings): `.csv` → grid editor (header-row toggle, add/remove rows/columns, cell editing; serializes back through the normal VFS write path so autosave/dirty tracking just work); `.json` → CM6 JSON language + live parse diagnostics (+ optional collapsible tree view).
-- [ ] Both offer a raw-text escape toggle and degrade to the text editor on unparseable content; `&`-space stays read-only (D3-A).
+- [x] Extension dispatch in the tab body: `.csv` → `CsvEditor` grid (chrome/csv.ts RFC-4180-ish parse/serialize, header toggle, add/remove rows/columns, cell edits through handleCodeChange so VFS/autosave/dirty just work); `.json` → `JsonEditor` (CM6 lang-json + jsonParseLinter gutter + synchronous validity badge + collapsible tree view).
+- [x] "Raw Text" escape with a "Back to Grid/JSON Editor" return (reset on file switch); unparseable CSV (unclosed quote → `parseCsv` null) degrades to the text editor; `&`-space read-only rides `fileReadOnly` (D3-A).
 
 ### Milestone 4.5 — Image preview & pixel editor
 

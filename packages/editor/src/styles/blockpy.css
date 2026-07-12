@@ -364,6 +364,144 @@
   color: var(--blockpy-delete-maroon);
 }
 
+/* Docs browser panel (M4.3; Studio extension — docs_url). */
+.blockpy-docs-rail {
+  border-left: 1px solid var(--blockpy-border-warm);
+}
+
+.blockpy-docs-panel .blockpy-panel-header {
+  gap: 8px;
+}
+
+.blockpy-docs-download {
+  font-size: smaller;
+}
+
+.blockpy-docs-toc {
+  font-size: 13px;
+  border-bottom: 1px solid var(--blockpy-neutral-250);
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+}
+
+.blockpy-docs-toc ul {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.blockpy-docs-body {
+  overflow-y: auto;
+  max-height: 480px;
+}
+
+.blockpy-docs-loading,
+.blockpy-docs-error {
+  font-style: italic;
+  padding: 8px 0;
+}
+
+/* CSV grid + JSON editors (M4.4; Studio extension). */
+.blockpy-csv-toolbar,
+.blockpy-json-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  flex-wrap: wrap;
+}
+
+.blockpy-csv-grid-wrap {
+  overflow: auto;
+  max-height: 400px;
+  background: var(--blockpy-neutral-0);
+  border: 1px solid var(--blockpy-neutral-250);
+}
+
+.blockpy-csv-grid {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.blockpy-csv-grid th,
+.blockpy-csv-grid td {
+  border: 1px solid var(--blockpy-neutral-250);
+  padding: 0;
+}
+
+.blockpy-csv-grid input {
+  width: 100%;
+  border: none;
+  padding: 2px 6px;
+  background: transparent;
+  font-family: monospace;
+}
+
+.blockpy-csv-grid thead input {
+  font-weight: bold;
+}
+
+.blockpy-csv-row-actions {
+  width: 24px;
+  text-align: center;
+}
+
+.blockpy-csv-delete-row {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--blockpy-delete-maroon);
+}
+
+.blockpy-json-code .cm-editor {
+  border: 1px solid var(--blockpy-neutral-250);
+  max-height: 400px;
+}
+
+.blockpy-json-status-detail {
+  font-size: smaller;
+  color: var(--blockpy-status-danger);
+}
+
+.blockpy-json-tree {
+  background: var(--blockpy-neutral-0);
+  border: 1px solid var(--blockpy-neutral-250);
+  max-height: 400px;
+  overflow: auto;
+  padding: 6px;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.blockpy-json-tree ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 16px;
+}
+
+.blockpy-structured-return {
+  margin-bottom: 4px;
+}
+
+/* Focused editor mode drawer (M4.2; Studio extension). */
+.blockpy-focus-drawer {
+  border-top: 1px solid var(--blockpy-border-warm);
+}
+
+.blockpy-focus-drawer-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+/* The badge reuses the legacy label-* feedback colors (categories.ts). */
+.blockpy-focus-feedback-badge {
+  cursor: pointer;
+}
+
 .blockpy-feedback-traces table {
   background: var(--blockpy-neutral-0);
   width: 100%;

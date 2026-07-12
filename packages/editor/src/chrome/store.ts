@@ -36,6 +36,14 @@ export type RunState = 'idle' | 'running' | 'error';
  */
 export type EvalState = 'hidden' | 'button' | 'input';
 
+/**
+ * Color themes (M4.1; STUDIO EXTENSION, no legacy analog). `light` is the
+ * B6 visual-parity default; `dark` and `win2000` are explicit user opt-ins.
+ * `prefers-color-scheme` is deliberately ignored — the parity default wins
+ * until the user chooses (plan M4.1 / ledger LD-23).
+ */
+export type ThemeName = 'light' | 'dark' | 'win2000';
+
 /** Legacy `StatusState` enum (server.js:8-14). */
 export type ServerStatusState =
   | 'ready'
@@ -96,6 +104,20 @@ export interface EditorChromeState {
    * horizontal tab strip.
    */
   fileTree: boolean;
+  /** Active color theme (M4.1); persisted, applied via `[data-theme]`. */
+  theme: ThemeName;
+  /**
+   * Focused editor mode (M4.2; STUDIO EXTENSION — exam-friendly). Hides
+   * instructions/quick-menu/file-strip/group-nav and moves console +
+   * feedback into a collapsible bottom drawer. Deliberately NOT persisted:
+   * every page load starts in the normal chrome.
+   */
+  focusedMode: boolean;
+  /**
+   * Docs panel expansion (M4.3; STUDIO EXTENSION). Only meaningful when
+   * the assignment carries a `docs_url`; persisted like fileTree.
+   */
+  docsPanel: boolean;
   /** User-supplied passcode sent with every server payload (A7 §1). */
   passcode: string;
   /**
@@ -153,6 +175,9 @@ export interface EditorChromeState {
   toggleRenderImages(): void;
   toggleAutocomplete(): void;
   toggleFileTree(): void;
+  setTheme(theme: ThemeName): void;
+  setFocusedMode(on: boolean): void;
+  toggleDocsPanel(): void;
   setPasscode(passcode: string): void;
   setDirtySubmission(dirty: boolean): void;
   setEvalState(state: EvalState): void;
@@ -190,6 +215,10 @@ const INITIAL_SERVER_STATUS = Object.fromEntries(
 const AUTOCOMPLETE_KEY = 'BLOCKPY_display.autocomplete';
 /** localStorage key for the file-tree rail (M3.7). */
 const FILE_TREE_KEY = 'BLOCKPY_display.fileTree';
+/** localStorage key for the color theme (M4.1). */
+const THEME_KEY = 'BLOCKPY_display.theme';
+/** localStorage key for the docs panel (M4.3). */
+const DOCS_PANEL_KEY = 'BLOCKPY_display.docsPanel';
 
 function readStoredFlag(key: string): boolean {
   try {
@@ -207,6 +236,39 @@ function writeStoredFlag(key: string, value: boolean): void {
   }
 }
 
+export const THEME_NAMES: readonly ThemeName[] = ['light', 'dark', 'win2000'];
+
+function readStoredTheme(): ThemeName {
+  try {
+    const stored = localStorage.getItem(THEME_KEY);
+    return THEME_NAMES.includes(stored as ThemeName)
+      ? (stored as ThemeName)
+      : 'light';
+  } catch {
+    return 'light';
+  }
+}
+
+/**
+ * Themes apply as a `data-theme` attribute on the root element — the
+ * `[data-theme=…]` scopes in styles/themes.css override the tokens.css
+ * values. Light removes the attribute so the unthemed (parity) values bind.
+ */
+function applyThemeAttribute(theme: ThemeName): void {
+  try {
+    if (theme === 'light') {
+      delete document.documentElement.dataset.theme;
+    } else {
+      document.documentElement.dataset.theme = theme;
+    }
+  } catch {
+    // No DOM (SSR/tests without jsdom) — CSS theming simply doesn't bind.
+  }
+}
+
+const INITIAL_THEME = readStoredTheme();
+applyThemeAttribute(INITIAL_THEME);
+
 export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   pythonMode: 'split',
   historyMode: false,
@@ -223,6 +285,9 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   renderImages: true,
   autocomplete: readStoredFlag(AUTOCOMPLETE_KEY),
   fileTree: readStoredFlag(FILE_TREE_KEY),
+  theme: INITIAL_THEME,
+  focusedMode: false,
+  docsPanel: readStoredFlag(DOCS_PANEL_KEY),
   passcode: '',
   dirtySubmission: true,
   evalState: 'hidden',
@@ -283,6 +348,22 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
       const next = !state.fileTree;
       writeStoredFlag(FILE_TREE_KEY, next);
       return { fileTree: next };
+    }),
+  setTheme: (theme) => {
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      // Storage unavailable — the theme still applies for this session.
+    }
+    applyThemeAttribute(theme);
+    set({ theme });
+  },
+  setFocusedMode: (on) => set({ focusedMode: on }),
+  toggleDocsPanel: () =>
+    set((state) => {
+      const next = !state.docsPanel;
+      writeStoredFlag(DOCS_PANEL_KEY, next);
+      return { docsPanel: next };
     }),
   setPasscode: (passcode) => set({ passcode }),
   setDirtySubmission: (dirty) => set({ dirtySubmission: dirty }),

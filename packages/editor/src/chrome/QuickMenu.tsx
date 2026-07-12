@@ -18,7 +18,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { Dialog } from './Dialog';
 import { Icon } from './icons';
-import { useEditorChromeStore } from './store';
+import { useEditorChromeStore, type ThemeName } from './store';
+
+/** Theme cycle order (M4.1): light → dark → win2000 → light. */
+const NEXT_THEME: Record<ThemeName, ThemeName> = {
+  light: 'dark',
+  dark: 'win2000',
+  win2000: 'light',
+};
+
+const THEME_LABELS: Record<ThemeName, string> = {
+  light: 'Light',
+  dark: 'Dark',
+  win2000: 'Windows 2000',
+};
 
 /**
  * Legacy `getCurrentTime` (utilities.js:336-348) — including the quirk that
@@ -110,6 +123,7 @@ export function QuickMenu(props: QuickMenuProps) {
 
   const store = useEditorChromeStore;
   const dirty = useEditorChromeStore((state) => state.dirtySubmission);
+  const theme = useEditorChromeStore((state) => state.theme);
 
   // Track browser fullscreen so the icon flips even on Esc exits.
   useEffect(() => {
@@ -275,6 +289,16 @@ export function QuickMenu(props: QuickMenuProps) {
         title="Toggle Images"
       >
         <Icon name="images" />
+      </button>
+      {/* M4.1 theme cycler (Studio extension, LD-23): light is the parity
+          default; dark/win2000 are explicit opt-ins, persisted. */}
+      <button
+        type="button"
+        className="btn btn-outline-secondary btn-sm"
+        onClick={() => store.getState().setTheme(NEXT_THEME[theme])}
+        title={`Color Theme: ${THEME_LABELS[theme]} (click for ${THEME_LABELS[NEXT_THEME[theme]]})`}
+      >
+        <Icon name="theme" />
       </button>
       {props.shareUrl && (
         <button

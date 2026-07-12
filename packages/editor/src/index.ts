@@ -94,6 +94,7 @@ export {
   type RunState,
   type ServerEndpoint,
   type ServerStatusState,
+  type ThemeName,
   type TraceStepView,
 } from './chrome/store';
 export { categoryPresentation } from './chrome/categories';

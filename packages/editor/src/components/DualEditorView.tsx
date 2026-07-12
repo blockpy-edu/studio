@@ -12,6 +12,7 @@ import {
   type DualEditorConfiguration,
   type DualEditorMode,
 } from '../dual/dual-editor';
+import { useEditorChromeStore } from '../chrome/store';
 
 export interface DualEditorViewProps
   extends Omit<DualEditorConfiguration, 'container' | 'viewMode' | 'readOnly'> {
@@ -60,7 +61,6 @@ export function DualEditorView(props: DualEditorViewProps) {
       editor.current = null;
     };
     // Construction-time config: first render only.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -84,6 +84,15 @@ export function DualEditorView(props: DualEditorViewProps) {
       editor.current.setReadOnly(props.readOnly);
     }
   }, [props.readOnly]);
+
+  // Themes are a global user preference (M4.1) — every editor instance
+  // (coding + minified) follows the store, no per-mount prop needed. Runs
+  // on mount too (declared after the construction effect), so a persisted
+  // dark/win2000 choice applies to fresh editors.
+  const theme = useEditorChromeStore((state) => state.theme);
+  useEffect(() => {
+    editor.current?.setTheme(theme);
+  }, [theme]);
 
   return <div ref={mountRef} className={props.className} />;
 }

@@ -33,6 +33,29 @@ const BLOCKLY_CHANGE_EVENTS: string[] = [
   Blockly.Events.VAR_RENAME,
 ];
 
+/**
+ * Dark workspace theme (M4.1, LD-23). Block colors stay Classic (they are
+ * BlockMirror-normative hues, legible on dark); only the chrome components
+ * restyle. win2000 is a DOM-chrome skin — the workspace keeps Classic.
+ */
+const DARK_WORKSPACE_THEME = Blockly.Theme.defineTheme('blockpyDark', {
+  name: 'blockpyDark',
+  base: Blockly.Themes.Classic,
+  componentStyles: {
+    workspaceBackgroundColour: '#1e1e1e',
+    toolboxBackgroundColour: '#252526',
+    toolboxForegroundColour: '#cccccc',
+    flyoutBackgroundColour: '#252526',
+    flyoutForegroundColour: '#cccccc',
+    flyoutOpacity: 1,
+    scrollbarColour: '#797979',
+    insertionMarkerColour: '#ffffff',
+    insertionMarkerOpacity: 0.3,
+    markerColour: '#d0d0d0',
+    cursorColour: '#d0d0d0',
+  },
+});
+
 export interface BlockEditorViewConfiguration {
   width: string;
   visible: boolean;
@@ -108,6 +131,13 @@ export class DualBlockEditor {
     }
     this.workspace.updateToolbox(this.makeToolbox());
     this.resized();
+  }
+
+  /** Live-swap the workspace theme (M4.1; only dark restyles). */
+  setTheme(theme: 'light' | 'dark' | 'win2000'): void {
+    this.workspace.setTheme(
+      theme === 'dark' ? DARK_WORKSPACE_THEME : Blockly.Themes.Classic,
+    );
   }
 
   /** Toolbox flyout width — used by the text editor's indent sidebar. */

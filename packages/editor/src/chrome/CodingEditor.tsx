@@ -9,13 +9,18 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { format, parse, type Role, type Space, type Vfs } from '@blockpy/vfs';
+import { categoryPresentation } from './categories';
 import { DualEditorView } from '../components/DualEditorView';
 import type { DualEditor } from '../dual/dual-editor';
 import { TOOLBOXES, type ToolboxSpec } from '../dual/toolboxes';
 import { Console } from './Console';
 import { DevConsole } from './DevConsole';
+import { CsvEditor } from './CsvEditor';
+import { parseCsv } from './csv';
 import { Dialog } from './Dialog';
+import { DocsPanel } from './DocsPanel';
 import { Feedback } from './Feedback';
+import { JsonEditor } from './JsonEditor';
 import { FileTabs } from './FileTabs';
 import { FileTree } from './FileTree';
 import { Icon } from './icons';
@@ -27,7 +32,7 @@ import {
 } from './History';
 import { HistoryDiffView } from '../components/HistoryDiffView';
 import { ImagesManager, type UploadsController } from './ImagesManager';
-import { Instructions } from './Instructions';
+import { Instructions, renderInstructions } from './Instructions';
 import { PythonToolbar } from './PythonToolbar';
 import { QuickMenu, type QuickMenuProps } from './QuickMenu';
 import { SettingsEditor, type AssignmentFields } from './SettingsEditor';
@@ -286,6 +291,12 @@ export interface CodingEditorProps {
   uploads?: UploadsController;
   /** Legacy provideRatings (= !assignment.hidden) — feedback thumbs. */
   provideRatings?: boolean;
+  /**
+   * `docs_url` setting (M4.3; STUDIO EXTENSION, LD-25): a markdown
+   * reference document rendered in the collapsible right-hand Docs panel.
+   * Empty/undefined hides the affordance entirely.
+   */
+  docsUrl?: string;
   /** submission.score (0-1) for the instructor feedback header. */
   submissionScore?: number;
   /** Legacy ui.feedback.resetScore (blockpy.js:784-788). */
@@ -325,6 +336,14 @@ export function CodingEditor(props: CodingEditorProps) {
     fileTreeOn &&
     Boolean(props.vfs) &&
     ((props.instructor ?? false) || !(props.hideFiles ?? true));
+  // Docs panel gating (M4.3): assignment provides docs_url AND the
+  // persisted user toggle is on.
+  const docsPanelOn = useEditorChromeStore((state) => state.docsPanel);
+  const showDocs = Boolean(props.docsUrl) && docsPanelOn;
+  // Structured-editor escape hatch (M4.4): csv/json tabs get grid/JSON
+  // editors unless the user drops to raw text; resets on file switch.
+  const [rawStructured, setRawStructured] = useState(false);
+  useEffect(() => setRawStructured(false), [activeFile]);
   const traceVisible = useEditorChromeStore((state) => state.traceVisible);
   const activeConsole = useEditorChromeStore((state) => state.activeConsole);
   const historyMode = useEditorChromeStore((state) => state.historyMode);
@@ -332,6 +351,53 @@ export function CodingEditor(props: CodingEditorProps) {
   const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [historyError, setHistoryError] = useState(false);
+
+  // -- focused editor mode (M4.2; Studio extension, exam-friendly) ----------
+  // Hides instructions/quick-menu/file-strip (App hides the group nav off
+  // the same store flag); console + feedback live in a collapsible bottom
+  // drawer whose feedback badge stays visible while collapsed.
+  const focusedMode = useEditorChromeStore((state) => state.focusedMode);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [instructionsOverlay, setInstructionsOverlay] = useState(false);
+  const feedback = useEditorChromeStore((state) => state.feedback);
+  const onLogEvent = props.onLogEvent;
+  const activeFileRef = useRef(activeFile);
+  activeFileRef.current = activeFile;
+  const setFocused = useCallback(
+    (on: boolean) => {
+      if (store.getState().focusedMode === on) return;
+      store.getState().setFocusedMode(on);
+      setDrawerOpen(false);
+      setInstructionsOverlay(false);
+      onLogEvent?.(
+        on ? 'X-Display.Focus.Enter' : 'X-Display.Focus.Exit',
+        '',
+        '',
+        '',
+        activeFileRef.current,
+      );
+    },
+    [store, onLogEvent],
+  );
+  // Esc leaves; Ctrl+Alt+F toggles (documented on the toolbar button).
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && store.getState().focusedMode) {
+        setFocused(false);
+      } else if (
+        event.ctrlKey &&
+        event.altKey &&
+        event.key.toLowerCase() === 'f'
+      ) {
+        event.preventDefault();
+        setFocused(!store.getState().focusedMode);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [store, setFocused]);
+  // Leaving the editor (assignment switch) always restores the chrome.
+  useEffect(() => () => store.getState().setFocusedMode(false), [store]);
 
   // Leaving instructor view forfeits the dev console slot (and keeps the
   // unseen counters coherent for the next visit).
@@ -366,7 +432,6 @@ export function CodingEditor(props: CodingEditorProps) {
   // chosen at creation. Prompts follow the legacy plain-prompt convention
   // (ImagesManager rename).
 
-  const onLogEvent = props.onLogEvent;
   const handleDeleteFile = useCallback(
     (legacyName: string) => {
       if (!vfs) return;
@@ -831,65 +896,72 @@ export function CodingEditor(props: CodingEditorProps) {
     }
   }, [pythonMode, activeFile, props.onLogEvent]);
 
+  // Console + feedback pair (Row 2). In focused mode (M4.2) the same pair
+  // renders inside the bottom drawer instead of the fixed second row.
+  const consoleAndFeedback = (
+    <div className="row">
+      {props.instructor && activeConsole === 'dev' ? (
+        <DevConsole
+          onShowStudent={() => store.getState().setActiveConsole('student')}
+        />
+      ) : (
+        <Console
+          onEvaluate={handleEvaluate}
+          onShowDev={
+            props.instructor
+              ? () => store.getState().setActiveConsole('dev')
+              : undefined
+          }
+        />
+      )}
+      {traceVisible ? (
+        <TraceExplorer onStepLine={handleTraceLine} />
+      ) : (
+        <Feedback
+          instructor={props.instructor}
+          score={props.submissionScore}
+          onResetScore={props.onResetScore}
+          onRate={
+            props.provideRatings
+              ? (rating) => {
+                  // X-Rating carries the presented feedback's
+                  // category/label (blockpy.js:797-800).
+                  const current = store.getState().feedback;
+                  props.onLogEvent?.(
+                    'X-Rating',
+                    current.category ?? '',
+                    current.label,
+                    rating,
+                    '',
+                  );
+                }
+              : undefined
+          }
+        />
+      )}
+    </div>
+  );
+  const feedbackBadge = categoryPresentation(feedback.category);
+
   return (
     <div className="blockpy-content container-fluid">
-      <div className="row">
-        <Instructions
-          // Pedal questions (on_run.js:74-76): grader-set instructions win
-          // until the next assignment load (the mount effect clears them).
-          markdown={instructionsOverride ?? props.instructions ?? ''}
-          assignmentName={props.assignmentName}
-        />
-        <QuickMenu {...props.quickMenu} onRun={() => void handleRun()} />
-      </div>
-      <div className="row">
-        <div className="col-md-12">
-          <div className="row">
-            {props.instructor && activeConsole === 'dev' ? (
-              <DevConsole
-                onShowStudent={() =>
-                  store.getState().setActiveConsole('student')
-                }
-              />
-            ) : (
-              <Console
-                onEvaluate={handleEvaluate}
-                onShowDev={
-                  props.instructor
-                    ? () => store.getState().setActiveConsole('dev')
-                    : undefined
-                }
-              />
-            )}
-            {traceVisible ? (
-              <TraceExplorer onStepLine={handleTraceLine} />
-            ) : (
-              <Feedback
-                instructor={props.instructor}
-                score={props.submissionScore}
-                onResetScore={props.onResetScore}
-                onRate={
-                  props.provideRatings
-                    ? (rating) => {
-                        // X-Rating carries the presented feedback's
-                        // category/label (blockpy.js:797-800).
-                        const current = store.getState().feedback;
-                        props.onLogEvent?.(
-                          'X-Rating',
-                          current.category ?? '',
-                          current.label,
-                          rating,
-                          '',
-                        );
-                      }
-                    : undefined
-                }
-              />
-            )}
-          </div>
+      {!focusedMode && (
+        <div className="row">
+          <Instructions
+            // Pedal questions (on_run.js:74-76): grader-set instructions win
+            // until the next assignment load (the mount effect clears them).
+            markdown={instructionsOverride ?? props.instructions ?? ''}
+            assignmentName={props.assignmentName}
+          />
+          <QuickMenu {...props.quickMenu} onRun={() => void handleRun()} />
         </div>
-      </div>
-      {vfs && !(showFileTree && pythonMode === 'text' && !historyMode) && (
+      )}
+      {!focusedMode && (
+        <div className="row">
+          <div className="col-md-12">{consoleAndFeedback}</div>
+        </div>
+      )}
+      {!focusedMode && vfs && !(showFileTree && pythonMode === 'text' && !historyMode) && (
         <div className="row">
           <FileTabs
             vfs={vfs}
@@ -904,7 +976,7 @@ export function CodingEditor(props: CodingEditorProps) {
         </div>
       )}
       <div className="row">
-        {showFileTree && vfs && (
+        {!focusedMode && showFileTree && vfs && (
           <div className="col-md-3 blockpy-panel blockpy-file-tree-rail">
             <div className="blockpy-panel-header">
               <strong>Files:</strong>
@@ -930,8 +1002,14 @@ export function CodingEditor(props: CodingEditorProps) {
           </div>
         )}
         <div
-          className={`blockpy-panel blockpy-editor ${
-            showFileTree && vfs ? 'col-md-9' : 'col-md-12'
+          // Grid negotiation (M3.7 rails + M4.3 docs): 12 minus 3 per open
+          // side panel; focused mode always takes the full width.
+          className={`blockpy-panel blockpy-editor col-md-${
+            focusedMode
+              ? 12
+              : 12 -
+                (showFileTree && vfs ? 3 : 0) -
+                (showDocs ? 3 : 0)
           }`}
         >
           <PythonToolbar
@@ -939,6 +1017,14 @@ export function CodingEditor(props: CodingEditorProps) {
             onStop={handleStop}
             onReset={handleReset}
             enableBlocks={(props.enableBlocks ?? true) && isAnswerFile}
+            onToggleFocus={() => setFocused(!focusedMode)}
+            focusedMode={focusedMode}
+            {...(props.docsUrl
+              ? {
+                  onToggleDocs: () => store.getState().toggleDocsPanel(),
+                  docsOpen: showDocs,
+                }
+              : {})}
             onHistory={props.loadHistory ? handleToggleHistory : undefined}
             // File actions for the ACTIVE file (M3.7 / LD-21), gated by the
             // VFS capability guards + role editability.
@@ -996,6 +1082,28 @@ export function CodingEditor(props: CodingEditorProps) {
                 props.onSaveSettings?.(blob, fields);
               }}
             />
+          ) : !rawStructured &&
+            activeFile.toLowerCase().endsWith('.csv') &&
+            parseCsv(code) !== null ? (
+            // M4.4 (LD-26): grid editor for parseable CSV tabs; unparseable
+            // content falls through to the text editor. `&`-space read-only
+            // rides fileReadOnly (D3-A).
+            <CsvEditor
+              key={activeFile}
+              value={code}
+              readOnly={fileReadOnly}
+              onChange={handleCodeChange}
+              onRawView={() => setRawStructured(true)}
+            />
+          ) : !rawStructured && activeFile.toLowerCase().endsWith('.json') ? (
+            // M4.4 (LD-26): CM6 JSON editor with live parse status + tree.
+            <JsonEditor
+              key={activeFile}
+              value={code}
+              readOnly={fileReadOnly}
+              onChange={handleCodeChange}
+              onRawView={() => setRawStructured(true)}
+            />
           ) : (
             <div
               className="blockpy-python-blockmirror"
@@ -1018,14 +1126,36 @@ export function CodingEditor(props: CodingEditorProps) {
                 );
               }}
             >
+              {rawStructured &&
+                (activeFile.toLowerCase().endsWith('.csv') ||
+                  activeFile.toLowerCase().endsWith('.json')) && (
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-secondary blockpy-structured-return"
+                    onClick={() => setRawStructured(false)}
+                  >
+                    Back to{' '}
+                    {activeFile.toLowerCase().endsWith('.csv')
+                      ? 'Grid'
+                      : 'JSON'}{' '}
+                    Editor
+                  </button>
+                )}
               <DualEditorView
+                // Height is construction-time config — the key remounts the
+                // editor taller for focused mode (code survives via props).
+                key={focusedMode ? 'focused' : 'normal'}
                 mode={isAnswerFile ? pythonMode : 'text'}
                 code={code}
                 onCodeChange={handleCodeChange}
                 readOnly={fileReadOnly}
                 blocklyMediaPath={props.blocklyMediaPath}
                 toolbox={toolboxSpec}
-                height={400}
+                height={
+                  focusedMode
+                    ? Math.max(500, window.innerHeight - 220)
+                    : 400
+                }
                 editorRef={(editor) => {
                   editorRef.current = editor;
                   // Apply the persisted autocomplete preference to the
@@ -1039,7 +1169,80 @@ export function CodingEditor(props: CodingEditorProps) {
             </div>
           )}
         </div>
+        {/* Docs browser rail (M4.3; renders only when docs_url is set and
+            the persisted toggle is on). */}
+        {!focusedMode && showDocs && props.docsUrl && (
+          <div className="col-md-3 blockpy-panel blockpy-docs-rail">
+            <DocsPanel
+              url={props.docsUrl}
+              onCollapse={() => store.getState().toggleDocsPanel()}
+            />
+          </div>
+        )}
       </div>
+      {/* Focused-mode bottom drawer (M4.2): a slim bar with the feedback
+          badge always visible; expanding reveals the console + feedback
+          pair that normally lives in Row 2. */}
+      {focusedMode && (
+        <div className="row blockpy-focus-drawer">
+          <div className="col-md-12">
+            <div className="blockpy-focus-drawer-bar">
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary blockpy-focus-drawer-toggle"
+                aria-expanded={drawerOpen}
+                onClick={() => setDrawerOpen(!drawerOpen)}
+              >
+                {drawerOpen ? 'Hide Console & Feedback' : 'Console & Feedback'}
+              </button>
+              <span
+                role="button"
+                tabIndex={0}
+                className={`badge blockpy-focus-feedback-badge ${feedbackBadge.badgeClass}`}
+                title="Show feedback"
+                onClick={() => setDrawerOpen(true)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    setDrawerOpen(true);
+                  }
+                }}
+              >
+                {feedbackBadge.displayText || 'Ready'}
+              </span>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary blockpy-focus-instructions"
+                onClick={() => setInstructionsOverlay(true)}
+              >
+                Instructions
+              </button>
+            </div>
+            {drawerOpen && consoleAndFeedback}
+          </div>
+        </div>
+      )}
+      {/* Focused-mode instructions overlay (M4.2): the pane is hidden, not
+          gone — same markdown pipeline as the Instructions component. Only
+          mounted while open (the markdown pass is per-render). */}
+      {focusedMode && instructionsOverlay && (
+        <Dialog
+          title={props.assignmentName ?? 'Instructions'}
+          visible
+          onClose={() => setInstructionsOverlay(false)}
+          onOkay={() => setInstructionsOverlay(false)}
+          okayLabel="Close"
+        >
+          <div
+            className="blockpy-instructions"
+            // D4-A: legacy renders instructor HTML unsanitized.
+            dangerouslySetInnerHTML={{
+              __html: renderInstructions(
+                instructionsOverride ?? props.instructions ?? '',
+              ),
+            }}
+          />
+        </Dialog>
+      )}
       <Dialog
         title="Error Loading History"
         visible={historyError}

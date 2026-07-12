@@ -41,6 +41,7 @@
 import type { ComponentType } from 'react';
 import {
   AlignLeft,
+  BookOpen,
   Bug,
   FolderInput,
   FolderTree,
@@ -58,7 +59,9 @@ import {
   Eye,
   FastForward,
   FileInput,
+  Focus,
   History,
+  Palette,
   Images,
   LayoutGrid,
   Link,
@@ -121,6 +124,12 @@ const ICONS = {
   // Autocomplete toggle (M3.3; Studio extension, no legacy glyph —
   // WandSparkles = "the editor suggests for you").
   autocomplete: WandSparkles,
+  // Theme cycler (M4.1; Studio extension, no legacy glyph).
+  theme: Palette,
+  // Focused editor mode (M4.2; Studio extension, no legacy glyph).
+  focus: Focus,
+  // Docs browser panel (M4.3; Studio extension, no legacy glyph).
+  docs: BookOpen,
   // File management (M3.7; Studio extensions, no legacy glyphs).
   fileTree: FolderTree,
   rename: PenLine,

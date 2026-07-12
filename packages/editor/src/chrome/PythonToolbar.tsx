@@ -29,6 +29,18 @@ export interface PythonToolbarProps {
   onRenameFile?(): void;
   canDeleteFile?: boolean;
   canRenameFile?: boolean;
+  /**
+   * Focused editor mode toggle (M4.2; STUDIO EXTENSION). Renders only with
+   * a handler; Esc exits, Ctrl+Alt+F toggles (wired by the CodingEditor).
+   */
+  onToggleFocus?(): void;
+  focusedMode?: boolean;
+  /**
+   * Docs panel toggle (M4.3; STUDIO EXTENSION). Renders only with a
+   * handler — the CodingEditor supplies one when `docs_url` is set.
+   */
+  onToggleDocs?(): void;
+  docsOpen?: boolean;
 }
 
 const MODE_TABS: { name: string; iconName: IconName; mode: DualEditorMode }[] =
@@ -48,6 +60,10 @@ export function PythonToolbar({
   onRenameFile,
   canDeleteFile = false,
   canRenameFile = false,
+  onToggleFocus,
+  focusedMode = false,
+  onToggleDocs,
+  docsOpen = false,
 }: PythonToolbarProps) {
   const runState = useEditorChromeStore((state) => state.runState);
   const pythonMode = useEditorChromeStore((state) => state.pythonMode);
@@ -137,6 +153,44 @@ export function PythonToolbar({
           <Icon name="autocomplete" /> Autocomplete
         </button>
       </div>
+      {/* Docs panel toggle (M4.3; Studio extension — docs_url set). */}
+      {onToggleDocs && (
+        <div className="btn-group mr-2" role="group">
+          <button
+            type="button"
+            className={
+              'btn btn-outline-secondary blockpy-toggle-docs' +
+              (docsOpen ? ' active' : '')
+            }
+            aria-pressed={docsOpen}
+            title="Toggle the documentation panel"
+            onClick={onToggleDocs}
+          >
+            <Icon name="docs" /> Docs
+          </button>
+        </div>
+      )}
+      {/* Focused mode toggle (M4.2; Studio extension — exam display). */}
+      {onToggleFocus && (
+        <div className="btn-group mr-2" role="group">
+          <button
+            type="button"
+            className={
+              'btn btn-outline-secondary blockpy-toggle-focus' +
+              (focusedMode ? ' active' : '')
+            }
+            aria-pressed={focusedMode}
+            title={
+              focusedMode
+                ? 'Exit focused editor mode (Esc)'
+                : 'Focused editor mode (Ctrl+Alt+F)'
+            }
+            onClick={onToggleFocus}
+          >
+            <Icon name="focus" /> Focus
+          </button>
+        </div>
+      )}
       <div className="btn-group mr-2" role="group" aria-label="History Group">
         <button
           type="button"

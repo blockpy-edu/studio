@@ -101,6 +101,12 @@ Because the client's `saveAssignmentSettings` rebuilds the blob from its registr
 these server-only keys.** The rewrite must round-trip unknown keys (README §11.1 already requires
 this — it is a fix, not parity; see Deltas).
 
+### Studio extension keys (same blob; no legacy analog)
+
+| Key | Added | Effect |
+|---|---|---|
+| `docs_url` | M4.3 / LD-25 | URL of a markdown reference document rendered in the collapsible Docs panel beside the editor. Raw string; empty/absent hides the affordance. Server-ignored; a LEGACY client instructor save drops it (the registry-rebuild bug above) — Studio saves round-trip it. |
+
 ---
 
 ## Table 2 — BlockPy constructor option bag as passed by `editor.html`

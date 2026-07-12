@@ -1,0 +1,214 @@
+/**
+ * Color themes (M4.1; STUDIO EXTENSION — ledger LD-23). Light is the B6
+ * visual-parity default and lives entirely in tokens.css; the scopes below
+ * bind only when the user opts in (`data-theme` on the root element, set by
+ * the chrome store). `prefers-color-scheme` is deliberately ignored — the
+ * parity default wins until the user chooses.
+ *
+ * Load order: after tokens.css AND blockpy.css (the non-token rules below
+ * must win by source order).
+ *
+ * Dark values are NOT normative-legacy — they are chosen for WCAG AA
+ * contrast against the #1e1e1e/#26221a surfaces (§16.3). The neutral ramp
+ * inverts (neutral-900 was "ink on paper"; in dark it is "ink on slate").
+ */
+
+/* ==========================================================================
+   Dark
+   ========================================================================== */
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* Frame */
+  --blockpy-bg-parchment: #26221a; /* parchment, dimmed */
+  --blockpy-border-warm: #4a4234;
+
+  /* Status semantics: same hue families, nudged for dark-surface AA. The
+     badges keep white text, so backgrounds stay mid-tone. */
+  --blockpy-status-syntax: #b22222; /* darkred is invisible on slate */
+  --blockpy-status-internal: #6c6c6c; /* black badge would merge with bg */
+  --blockpy-status-offline: #999;
+
+  /* Feedback accents (used as TEXT on dark surfaces — brightened) */
+  --blockpy-positive-green: #4cbb4c;
+  --blockpy-alert-red: #ff6b6b;
+
+  /* File tabs */
+  --blockpy-tab-bg: #3a3a3a;
+  --blockpy-tab-border: #444;
+  --blockpy-tab-active-bg: #1e1e1e;
+  --blockpy-tab-uneditable: #7ea6ff; /* darkblue text unreadable on slate */
+
+  /* Editor line highlights (same semantics, dark-surface variants) */
+  --blockpy-line-active-bg: #1e4620;
+  --blockpy-line-active-text: #ffb3ab;
+  --blockpy-line-error-bg: #5a1f1f;
+  --blockpy-line-uncovered-bg: #4a4a1f;
+  --blockpy-editor-readonly-bg: #2a2a2a;
+  --blockpy-gutter-border: #555;
+  --blockpy-line-rule: rgba(255, 255, 255, 0.12);
+
+  /* Neutral ramp — inverted (900 stays "strongest contrast vs surface") */
+  --blockpy-neutral-900: #f2f2f2;
+  --blockpy-neutral-800: #dddddd;
+  --blockpy-neutral-700: #cccccc;
+  --blockpy-neutral-600: #aaaaaa;
+  --blockpy-neutral-500: #8c8c8c;
+  --blockpy-neutral-450: #5a5a5a;
+  --blockpy-neutral-400: #666666;
+  --blockpy-neutral-350: #555555;
+  --blockpy-neutral-300: #4a4a4a;
+  --blockpy-neutral-250: #454545;
+  --blockpy-neutral-200: #404040;
+  --blockpy-neutral-150: #333333;
+  --blockpy-neutral-125: #323232;
+  --blockpy-neutral-100: #2d2d2d;
+  --blockpy-neutral-75: #2a2a2a;
+  --blockpy-neutral-0: #1e1e1e;
+}
+
+/* Page + base text. The overlay keeps its own literal black (it dims). */
+:root[data-theme='dark'] body {
+  background-color: #191919;
+  color: #e8e6e3;
+}
+
+:root[data-theme='dark'] .blockpy-overlay {
+  background-color: black;
+}
+
+:root[data-theme='dark'] a {
+  color: #6fb3ff;
+}
+
+/* Form controls (Bootstrap subset paints these white by default). */
+:root[data-theme='dark'] .form-control,
+:root[data-theme='dark'] .form-select,
+:root[data-theme='dark'] select,
+:root[data-theme='dark'] textarea,
+:root[data-theme='dark'] input[type='text'],
+:root[data-theme='dark'] input[type='number'],
+:root[data-theme='dark'] input[type='password'] {
+  background-color: #2a2a2a;
+  color: #e8e6e3;
+  border-color: #555;
+}
+
+:root[data-theme='dark'] .modal-content {
+  background-color: #262626;
+  color: #e8e6e3;
+}
+
+/* The green-check-mark outline was a white-paper trick; invert the halo. */
+:root[data-theme='dark'] .green-check-mark {
+  text-shadow:
+    -1px 0 #1e1e1e,
+    0 1px #1e1e1e,
+    1px 0 #1e1e1e,
+    0 -1px #1e1e1e;
+}
+
+/* CodeMirror 6 chrome (syntax colors come from the JS dark HighlightStyle;
+   gutters/line-highlights ride the token overrides above). */
+:root[data-theme='dark'] .cm-editor {
+  background-color: #1e1e1e;
+  color: #d4d4d4;
+}
+
+:root[data-theme='dark'] .cm-editor .cm-cursor {
+  border-left-color: #d4d4d4;
+}
+
+:root[data-theme='dark'] .cm-editor .cm-selectionBackground,
+:root[data-theme='dark'] .cm-editor.cm-focused .cm-selectionBackground {
+  background-color: #264f78;
+}
+
+:root[data-theme='dark'] .cm-editor .cm-activeLine {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+:root[data-theme='dark'] .cm-editor .cm-tooltip {
+  background-color: #2d2d2d;
+  color: #e8e6e3;
+  border-color: #555;
+}
+
+/* ==========================================================================
+   Windows 2000 — cosmetic skin ONLY (identical layout/metrics). Bevels use
+   inset box-shadows, never border-width changes; radii flatten; the font
+   stack goes system-gray-era. Everything else inherits the light tokens.
+   ========================================================================== */
+
+:root[data-theme='win2000'] {
+  --blockpy-bg-parchment: #c0c0c0; /* system gray */
+  --blockpy-border-warm: #808080;
+  --blockpy-tab-bg: #b0b0b0;
+  --blockpy-tab-border: #808080;
+  --blockpy-neutral-100: #c0c0c0;
+  --blockpy-neutral-75: #c0c0c0;
+}
+
+:root[data-theme='win2000'] body {
+  background-color: #c0c0c0;
+}
+
+:root[data-theme='win2000'] .blockpy-content,
+:root[data-theme='win2000'] .modal-content {
+  font-family: Tahoma, 'MS Sans Serif', 'Segoe UI', sans-serif;
+}
+
+/* Raised bevel on every button; colored buttons (run/delete) keep their
+   background and only gain the chrome. */
+:root[data-theme='win2000'] .blockpy-content .btn,
+:root[data-theme='win2000'] .modal-content .btn {
+  border-radius: 0;
+  box-shadow:
+    inset -1px -1px 0 #000000,
+    inset 1px 1px 0 #ffffff,
+    inset -2px -2px 0 #808080,
+    inset 2px 2px 0 #dfdfdf;
+}
+
+:root[data-theme='win2000'] .blockpy-content .btn:active,
+:root[data-theme='win2000'] .modal-content .btn:active {
+  box-shadow:
+    inset 1px 1px 0 #000000,
+    inset -1px -1px 0 #ffffff,
+    inset 2px 2px 0 #808080,
+    inset -2px -2px 0 #dfdfdf;
+}
+
+:root[data-theme='win2000'] .blockpy-content .btn-outline-secondary,
+:root[data-theme='win2000'] .modal-content .btn-outline-secondary {
+  background-color: #c0c0c0;
+  color: #000;
+  border-color: #c0c0c0;
+}
+
+/* Sunken text wells (fields stay white — authentic). */
+:root[data-theme='win2000'] .blockpy-content .form-control,
+:root[data-theme='win2000'] .modal-content .form-control,
+:root[data-theme='win2000'] .blockpy-content select,
+:root[data-theme='win2000'] .blockpy-content textarea {
+  border-radius: 0;
+  box-shadow:
+    inset 1px 1px 0 #808080,
+    inset -1px -1px 0 #ffffff;
+}
+
+/* Square everything else that Bootstrap rounds. */
+:root[data-theme='win2000'] .blockpy-content .badge,
+:root[data-theme='win2000'] .blockpy-content .card,
+:root[data-theme='win2000'] .blockpy-content .nav-tabs .nav-link,
+:root[data-theme='win2000'] .modal-content {
+  border-radius: 0;
+}
+
+/* Dialog title bars go active-caption navy. */
+:root[data-theme='win2000'] .modal-header {
+  background: linear-gradient(90deg, #000080, #1084d0);
+  color: #ffffff;
+  border-radius: 0;
+}

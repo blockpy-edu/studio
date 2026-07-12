@@ -28,6 +28,7 @@ function resetStore() {
   state.setClearInputs(true);
   state.setDirtySubmission(true);
   state.setPasscode('');
+  state.setTheme('light');
 }
 
 describe('formatClockTime (utilities.js getCurrentTime)', () => {
@@ -195,6 +196,29 @@ describe('QuickMenu component', () => {
         '[title="Get Shareable Link for Instructors or TAs"]',
       ),
     ).toBeNull();
+  });
+
+  it('theme cycler: light → dark → win2000 → light, persisted + data-theme (M4.1)', () => {
+    const { container } = render(<QuickMenu />);
+    const button = () =>
+      container.querySelector<HTMLButtonElement>('[title^="Color Theme:"]')!;
+    expect(button().title).toContain('Light');
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+
+    act(() => void fireEvent.click(button()));
+    expect(useEditorChromeStore.getState().theme).toBe('dark');
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(localStorage.getItem('BLOCKPY_display.theme')).toBe('dark');
+
+    act(() => void fireEvent.click(button()));
+    expect(useEditorChromeStore.getState().theme).toBe('win2000');
+    expect(document.documentElement.dataset.theme).toBe('win2000');
+
+    // Back to light: the attribute clears so the parity tokens bind.
+    act(() => void fireEvent.click(button()));
+    expect(useEditorChromeStore.getState().theme).toBe('light');
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+    expect(localStorage.getItem('BLOCKPY_display.theme')).toBe('light');
   });
 
   it('ticks the wall clock only when has_clock is on (A4 §6 inversion note)', () => {

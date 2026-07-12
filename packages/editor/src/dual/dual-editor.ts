@@ -20,11 +20,12 @@
  * (`skipSkulpt`) are gone (no Skulpt in Studio).
  */
 import { DualBlockEditor } from './block-editor';
-import { DualTextEditor } from './text-editor';
+import { DualTextEditor, type EditorTheme } from './text-editor';
 import type { ToolboxSpec } from './toolboxes';
 import type { ConverterConfiguration } from '@blockpy/blocks';
 
 export type DualEditorMode = 'block' | 'split' | 'text';
+export type { EditorTheme };
 
 export interface DualEditorConfiguration {
   /** Mount point. Required. */
@@ -86,6 +87,7 @@ export class DualEditor {
 
   private code_ = '';
   private mode_: DualEditorMode | null = null;
+  private theme_: EditorTheme = 'light';
   private listeners_: DualEditorListener[] = [];
   private textChangeTimer_: ReturnType<typeof setTimeout> | null = null;
   private readonly onWindowResize = () => {
@@ -253,6 +255,18 @@ export class DualEditor {
   /** Live-toggle text-editor autocomplete (M3.3; default off). */
   setAutocomplete(enabled: boolean): void {
     this.textEditor.setAutocomplete(enabled);
+  }
+
+  /**
+   * Live-swap the color theme on both halves (M4.1, LD-23). No-op when
+   * unchanged — Blockly's setTheme forces a full workspace refresh, which
+   * must not run on every mount (every editor starts light).
+   */
+  setTheme(theme: EditorTheme): void {
+    if (theme === this.theme_) return;
+    this.theme_ = theme;
+    this.textEditor.setTheme(theme);
+    this.blockEditor.setTheme(theme);
   }
 
   refresh(): void {

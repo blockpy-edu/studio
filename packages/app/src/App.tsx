@@ -43,6 +43,7 @@ import { SubmissionSync } from './submission-sync';
 import '@blockpy/editor/styles/tokens.css';
 import '@blockpy/editor/styles/bootstrap-subset.css';
 import '@blockpy/editor/styles/blockpy.css';
+import '@blockpy/editor/styles/themes.css';
 import '@blockpy/navigation/styles/navigation.css';
 import '@blockpy/reader/styles/reader.css';
 import '@blockpy/quizzer/styles/quizzer.css';
@@ -115,6 +116,9 @@ export function App({ config, extras, registerActions }: AppProps) {
   // Live dual editor — the updateSubmission block-PNG source (§14.3).
   const dualEditorRef = useRef<DualEditor | null>(null);
   const store = useEditorChromeStore;
+  // Focused editor mode (M4.2) hides the group-nav headers around the
+  // editor — the flag lives in the editor chrome store.
+  const focusedMode = useEditorChromeStore((state) => state.focusedMode);
 
   // -- server client (spec §14): built once per mount ------------------------
   const apiBundle = useMemo(() => {
@@ -912,7 +916,7 @@ export function App({ config, extras, registerActions }: AppProps) {
       {/* Dual-rendered group header/footer (spec §9): the legacy template
           includes the macro at the top AND bottom of the page body
           (editor.html:102-103, 188-190), synced through one store. */}
-      {navStore && <GroupNav store={navStore} />}
+      {navStore && !focusedMode && <GroupNav store={navStore} />}
       <AssignmentHost
         typeIndex={assignment.typeIndex}
         embed={display.embed}
@@ -975,6 +979,12 @@ export function App({ config, extras, registerActions }: AppProps) {
               : undefined
           }
           allowRealRequests={settingBool(settings['allow_real_requests'] ?? false)}
+          // Docs panel source (M4.3, LD-25): raw string per A4 semantics.
+          docsUrl={
+            typeof settings['docs_url'] === 'string' && settings['docs_url']
+              ? settings['docs_url']
+              : undefined
+          }
           disableTifa={settingBool(settings['disable_tifa'] ?? false)}
           disableInstructorRun={settingBool(settings['disable_instructor_run'] ?? false)}
           // Pool-question seed (on_run.js:43-45; LD-22): legacy currentSeed
@@ -1148,7 +1158,7 @@ export function App({ config, extras, registerActions }: AppProps) {
         />
       )}
       </AssignmentHost>
-      {navStore && <GroupNav store={navStore} />}
+      {navStore && !focusedMode && <GroupNav store={navStore} />}
     </main>
   );
 }

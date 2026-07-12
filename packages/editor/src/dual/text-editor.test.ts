@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { EditorView } from '@codemirror/view';
 import { DualTextEditor, type TextEditorHost } from './text-editor';
 
 function makeHost(): TextEditorHost & { changes: string[]; runs: number } {
@@ -121,6 +122,21 @@ describe('DualTextEditor', () => {
     });
     editor.view.contentDOM.dispatchEvent(event);
     expect(spy).toHaveBeenCalled();
+    editor.dispose();
+  });
+
+  it('setTheme toggles CM6 dark base; win2000 stays on the light surface (M4.1)', () => {
+    const host = makeHost();
+    const editor = new DualTextEditor(host, false);
+    editor.setMode('text');
+    expect(editor.view.state.facet(EditorView.darkTheme)).toBe(false);
+    editor.setTheme('dark');
+    expect(editor.view.state.facet(EditorView.darkTheme)).toBe(true);
+    // win2000 is a chrome-only skin — the code surface stays light.
+    editor.setTheme('win2000');
+    expect(editor.view.state.facet(EditorView.darkTheme)).toBe(false);
+    editor.setTheme('light');
+    expect(editor.view.state.facet(EditorView.darkTheme)).toBe(false);
     editor.dispose();
   });
 });

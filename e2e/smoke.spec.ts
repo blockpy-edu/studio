@@ -752,6 +752,87 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
   );
 });
 
+test('focused editor mode: enter grows the editor, drawer serves feedback, Esc restores (M4.2)', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.blocklySvg').first().waitFor();
+  // Measure the CM6 surface (the blockmirror wrapper collapses — floated/
+  // absolute children), which tracks the configured editor height.
+  const editorBefore = (await page
+    .locator('.blockpy-python-blockmirror .cm-editor')
+    .first()
+    .boundingBox())!;
+  // Enter via the toolbar button: chrome collapses, X-Display.Focus.Enter.
+  await page.locator('.blockpy-toggle-focus').click();
+  await expect(page.locator('.blockpy-header')).toHaveCount(0);
+  await expect(page.locator('.blockpy-quick-menu')).toHaveCount(0);
+  await expect(page.locator('.blockpy-files')).toHaveCount(0);
+  const editorAfter = (await page
+    .locator('.blockpy-python-blockmirror .cm-editor')
+    .first()
+    .boundingBox())!;
+  expect(editorAfter.height).toBeGreaterThan(editorBefore.height);
+  expect(editorAfter.y).toBeLessThan(editorBefore.y);
+  // The drawer bar shows the feedback badge while collapsed.
+  const badge = page.locator('.blockpy-focus-feedback-badge');
+  await expect(badge).toBeVisible();
+  await expect(page.locator('.blockpy-printer')).toHaveCount(0);
+  // State survives a run/feedback cycle: run, watch the badge stay put,
+  // then expand the drawer from the badge and see console + feedback.
+  await page.locator('button.blockpy-run').click();
+  await expect(page.locator('.blockpy-python-toolbar')).toBeVisible();
+  await badge.click();
+  await expect(page.locator('.blockpy-printer')).toBeVisible();
+  await expect(page.locator('.blockpy-feedback')).toBeVisible();
+  // Instructions overlay toggle.
+  await page.locator('.blockpy-focus-instructions').click();
+  await expect(page.locator('.blockpy-dialog')).toContainText(
+    'Print the value of',
+  );
+  await page.locator('.blockpy-dialog .modal-okay').click();
+  // Esc restores the full chrome.
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.blockpy-header')).toBeVisible();
+  await expect(page.locator('.blockpy-quick-menu')).toBeVisible();
+  await expect(page.locator('.blockpy-focus-drawer')).toHaveCount(0);
+});
+
+test('theme cycler applies data-theme scopes and persists (M4.1/LD-23)', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.blocklySvg').first().waitFor();
+  const themeButton = page.locator('[title^="Color Theme:"]');
+  // Parity default: no data-theme attribute, parchment content frame.
+  expect(
+    await page.evaluate(() => document.documentElement.dataset.theme),
+  ).toBeUndefined();
+  await themeButton.click(); // → dark
+  expect(
+    await page.evaluate(() => document.documentElement.dataset.theme),
+  ).toBe('dark');
+  // Token override binds: the content frame leaves parchment.
+  const frameBg = await page
+    .locator('.blockpy-content')
+    .evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(frameBg).not.toBe('rgb(252, 248, 227)');
+  // CM6 flips to the dark surface.
+  const editorBg = await page
+    .locator('.cm-editor')
+    .first()
+    .evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(editorBg).toBe('rgb(30, 30, 30)');
+  // Persists across a reload (BLOCKPY_display.theme).
+  await page.reload();
+  await page.locator('.blocklySvg').first().waitFor();
+  expect(
+    await page.evaluate(() => document.documentElement.dataset.theme),
+  ).toBe('dark');
+  // Cycle back to light for the rest of the suite.
+  await page.locator('[title^="Color Theme:"]').click(); // → win2000
+  await page.locator('[title^="Color Theme:"]').click(); // → light
+  expect(
+    await page.evaluate(() => document.documentElement.dataset.theme),
+  ).toBeUndefined();
+});
+
 test('layout regressions: no horizontal overflow, panels side by side, white editor', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('.blocklySvg').first()).toBeVisible();

@@ -163,6 +163,19 @@ These rows appear in the same `submission_log` table and are consumed by the sam
 
 The server's own enum of "known" submission event types (`SubmissionLogEvent`, `server/models/enums/logs.py:33-58`) is *advisory* — the `event_type` column is a free string (`submission_log.py:41`), and most client vocabulary (e.g., `Run.Program`, `Intervention`, all `X-Display.*`) is not in the enum.
 
+### 5.1 Studio extension events (spec §14.4: only `X-` additions allowed)
+
+New events the Studio client emits with no legacy analog. Same wire shape
+as every other event; researchers can filter them out by name.
+
+| event_type | category | label | message | file_path | Trigger | Added |
+| ---------- | -------- | ----- | ------- | --------- | ------- | ----- |
+| `X-File.Rename` | `""` | `""` | new legacy name | old legacy name | File renamed via toolbar/tree UI | M3.7 / LD-21 |
+| `X-File.Move` | `""` | `""` | target namespace | legacy name | Instructor moves a file between namespaces | M3.7 / LD-21 |
+| `X-File.Delete` | `""` | `""` | `""` | legacy name | File deleted (tree rail rows; the toolbar Delete of `answer.py`-adjacent files keeps legacy `X-File.Reset` semantics where applicable) | M3.7 / LD-21 |
+| `X-Display.Focus.Enter` | `""` | `""` | `""` | active filename | Focused editor mode entered (toolbar button / Ctrl+Alt+F) | M4.2 |
+| `X-Display.Focus.Exit` | `""` | `""` | `""` | active filename | Focused editor mode left (button / Esc / assignment switch does NOT log — only user exits) | M4.2 |
+
 ---
 
 ## 6. Open questions / ambiguities
