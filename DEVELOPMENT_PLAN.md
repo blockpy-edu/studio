@@ -1,8 +1,8 @@
 # BlockPy Studio — Development Plan
 
 **Derived from:** [README.md](README.md) (spec draft)
-**Last updated:** 2026-07-11
-**Status:** Proposed
+**Last updated:** 2026-07-12
+**Status:** Active — Phases 0–2 complete; Phases 3–6 proposed (Phases 3–5 added from the maintainer review of 2026-07-11)
 
 This plan turns the specification into an ordered set of engineering phases, milestones, and deliverables. Section references (§) point into the spec.
 
@@ -202,13 +202,141 @@ New scope (user requirement; the legacy QUIZ_EDITOR mode was never built). Lates
 - [x] **Kettle/Explain legacy islands (§17)** — `app/src/LegacyIsland.tsx`: renders the legacy custom element (`<kettle params=…>`, editor.html:168-185 model slice with `ko.observable` currentAssignmentId) and `ko.applyBindings` when `window.ko` has the component registered + `frontend.Server` exists; `ko.cleanNode` on unmount; graceful notice otherwise (smoke-tested on the dev harness, which ships no bundle). The islands' `$MAIN_BLOCKPY_EDITOR.components.server` surface (createServerData/`_postBlocking`/`_postRetry`/`altLogEntry`, kettle.ts:1003/explain.ts:274) plus `model.display.passcode()` is grafted via `createLegacyServerBridge` delegating to the api client/transport — never clobbering a real editor's own surfaces.
 - [x] **Textbook decision → PORT as thin `reader` composition (§11.4)** — parity reference is the WORKING standalone textbook.html page, NOT the `<textbook>` ko component (unfinished, crashes in the group path — **ledger LD-15**). `@blockpy/textbook`: v1 document parser (textbook.py port incl. the version guard and MISSING_READING), sidebar macro (indent `5+indent*8`px, info accent at indent 0 only, disabled-secondary headers), first-reading default page, `?page=` pushState/popstate/title contract, pages render through the injected full `Reader` (embedded surface, NO-OP markCorrect per textbook.html:109 — readings still post their own markRead; the textbook itself never marks correct, its markRead is commented out in legacy), instructor RAW editor (instructions+settings textareas → saveFile `!instructions.md` + saveAssignment settings; FORM mode deferred). Client-side rehydration gap is **ledger LD-16** (server-team flag: rehydrated load_assignment or a by-url endpoint; the parser already accepts both shapes and the dev harness serves the rehydrated form).
 - [x] **Tests:** +49 unit (surface context 6, lti-embed 12, navigation globals 4, frontend stub 4, textbook document 8 + component 8, legacy island + bridge 8, existing suites re-verified) → **536 passed / 12 skipped**; +3 smoke (textbook composition end-to-end incl. markRead attribution and the RAW editor, kettle island degradation, LTI page environment incl. the §15.3 globals) → **18 non-gated / 19 with `PYODIDE_E2E=1`, all green**. Harness: textbook 105 serves a real chaptered document over reading 103, kettle 108 demos the island notice, the page ships a legacy `.delete-on-load` span.
-- Deferred within M2.5: standalone textbook-page ownership (the dedicated route with server-rendered sidebar stays legacy until Phase 3); running Kettle/Explain against the REAL bundle end-to-end (needs a page that loads it — shim-mode verification when a flagged course exercises it); `X-` event wiring for textbook page opens.
+- Deferred within M2.5: standalone textbook-page ownership (the dedicated route with server-rendered sidebar stays legacy — now scheduled as Milestone 4.7); running Kettle/Explain against the REAL bundle end-to-end (needs a page that loads it — shim-mode verification when a flagged course exercises it); `X-` event wiring for textbook page opens.
 
 **Exit criteria:** golden-transcript replay passes for the full scripted session (the primary G3 gate); navigation + quiz Playwright suites green; a flagged course runs a mixed group (coding + reading + quiz) end-to-end in an LMS iframe.
 
 ---
 
-## 4. Phase 3 — Hardening & Default-On
+## 4. Phase 3 — Punch list: bug burn-down & parity gaps (maintainer review, 2026-07-11)
+
+Goal: burn down the defects and gaps from the maintainer's first full review before layering new capabilities. Every item was investigated against the code on 2026-07-11/12 (five parallel deep-dives: engine/Python-strings, editor chrome, block editor, quiz/files/textbook, legacy server references); findings and exact fix sites are inline. Ordering is severity × dependency: block mode is unusable without M3.1, grading correctness (M3.2) affects every course, and the Settings editor (M3.5) is the home for the new settings keys other milestones introduce.
+
+Ledger entries pre-assigned here: **LD-17** (fullscreen failure event), **LD-18** (share prompt only on negative rating), **LD-19** (badges for previously blank categories), **LD-20** (console image sizing), **LD-21** (working file rename/delete/namespace UI). Note: grading-always-runs (M3.2) is NOT a ledger item — it restores legacy behavior Studio accidentally tightened.
+
+### Milestone 3.0 — Python-source hygiene (quick win, do first)
+
+Audit result (2026-07-11): exactly two production payloads live as TS template literals — `packages/engine/src/runtime.py.ts` (~340 lines of Python, consumed via `runner.ts:7` → `pyodide.runPython`) and `packages/engine/src/pedal-env.py.ts` (~115 lines, `pedal.ts:11`). Test snippets are a few lines each and stay inline.
+
+- [ ] Move the bodies to real `packages/engine/src/{runtime,pedal-env}.py`; import via Vite `?raw` (`import RUNTIME_PY from './runtime.py?raw'`); add `packages/engine/src/raw.d.ts` (`declare module '*.py?raw'` — no ambient raw declaration exists anywhere today). `?raw` is verified viable in every consumer: app build, both iife lib builds, the ES-format module worker, Vitest.
+- [ ] `tools/run-grader-corpus.mjs:29-33` currently regex-extracts the literal out of the `.ts` text — switch to `readFileSync` of the real `.py` (the regex only exists because the Python was trapped in TS). No other tool imports engine sources (verified).
+- [ ] Keep the `index.ts` re-exports so the public API is unchanged. The double-escape hazards (`'\\n'` at runtime.py.ts:238/261, escaped backticks in docstrings) disappear with the move — diff the delivered Python byte-for-byte before/after to prove no behavior change.
+- Land this BEFORE M3.2/M3.5 touch the runtime (grading + requests changes then edit a real, lintable `.py`).
+
+### Milestone 3.1 — Block editor unbreak (right-click, variables flyout)
+
+Root cause found (2026-07-11): Studio imports `blockly/core` directly and never calls `Blockly.setLocale` — only the full `blockly` package entry does that — so `Blockly.Msg` is EMPTY. The default context-menu items (which ARE registered; the `registerDefaultOptions` hypothesis was ruled out) throw `TypeError` on `Msg.DELETE_X_BLOCKS.replace(...)` at right-click, and every Msg-driven label renders blank (the Variables flyout's "Create variable…" button, rename/delete labels, `astName.ts:85`'s delete-variable path).
+
+- [ ] `packages/blocks/src/registry.ts`: `import * as En from 'blockly/msg/en'; Blockly.setLocale(En)` at bootstrap — fixes the right-click crash and the blank labels in one move.
+- [ ] Variables flyout: Blockly 11 auto-registers the `custom="VARIABLE"` callback, but BlockMirror's `Blockly.Variables.flyoutCategoryBlocks` override (blockly_shims.js:64-102 — emits `ast_Assign`/`ast_AugAssign`/`ast_Name`, honors `_HIDE_GETTERS_SETTERS`) was never ported, so the flyout serves stock `variables_get/set` blocks that don't round-trip. Port the override into `generator.ts`'s `installGeneratorShims()`; the `_HIDE_GETTERS_SETTERS` toggles in toolboxes.ts:451-455/493-495 come back to life.
+- [ ] Tests: unit-assert the flyout XML yields `ast_*` block types; Playwright right-click smoke (menu opens, Delete Block works).
+
+### Milestone 3.2 — Grading resilience & console correctness
+
+- [ ] **Grading survives student errors (legacy-parity fix).** `engine-adapter.ts:118` gates the Pedal job on `result.success`; legacy chained `onRun()` unconditionally (engine.js:109-124 — `failure()` RESOLVES) and let Pedal's own re-run capture the student error as feedback. Restructure: when an `!on_run.py` exists, run the grading job on BOTH paths — Pedal's `set_source → run` captures syntax/runtime errors natively (the Py3.14 `SyntaxError.text` fail-soft is already in pedal-env, lines 113-129); keep the hand-built runtime/syntax feedback (engine-adapter.ts:147-159) ONLY as the no-grader fallback. Gate on the legacy `disable_feedback` setting (A4) — not currently plumbed into the adapter at all; thread it via the same settings path as M3.5's key. The student's raw traceback keeps flowing to the STUDENT console (`RunOutcome.error` → CodingEditor.tsx:380-382); grader stdout/stderr stays on the dev console per the system-message routing requirement (M1.4).
+- [ ] **Traceback formatting.** Console.tsx:84-85 renders stderr as a plain `<span>` — multi-line tracebacks collapse to one wrapped line. Render as `<pre className="blockpy-printer-traceback">`; add mono font (reuse the tokens.css mono var) + `white-space: pre-wrap` + darkred rules next to blockpy.css:140-148. Only these two files.
+- [ ] **Console images (ledger LD-20).** The only sizing rule is `max-height: 100px` (blockpy.css:154-156) — thumbnails. Replace with `width: 100%; height: auto; max-height: 480px; object-fit: contain` so plots stretch to the console column with a sane cap. Applies to full console and minified editor alike.
+- [ ] **Badge coverage (ledger LD-19).** `categories.ts` MAPPING lacks `mistakes`, `style`, `system`, `unknown` → they fall to `label-none` (no badge; legacy had the same hole). Add mappings with tokens-consistent colors. ALSO: `analyzer`/`semantic` ARE mapped ("Algorithm Error"), so the reported missing badge on analyzer feedback means the live Pedal category string may differ (e.g. `algorithm`) — capture the actual literal from a TIFA run first and alias whatever arrives.
+- [ ] **View-Trace header gap.** The floated `btn-sm` inside the `.clearfix` header (Feedback.tsx:90-100) forces the header row to button height while the inline `Feedback:` text sits on the baseline — visible whenever a trace exists. Convert the header (and TraceExplorer.tsx:50-59, same pattern) to a flex row with the button right-aligned; drop the clearfix/float; give `.feedback-header` a rule (it has none).
+
+### Milestone 3.3 — Chrome interaction fixes
+
+- [ ] **"Add New" dropdown layout.** AddNewMenu.tsx renders BS4 dropdown markup, but `bootstrap-subset.css` never received the dropdown rules — no `.dropdown { position: relative }`, `.dropdown-menu { position: absolute; … }`, `.show`, `.dropdown-menu-right` — so the menu renders in normal flow, shoving the tab row down at full width. Pin the BS 4.6 dropdown rules into the subset (static below-toggle placement; no Popper needed).
+- [ ] **Share link button.** QuickMenu renders share only when the app injects `quickMenu.shareUrl` (QuickMenu.tsx:278) — and App never does, so the button never exists. The client-side link builder already landed in M1.6 (`base + btoa(...)`); wire it into the quick-menu props whenever the ids it needs are present (legacy `canShare` semantics, blockpy.js:632-657 computed this internally).
+- [ ] **Fullscreen failure event (ledger LD-17).** QuickMenu.tsx:141-152 preserves the legacy `.catch().then()` quirk: Success logs even after the Error path handled a rejection. Change to two-arm handling — fulfilled → `X-Display.Fullscreen.Success`; rejected → new `X-Display.Fullscreen.Failure` + alert; Success never fires on failure. Register the new event id in `api/events.ts`.
+- [ ] **Share prompt only on negative rating (ledger LD-18).** Feedback.tsx:68-79 calls `requestPromptedShare()` for ANY rating after the 1 s thank-you (ported legacy quirk, blockpy.js:801-813). Trigger it only for `thumbs-down`; thumbs-up keeps the thank-you and stops there.
+- [ ] **Autocomplete default OFF + toggle.** `autocompletion()` + `completionKeymap` are hardcoded (text-editor.ts:180/203) with no Compartment. Wrap in a CM6 `Compartment` (same pattern as read-only, text-editor.ts:299-303), default `[]`; `setAutocomplete(on)` through DualEditor; toolbar toggle in PythonToolbar backed by a chrome-store flag persisted to localStorage (`BLOCKPY_display.autocomplete`, following the showRating key pattern). Legacy CM5 had no autocomplete, so off-by-default is also the parity default — no ledger needed.
+- [ ] **Editor responsiveness.** Finding: CM6 syntax highlighting/lint is ALREADY immediate — no ported delay exists on that path. The per-keystroke cost is text→blocks regeneration (`blockDelay` defaults to `false` = synchronous full reconvert, dual-editor.ts:194-205). Set a modest default `blockDelay` (~300 ms) for split/block modes and SKIP block regeneration entirely while in text mode (the block editor is hidden there); leave highlighting untouched.
+
+### Milestone 3.4 — Quiz presentation fixes
+
+Root cause (2026-07-11): the `box-sizing: border-box` reset is deliberately scoped to `.blockpy-content` (bootstrap-subset.css:23-28), and the quiz surface never renders inside one (`AssignmentSurface` emits no DOM wrapper), so every `.form-control` (`width: 100%` + padding + border, resolved as content-box) overflows its column. The quizzer ships no CSS of its own.
+
+- [ ] New `packages/quizzer/src/styles/quizzer.css` imported like the other surfaces (App.tsx:43-48); scoped reset `.quizzer-question-card, .quizzer-question-card * { box-sizing: border-box }`. Do NOT wrap quizzes in `.blockpy-content` — that would drag in the parchment frame.
+- [ ] Inline fill-in blanks (QuestionView.tsx:418-429): a block-level full-width `.form-control` jammed into an inline `d-inline-block` span mid-sentence. New `.quizzer-inline-blank` (`display: inline-block; width: auto; min-width: 8ch; height: auto; padding: 0 .25rem`) sized to sit in prose; define the currently rule-less `.quizzer-inline-select` / `.quizzer-blank-slot` while at it.
+- [ ] Overflowing inputs: short-answer/numerical `.form-control`s covered by the reset; the essay textarea's inline `width: 100%` (QuestionView.tsx:332-342) gets border-box/max-width; same fix for the instructor RAW textareas sharing the pattern (Textbook.tsx:325-338, quiz editor).
+
+### Milestone 3.5 — Assignment Settings editor + new settings keys
+
+- [ ] **SettingsEditor component (the empty-Settings-tab fix).** The `!assignment_settings.blockpy` tab currently falls through CodingEditor.tsx:696-737 to a plain text editor over an (empty) raw file — no form exists at all. Add a dispatch branch beside the `images.blockpy` → ImagesManager special case (CodingEditor.tsx:696-701) mounting a real instructor form, the legacy `ASSIGNMENT_SETTINGS_EDITOR_HTML` port (assignment_settings.js:4-300): Name / URL / Points / IP Ranges / Passcode / Preloaded Datasets / Preloaded Files / Part ID fields, Block Toolbox + Problem Type selects, Starting View radios, the ~35 boolean settings checkboxes (disableTimeout … hasClock), Public/Hidden/Reviewed, Save button. Writes ride the existing settings-blob path + `mergeSettings` (D5-B unknown-key round-trip); keep a raw-JSON escape-hatch tab for hand edits.
+- [ ] **`allow_real_requests` setting (default false = today's mock).** The requests shim installs unconditionally per job (`StudioRuntime.install_requests_mock`, runtime.py lines 111-166, called at line 263). Plumb: settings blob → App → `RunOptions` (CodingEditor.tsx:73-92) → `EngineJob` (protocol.ts) → `JobRunner` → Python `StudioRuntime.run(allow_real_requests=…)`. When true, skip the mock and `micropip.install('requests')` + `pyodide_http.patch_all()` (same wheel pattern as pedal.ts:87-98) so `requests` rides browser fetch. Document best-effort: browser CORS still applies (risk R9). Surface as a checkbox in the new form; verify the key name against A4 conventions before freezing.
+- [ ] Register the other Studio-new keys in the same form as they land: `docs_url` (M4.3); note autocomplete is a per-user display toggle (M3.3), not an assignment setting.
+
+### Milestone 3.6 — Modern Python syntax in blocks (`match` first)
+
+The grammar already parses `match`/`case` (@lezer/python 1.1.19 has `MatchStatement`); the gap is Studio-side. Two fallback layers matter: a missing `to-ast.ts` case ABORTS the parse and rawifies everything from that line to EOF (worst); a missing converter rawifies just the one statement.
+
+- [ ] **match/case (required).** Add a `MatchStatement` case to the to-ast statement switch (today it hits the `fail` default at to-ast.ts:269-270, collapsing the match and everything below it into one `ast_Raw`) → new `ir.Match`/`ir.MatchCase`; new `packages/blocks/src/ast/astMatch.ts` (block def + forBlock generator + converter) + toolbox entry. **Design decision:** v1 case patterns render as textual fields (raw pattern source), not a pattern-block algebra — no BlockMirror precedent exists and patterns are not expressions; revisit only if course content demands it. Round-trip corpus gains match fixtures (wildcard, capture, or-patterns, guards, class/mapping patterns as text).
+- [ ] **Cheap wins (IR already produced, converter missing → currently single-statement `ast_Raw`):** `astAwait.ts`, `astBytes.ts`, `astEllipsis.ts`. Plus a `NamedExpression` (walrus) case in `expression()` — today a parse-level failure (whole-remainder raw), disproportionately damaging.
+- [ ] **async correctness.** `async def` mis-indexes children (the name read at to-ast.ts:566 grabs the `def`/`async` token) — fix indexing; carry an async flag on FunctionDef/For/With blocks (visual marker + generator emit).
+- [ ] Documented-acceptable raw fallbacks: `except*`, PEP 695 `type`/type-params — verify they degrade at the converter level (single raw block), not the parse level.
+
+### Milestone 3.7 — File management controls & filesystem tree
+
+- [ ] **VFS:** add `rename()` (does not exist today) and `changeSpace()`; enforce the legacy `UNRENAMABLE_FILES`/magic-name guards (files.js:229/234; `delete()` already guards, vfs.ts:98-108). Pin the wire semantics for rename/delete propagation (uploads delete = empty-contents upload with delete flag, already landed; VFS-file rename = save under new name + delete old — verify against server behavior before freezing).
+- [ ] **Buttons (ledger LD-21).** PythonToolbar's disabled placeholder groups become real Delete / Rename / Change-namespace controls, gated `hideFiles || instructor` like legacy `canDelete`/`canRename` (blockpy.js:1057-1062). Context: legacy Delete existed (python.js:117-123, `DELETABLE_SIMPLE_FILES`); legacy Rename was DEAD (button commented out at python.js:142-147; `renameFile` references an undefined variable, files.js:518-528) — Studio ships a working rename, hence the ledger entry. Change-namespace is net-new (legacy chose namespace only at creation).
+- [ ] **Filesystem tree sidebar (new feature, off by default).** Collapsible left rail in the CodingEditor grid (the rows currently hard-code `col-md-12` — FileTabs.tsx:105, CodingEditor.tsx:668 — and must yield width); lists `vfs.listVisible(role)` bucketed by `entry.space` (the VFS already exposes everything needed: vfs.ts:111-131 + the permissions matrix; no grouping helper exists — the panel buckets itself); live via the `vfs.onChange` pattern (FileTabs.tsx:99-102). Instructor view labels each bucket with its namespace (`!` instructor, `?` hidden, `&` read-only, `^` starting, plain student). When the rail is on AND the view is text-only mode, the horizontal tab strip can switch to the vertical list (user-selectable). Delete/rename/change-space actions available from tree rows, same gating as the toolbar. This grid generalization (left rail + center + right rail) is also the layout groundwork for the M4.3 docs panel.
+
+---
+
+## 5. Phase 4 — Studio extensions (new capabilities, maintainer 2026-07-11)
+
+All additive with no legacy analog (or explicitly superseding a legacy screen); each ships opt-in per the §17.5 discipline, with defaults preserving the B6 visual-parity mandate.
+
+### Milestone 4.1 — Theme system: light (default) / dark / Windows-2000
+
+- [ ] Mechanism: `tokens.css` already centralizes the normative colors — add `[data-theme="dark"]` / `[data-theme="win2000"]` scopes overriding tokens; unthemed = today's values. Light stays the parity default and themes are explicit user opt-in, so B6 holds (approved-differences entry for the capability itself).
+- [ ] Dark needs more than tokens: a CM6 dark highlight style, a Blockly `Theme` for workspace/toolbox, and a console/feedback/badge contrast pass (WCAG AA per §16.3).
+- [ ] Windows-2000: cosmetic skin only — system-gray `#c0c0c0` surfaces, 2px outset/inset bevels, square corners, an MS-Sans-Serif-ish stack; identical layout/metrics.
+- [ ] Toggle in the quick menu; persisted (`BLOCKPY_display.theme` localStorage, showRating pattern); `prefers-color-scheme` is ignored — the parity default wins until the user chooses.
+
+### Milestone 4.2 — Focused editor mode (exam-friendly)
+
+- [ ] A store-level display mode maximizing the editor: hide instructions pane, file strip, group-nav headers, and the quick menu; keep — the Run/Stop/Reset toolbar, the editor at full width/height, and a slim collapsible bottom drawer housing console + feedback (the feedback badge stays visible even when the drawer is collapsed, so students can't miss grading). Instructions reachable via a temporary overlay toggle rather than gone entirely.
+- [ ] Enter/exit must be trivial: toolbar button, `Esc` to leave, keyboard shortcut to enter; composes with browser fullscreen (reuses the M3.3-fixed fullscreen path).
+- [ ] Log `X-Display.Focus.Enter`/`X-Display.Focus.Exit` (registry additions) — exam telemetry.
+- [ ] Playwright: enter → editor grows; drawer expands on new feedback badge click; Esc restores; state survives run/feedback cycles.
+
+### Milestone 4.3 — Docs browser (right-hand panel)
+
+- [ ] Collapsible right-hand panel beside the editor rendering a course reference document. Source = new `docs_url` setting (raw string per A4 semantics; per-assignment, typically identical across a course) pointing at a downloadable markdown file; fetched once per session; rendered through the existing marked + hljs pipeline (A6 parity rules).
+- [ ] TOC generated from headings + a text filter box; expand/collapse state persisted; explicit "download" link to the raw file. Width negotiation with the editor column rides the M3.7 grid generalization.
+
+### Milestone 4.4 — CSV & JSON editors
+
+- [ ] Extension-based dispatch in the CodingEditor tab body (third special case beside images/settings): `.csv` → grid editor (header-row toggle, add/remove rows/columns, cell editing; serializes back through the normal VFS write path so autosave/dirty tracking just work); `.json` → CM6 JSON language + live parse diagnostics (+ optional collapsible tree view).
+- [ ] Both offer a raw-text escape toggle and degrade to the text editor on unparseable content; `&`-space stays read-only (D3-A).
+
+### Milestone 4.5 — Image preview & pixel editor
+
+- [ ] Graphic extensions (.png/.jpg/.gif/.bmp) get a preview tab body: checkerboard backdrop, zoom, dimensions readout.
+- [ ] Pixel-grid editor for small (sprite-scale) images: paint/erase, palette, new/resize canvas; writes back as data-URLs. Storage decision task FIRST: uploads placements vs data-URL VFS contents (the ImagesManager/uploads path landed in M1.6 — reuse it where the file lives server-side).
+
+### Milestone 4.6 — Assignment-group organizer (instructor)
+
+Reference investigated 2026-07-11: `courses/edit_settings.html` is a bulk FORM, not a drag-drop UI — per-assignment name/url + public/hidden/reviewed/subordinate booleans, per-group name/url; `subordinate` is a plain boolean (no parent pointer exists); server `position` columns exist but ordering-by-position is commented out (course.py:204-244). Studio builds the group-scoped equivalent, not a port.
+
+- [ ] **Slice 1 (existing endpoints):** an organizer for the CURRENT group reachable from instructor view — rename/edit the group (`POST /assignment_group/edit`), rename assignments + url/points/public/hidden/reviewed (`POST /blockpy/save_assignment`), move an assignment out/in (`POST /assignment_group/move_membership`; `new_group_id=-1` removes). Group-nav store refreshes after each edit; type changes remount through AssignmentHost's dispatch.
+- [ ] **Slice 2 (server-team flags, LD-16 style):** true reordering (pass `position` through move_membership — the route currently drops it — and re-enable the position `order_by`), change assignment `type` (NO endpoint exists today; server must extend `save_assignment`), `subordinate` toggle via JSON (today bulk-form-only). Client ships capability-detected: controls appear when the server accepts them.
+
+### Milestone 4.7 — Textbook URL routes (supersedes the M2.5 deferral)
+
+- [ ] **Close LD-16 for real:** ApiClient method for `/assignments/by_url` (assignments.py:341-355) + wire a `resolveAssignment` implementation into App's `<Textbook>` render (App.tsx:778-810 passes none today, so url-only sidebar refs render "Missing Reading" against an unmodified server).
+- [ ] **Standalone route:** a boot path for `/blockpy/assignments/textbook/<path>?page=…` (the `load_textbook` contract, assignments.py:95-130): resolve the textbook assignment by url-then-id, honor the initial `?page=` (the in-component pushState/popstate/title contract already works — Textbook.tsx:93-222), flagged template swap server-side. Studio still has no general client router — this lands as a boot-config entry mode, not a router.
+
+---
+
+## 6. Phase 5 — Code quality & standards (parallel workstream; starts immediately)
+
+Lint baseline (2026-07-11, `pnpm lint`): **136 problems** — 72 `@typescript-eslint/no-explicit-any` (error via tseslint recommended), 45 `no-unused-vars` (dominated by `_parent` params; the `_` prefix isn't configured as ignorable), 9 `react-hooks/exhaustive-deps` warnings (CodingEditor ×6, MinifiedEditor, QuestionView, QuizEditor — all the missing-`props` pattern), 3 stale eslint-disables, 6 misc errors. `any` is concentrated in `packages/blocks` (astCall 24, astComp 17, astFunctionDef 11, text-to-blocks 8); editor/quizzer are mostly clean.
+
+- [ ] **M5.1 — Lint to zero:** add `argsIgnorePattern: '^_'` to no-unused-vars (erases the bulk of the 45 instantly); drop the 3 stale disables; fix prefer-const / no-useless-escape / no-useless-backreference / no-this-alias; resolve all 9 exhaustive-deps warnings via the destructure-props pattern (behavior-neutral, but each gets an eye on effect timing); CI turns lint into a hard zero-warning gate.
+- [ ] **M5.2 — `any` elimination in `packages/blocks`:** type the IR node union + converter signatures (nearly all 72 errors live here); keep `no-explicit-any` at error — no downgrade.
+- [ ] **M5.3 — `docs/CODE_STANDARDS.md`:** codify the rules the codebase already mostly follows — no `any` (documented escape hatch: a justified `eslint-disable-next-line` with reason), hooks-deps discipline, `_`-prefix for intentionally unused params, module layout, comment policy (constraints only), test conventions (conformance suites vs unit), ledger discipline for any behavior change. Referenced from README; PR checklist item.
+
+---
+
+## 7. Phase 6 — Hardening & Default-On (spec §17 Phase 3)
 
 - **Non-functional acceptance (§16.3):** engine lazy-load after UI paint, wasm/package caching, 10-minified-editor memory budget, WCAG 2.1 AA on navigation/quiz/text editing, Blockly keyboard-nav plugin, Safari compat-mode verification, i18n externalization + Blockly locale wiring.
 - Finish the Skulpt-compat instructor appendix (§6.7).
@@ -217,7 +345,7 @@ New scope (user requirement; the legacy QUIZ_EDITOR mode was never built). Lates
 
 ---
 
-## 5. Cross-cutting workstreams (run through all phases)
+## 8. Cross-cutting workstreams (run through all phases)
 
 | Workstream                          | Cadence                                                              |
 | ----------------------------------- | -------------------------------------------------------------------- |
@@ -225,11 +353,12 @@ New scope (user requirement; the legacy QUIZ_EDITOR mode was never built). Lates
 | Approved-differences ledger (§16.2) | Reviewed at each milestone exit                                      |
 | Skulpt-compat appendix (§6.7)       | Updated whenever an engine delta is found                            |
 | Performance budget tracking (§16.3) | Dashboard from Milestone 1.3; regression alerts                      |
-| Accessibility review                | Component-level checks at each UI milestone; full audit in Phase 3   |
+| Accessibility review                | Component-level checks at each UI milestone; full audit in Phase 6   |
+| Lint & standards gate (Phase 5)     | Hard zero-warning CI gate from M5.1; CODE_STANDARDS.md reviewed at each milestone exit |
 
 ---
 
-## 6. Risk register
+## 9. Risk register
 
 | #   | Risk                                                                        | Impact                                         | Mitigation                                                                                                  |
 | --- | --------------------------------------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
@@ -241,24 +370,33 @@ New scope (user requirement; the legacy QUIZ_EDITOR mode was never built). Lates
 | R6  | Quiz schema richer than sampled fixtures                                    | Data loss on quiz save                         | Round-trip-unknown-fields rule (§11.3.7, §14.5); widen A3 sampling across production courses                |
 | R7  | Pyodide first-load latency hurts readings/quizzes                           | Bad first impression on non-coding assignments | Readings/quizzes interactive before engine loads (§16.3); lazy engine boot                                  |
 | R8  | Textbook port slips                                                         | Phase 2 delay                                  | Pre-approved fallback: legacy-shim island (§11.4)                                                           |
+| R9  | Real-network `requests` (M3.5) limited by browser CORS                     | Setting appears broken for arbitrary URLs      | Default stays the mock; document best-effort; consider a server proxy / allowlisted hosts later            |
+| R10 | Group organizer slice 2 blocked on missing server endpoints (type change, subordinate JSON, live position ordering) | M4.6 slips | Slice 1 ships on existing endpoints; server-team flags filed LD-16-style; capability-detected controls     |
+| R11 | Themes (M4.1) drift from the B6 visual-parity mandate                      | Parity regressions in the default look         | Light stays default + normative; themes are explicit opt-in; overrides live in tokens only                 |
+| R12 | `match` block design has no BlockMirror precedent                          | Round-trip regressions in blocks mode          | v1 textual patterns; corpus fixtures gate merges exactly like §16.1.2                                      |
 
 ---
 
-## 7. Suggested build order (dependency-driven)
+## 10. Suggested build order (dependency-driven)
 
 ```
 Phase 0:  scaffold ──► A1..A7 appendices ──► spikes S1..S3
 Phase 1:  vfs ──► api ──┐
           engine ───────┼──► editor+blocks ──► integrations ──► mountLegacy (flagged ship)
 Phase 2:  AssignmentHost ──► navigation ──► reader ──► quizzer ──► lti-embed/shim/islands (flagged ship)
-Phase 3:  hardening ──► default-on
+Phase 3:  M3.0 py-files ──► M3.1 blockly-unbreak ──► M3.2 grading/console ──► M3.3 chrome ──► M3.4 quiz-css
+          M3.5 settings-editor │ M3.6 match-blocks │ M3.7 files-ux   (parallel once M3.2 lands)
+Phase 4:  M4.1 themes ──► M4.2 focused-mode ──► M4.3 docs-panel
+          M4.4 csv/json ──► M4.5 image-editor │ M4.6 organizer │ M4.7 textbook-routes   (independent tracks)
+Phase 5:  M5.1 lint-zero (starts immediately, any time) ──► M5.2 blocks-typing ──► M5.3 standards-doc
+Phase 6:  hardening ──► default-on
 ```
 
-`vfs`, `api`, and `engine` milestones can proceed in parallel once Phase 0 lands; `editor` needs all three. Within Phase 2, `reader` depends on the minified editor (built in 1.4) and `quizzer` depends on the engine's `quiz.preprocess` phase (built in 1.3).
+`vfs`, `api`, and `engine` milestones can proceed in parallel once Phase 0 lands; `editor` needs all three. Within Phase 2, `reader` depends on the minified editor (built in 1.4) and `quizzer` depends on the engine's `quiz.preprocess` phase (built in 1.3). Within Phases 3–4: M3.0 precedes anything touching the runtime Python (M3.2, M3.5); M3.7's grid generalization precedes M4.3's right rail; M4.1 precedes M4.2 (focused mode must respect themes); Phase 5 runs whenever, but M5.2 should trail M3.6 so the blocks typing pass covers the new match/async converters once instead of twice.
 
 ---
 
-## 8. Definition of done (project-level)
+## 11. Definition of done (project-level)
 
 1. All five conformance suites (§16.1) green in CI.
 2. Golden-transcript replay matches modulo the approved-differences ledger (§16.2 / G3).
