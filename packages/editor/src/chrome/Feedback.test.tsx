@@ -22,7 +22,7 @@ describe('Feedback rating region (feedback.js:46-74, blockpy.js:789-817)', () =>
     vi.useRealTimers();
   });
 
-  it('rates: logs, dims the thumbs, thanks, then prompts a share (quirk)', () => {
+  it('thumbs-up: logs, dims the thumbs, thanks — and does NOT prompt a share', () => {
     vi.useFakeTimers();
     const onRate = vi.fn();
     const { container } = render(<Feedback onRate={onRate} />);
@@ -33,8 +33,16 @@ describe('Feedback rating region (feedback.js:46-74, blockpy.js:789-817)', () =>
     expect(
       container.querySelector('.blockpy-feedback-thank-you')!.className,
     ).toContain('show');
-    // Legacy quirk: ANY rating opens the prompted share dialog after 1 s
-    // (the suggestShare parameter was dead, blockpy.js:801-813).
+    // Ledger LD-18: the legacy quirk (ANY rating → prompted share after 1 s,
+    // blockpy.js:801-813) is fixed — positive ratings just say thanks.
+    act(() => vi.advanceTimersByTime(1000));
+    expect(useEditorChromeStore.getState().promptedShare).toBe(false);
+  });
+
+  it('thumbs-down still opens the prompted share dialog after 1 s (LD-18)', () => {
+    vi.useFakeTimers();
+    const { container } = render(<Feedback onRate={() => undefined} />);
+    fireEvent.click(container.querySelector('.blockpy-rating-down')!);
     act(() => vi.advanceTimersByTime(1000));
     expect(useEditorChromeStore.getState().promptedShare).toBe(true);
   });

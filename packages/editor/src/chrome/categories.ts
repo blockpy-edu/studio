@@ -25,6 +25,12 @@ const MAPPING: Record<string, CategoryPresentation> = {
     badgeClass: 'label-semantic-error',
     displayText: 'Algorithm Error',
   },
+  // Pedal 3's ACTUAL literal for TIFA/analyzer feedback is `algorithmic`
+  // (pedal/core/feedback_category.py) — the missing-badge bug (M3.2).
+  algorithmic: {
+    badgeClass: 'label-semantic-error',
+    displayText: 'Algorithm Error',
+  },
   feedback: { badgeClass: 'label-feedback-error', displayText: 'Instructions' },
   instructor: {
     badgeClass: 'label-feedback-error',
@@ -33,6 +39,19 @@ const MAPPING: Record<string, CategoryPresentation> = {
   complete: { badgeClass: 'label-problem-complete', displayText: 'Complete' },
   instructions: { badgeClass: 'label-instructions', displayText: 'Instructions' },
   'no errors': { badgeClass: 'label-no-errors', displayText: 'No errors' },
+  // Categories legacy left badge-less (fell to label-none) — ledger LD-19.
+  // Names are the Pedal 3 literals (pedal/core/feedback_category.py);
+  // badge classes reuse the existing legacy color hooks.
+  mistakes: { badgeClass: 'label-semantic-error', displayText: 'Mistake' },
+  specification: {
+    badgeClass: 'label-feedback-error',
+    displayText: 'Incorrect Answer',
+  },
+  style: { badgeClass: 'label-instructions', displayText: 'Style' },
+  system: { badgeClass: 'label-internal-error', displayText: 'System Error' },
+  positive: { badgeClass: 'label-no-errors', displayText: 'Positive' },
+  student: { badgeClass: 'label-instructions', displayText: 'Feedback' },
+  uncategorized: { badgeClass: 'label-instructions', displayText: 'Feedback' },
 };
 
 export function categoryPresentation(

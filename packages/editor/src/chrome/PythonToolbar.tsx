@@ -40,6 +40,10 @@ export function PythonToolbar({
   const pythonMode = useEditorChromeStore((state) => state.pythonMode);
   const setPythonMode = useEditorChromeStore((state) => state.setPythonMode);
   const historyMode = useEditorChromeStore((state) => state.historyMode);
+  const autocomplete = useEditorChromeStore((state) => state.autocomplete);
+  const toggleAutocomplete = useEditorChromeStore(
+    (state) => state.toggleAutocomplete,
+  );
   const running = runState === 'running';
 
   return (
@@ -103,6 +107,21 @@ export function PythonToolbar({
         </button>
         <button type="button" className="btn btn-outline-secondary" disabled>
           <Icon name="download" />
+        </button>
+      </div>
+      {/* Autocomplete toggle (M3.3; Studio extension — default off). */}
+      <div className="btn-group mr-2" role="group">
+        <button
+          type="button"
+          className={
+            'btn btn-outline-secondary blockpy-toggle-autocomplete' +
+            (autocomplete ? ' active' : '')
+          }
+          aria-pressed={autocomplete}
+          title="Toggle code autocomplete"
+          onClick={toggleAutocomplete}
+        >
+          <Icon name="autocomplete" /> Autocomplete
         </button>
       </div>
       <div className="btn-group mr-2" role="group" aria-label="History Group">

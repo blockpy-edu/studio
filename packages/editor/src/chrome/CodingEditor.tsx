@@ -28,6 +28,7 @@ import { ImagesManager, type UploadsController } from './ImagesManager';
 import { Instructions } from './Instructions';
 import { PythonToolbar } from './PythonToolbar';
 import { QuickMenu, type QuickMenuProps } from './QuickMenu';
+import { SettingsEditor, type AssignmentFields } from './SettingsEditor';
 import { TraceExplorer } from './TraceExplorer';
 import {
   useEditorChromeStore,
@@ -89,6 +90,16 @@ export interface RunOptions {
   files?: Record<string, string>;
   /** Files staged for the grading job (instructor view; A1 §3). */
   graderFiles?: Record<string, string>;
+  /**
+   * Legacy `disable_feedback` (engine.js:115): the controller must skip the
+   * grading pass even when an `onRun` script exists.
+   */
+  disableFeedback?: boolean;
+  /**
+   * `allow_real_requests` setting (M3.5): the engine skips the requests
+   * mock and lets the real package hit the network (CORS best-effort).
+   */
+  allowRealRequests?: boolean;
 }
 
 /** Legacy countTestCases tallies — the Intervention `unitTests` block (A2). */
@@ -176,6 +187,23 @@ export interface CodingEditorProps {
   instructor?: boolean;
   /** Legacy `hide_evaluate` setting: never offer the console Evaluate. */
   hideEvaluate?: boolean;
+  /**
+   * Legacy `disable_feedback` setting (engine.js:115): skip the instructor
+   * grading pass entirely — runs report only their own success/errors.
+   */
+  disableFeedback?: boolean;
+  /** `allow_real_requests` setting (M3.5): real network for `requests`. */
+  allowRealRequests?: boolean;
+  /**
+   * Assignment-level columns shown in the Settings form (M3.5); the section
+   * renders only when provided.
+   */
+  assignmentFields?: AssignmentFields;
+  /**
+   * The Settings form saved: persist the blob + edited assignment columns
+   * (legacy saveAssignmentSettings → save_assignment).
+   */
+  onSaveSettings?: (blob: string, fields: AssignmentFields) => void;
   /** Legacy `hide_files` setting (A4: defaults TRUE) — gates Add New. */
   hideFiles?: boolean;
   /**
@@ -304,6 +332,12 @@ export function CodingEditor(props: CodingEditorProps) {
     }
   }, [toolboxSpec]);
 
+  // Autocomplete preference → live CM6 reconfigure (M3.3; default off).
+  const autocompleteOn = useEditorChromeStore((state) => state.autocomplete);
+  useEffect(() => {
+    editorRef.current?.setAutocomplete(autocompleteOn);
+  }, [autocompleteOn]);
+
   // System messages (engine boot, grader lifecycle, instructor output) go
   // to the footer status line + the instructor-only dev console — never the
   // student console.
@@ -358,6 +392,8 @@ export function CodingEditor(props: CodingEditorProps) {
         {
           trace: true,
           inputs: runInputs,
+          disableFeedback: props.disableFeedback,
+          allowRealRequests: props.allowRealRequests,
           // Grade with the CURRENT !on_run.py — instructor edits to the On
           // Run tab apply on the very next run (§7: the VFS is the source
           // of truth) — and stage the live VFS into both jobs: the student
@@ -461,6 +497,8 @@ export function CodingEditor(props: CodingEditorProps) {
     vfs,
     props.runController,
     props.hideEvaluate,
+    props.disableFeedback,
+    props.allowRealRequests,
     props.onRunStart,
     props.onGraded,
     props.onLogEvent,
@@ -698,6 +736,22 @@ export function CodingEditor(props: CodingEditorProps) {
             // ["images.blockpy"]) — the uploaded-files manager replaces the
             // code editor for this tab.
             <ImagesManager uploads={props.uploads} instructor={props.instructor} />
+          ) : activeFile === '!assignment_settings.blockpy' ? (
+            // The Settings tab is a FORM over the settings blob, not a text
+            // editor (M3.5; legacy ASSIGNMENT_SETTINGS_EDITOR_HTML port).
+            <SettingsEditor
+              key={vfs ? activeFile : `${activeFile}-plain`}
+              blob={vfs?.read(activeFile) ?? code}
+              assignment={props.assignmentFields}
+              onSave={(blob, fields) => {
+                if (vfs) {
+                  vfs.write(activeFile, blob);
+                  props.onFileEdit?.(activeFile, blob);
+                }
+                setCode(blob);
+                props.onSaveSettings?.(blob, fields);
+              }}
+            />
           ) : (
             <div
               className="blockpy-python-blockmirror"
@@ -730,6 +784,11 @@ export function CodingEditor(props: CodingEditorProps) {
                 height={400}
                 editorRef={(editor) => {
                   editorRef.current = editor;
+                  // Apply the persisted autocomplete preference to the
+                  // fresh editor (the effect only fires on later changes).
+                  if (editor && store.getState().autocomplete) {
+                    editor.setAutocomplete(true);
+                  }
                   props.onEditorReady?.(editor);
                 }}
               />

@@ -158,6 +158,7 @@ export class DualTextEditor {
   readonly view: EditorView;
   private readonly host: TextEditorHost;
   private readonly readOnly = new Compartment();
+  private readonly autocomplete = new Compartment();
   private mode_: keyof typeof DualTextEditor.VIEW_CONFIGURATIONS = 'split';
   /** Code stashed while hidden, applied on next show (legacy `outOfDate_`). */
   private outOfDate_: string | null = null;
@@ -176,7 +177,9 @@ export class DualTextEditor {
           indentUnit.of('    '),
           python(),
           syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
-          autocompletion(),
+          // OFF by default (M3.3): legacy CM5 had no autocomplete, and the
+          // popup distracts novices. A toolbar toggle reconfigures it live.
+          this.autocomplete.of([]),
           pythonSyntaxLinter(),
           highlightField,
           highlightPlugin,
@@ -299,6 +302,13 @@ export class DualTextEditor {
   setReadOnly(isReadOnly: boolean): void {
     this.view.dispatch({
       effects: this.readOnly.reconfigure(EditorState.readOnly.of(isReadOnly)),
+    });
+  }
+
+  /** Live-toggle CM6 autocomplete (M3.3; default off). */
+  setAutocomplete(enabled: boolean): void {
+    this.view.dispatch({
+      effects: this.autocomplete.reconfigure(enabled ? autocompletion() : []),
     });
   }
 

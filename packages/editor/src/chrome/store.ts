@@ -80,6 +80,11 @@ export interface EditorChromeState {
   clearInputs: boolean;
   /** Render console images vs raw text (legacy `display.renderImages`). */
   renderImages: boolean;
+  /**
+   * Text-editor autocomplete (M3.3; STUDIO EXTENSION — legacy CM5 had
+   * none). Default OFF; persisted like the legacy localSettings keys.
+   */
+  autocomplete: boolean;
   /** User-supplied passcode sent with every server payload (A7 §1). */
   passcode: string;
   /**
@@ -129,6 +134,7 @@ export interface EditorChromeState {
   setQueuedInputs(inputs: string[]): void;
   setClearInputs(clear: boolean): void;
   toggleRenderImages(): void;
+  toggleAutocomplete(): void;
   setPasscode(passcode: string): void;
   setDirtySubmission(dirty: boolean): void;
   setEvalState(state: EvalState): void;
@@ -161,6 +167,17 @@ const INITIAL_SERVER_STATUS = Object.fromEntries(
   SERVER_ENDPOINTS.map((endpoint) => [endpoint, 'offline']),
 ) as Record<ServerEndpoint, ServerStatusState>;
 
+/** localStorage key for the autocomplete preference (showRating pattern). */
+const AUTOCOMPLETE_KEY = 'BLOCKPY_display.autocomplete';
+
+function readAutocomplete(): boolean {
+  try {
+    return localStorage.getItem(AUTOCOMPLETE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
 export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   pythonMode: 'split',
   historyMode: false,
@@ -175,6 +192,7 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   queuedInputs: [],
   clearInputs: true,
   renderImages: true,
+  autocomplete: readAutocomplete(),
   passcode: '',
   dirtySubmission: true,
   evalState: 'hidden',
@@ -223,6 +241,16 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   setClearInputs: (clear) => set({ clearInputs: clear }),
   toggleRenderImages: () =>
     set((state) => ({ renderImages: !state.renderImages })),
+  toggleAutocomplete: () =>
+    set((state) => {
+      const next = !state.autocomplete;
+      try {
+        localStorage.setItem(AUTOCOMPLETE_KEY, String(next));
+      } catch {
+        // Storage unavailable (sandboxed iframe) — the toggle still works.
+      }
+      return { autocomplete: next };
+    }),
   setPasscode: (passcode) => set({ passcode }),
   setDirtySubmission: (dirty) => set({ dirtySubmission: dirty }),
   setEvalState: (evalState) => set({ evalState }),

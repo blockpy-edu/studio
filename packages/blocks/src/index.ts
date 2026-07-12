@@ -19,6 +19,10 @@ export type { ParseOutcome, ParseDiagnostic } from './cst/parse';
 export { sourceToAst, AstParseError, decodePythonString } from './cst/to-ast';
 export type { SourceAst, SourceComment } from './cst/to-ast';
 export { generator, Order, installGeneratorShims } from './generator';
+export {
+  installVariablesFlyout,
+  variablesFlyoutBlocks,
+} from './variables-flyout';
 export { COLOR } from './colors';
 export { createBlock, rawBlock, xmlToString } from './xml';
 export {

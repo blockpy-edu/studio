@@ -45,6 +45,7 @@ import '@blockpy/editor/styles/bootstrap-subset.css';
 import '@blockpy/editor/styles/blockpy.css';
 import '@blockpy/navigation/styles/navigation.css';
 import '@blockpy/reader/styles/reader.css';
+import '@blockpy/quizzer/styles/quizzer.css';
 import '@blockpy/textbook/styles/textbook.css';
 import type { BootConfig, LegacyAssignmentPayload } from './boot-config';
 import type { MountExtras, StudioActions } from './studio-handle';
@@ -968,6 +969,67 @@ export function App({ config, extras, registerActions }: AppProps) {
               ? settingBool(settings['hide_evaluate'])
               : undefined
           }
+          disableFeedback={
+            settings['disable_feedback'] !== undefined
+              ? settingBool(settings['disable_feedback'])
+              : undefined
+          }
+          allowRealRequests={settingBool(settings['allow_real_requests'] ?? false)}
+          // Settings form (M3.5): assignment columns prefill from the
+          // decoded assignment; Save persists blob + columns through
+          // save_assignment (legacy saveAssignmentSettings) and live-applies
+          // by updating the loaded assignment's settings string.
+          assignmentFields={
+            active
+              ? {
+                  name: active.assignment.name,
+                  url: active.assignment.url,
+                  points: String(active.assignment.raw['points'] ?? ''),
+                  ipRanges: String(active.assignment.raw['ip_ranges'] ?? ''),
+                  public: active.assignment.raw['public'] === true,
+                  hidden: active.assignment.raw['hidden'] === true,
+                  reviewed: active.assignment.raw['reviewed'] === true,
+                }
+              : undefined
+          }
+          onSaveSettings={(blob, fields) => {
+            setLoaded((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    assignment: {
+                      ...prev.assignment,
+                      settings: blob,
+                      name: fields.name ?? prev.assignment.name,
+                      url: fields.url ?? prev.assignment.url,
+                    },
+                  }
+                : prev,
+            );
+            if (api && active && api.isEndpointConnected('saveAssignment')) {
+              void api.saveAssignment({
+                assignment_id: active.assignment.id ?? '',
+                settings: blob,
+                ...(fields.name !== undefined ? { name: fields.name } : {}),
+                ...(fields.url !== undefined ? { url: fields.url } : {}),
+                ...(fields.points !== undefined && fields.points !== ''
+                  ? { points: fields.points }
+                  : {}),
+                ...(fields.ipRanges !== undefined
+                  ? { ip_ranges: fields.ipRanges }
+                  : {}),
+                ...(fields.public !== undefined
+                  ? { public: String(fields.public) }
+                  : {}),
+                ...(fields.hidden !== undefined
+                  ? { hidden: String(fields.hidden) }
+                  : {}),
+                ...(fields.reviewed !== undefined
+                  ? { reviewed: String(fields.reviewed) }
+                  : {}),
+              });
+            }
+          }}
           assignmentHidden={active?.assignment.raw['hidden'] === true}
           runController={runController}
           onFileEdit={(filename, contents) => {

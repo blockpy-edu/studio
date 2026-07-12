@@ -47,11 +47,12 @@ export function TraceExplorer({ onStepLine }: TraceExplorerProps) {
   const locals = step?.locals ?? {};
   return (
     <div className="blockpy-trace col-md-6 blockpy-panel">
-      <div className="clearfix">
+      {/* Flex header, same fix as the Feedback pane (M3.2 gap). */}
+      <div className="blockpy-panel-header">
         <strong>Trace: </strong>
         <button
           type="button"
-          className="btn btn-sm btn-outline-secondary float-right blockpy-hide-trace"
+          className="btn btn-sm btn-outline-secondary blockpy-panel-header-action blockpy-hide-trace"
           onClick={() => setTraceVisible(false)}
         >
           <Icon name="eye" /> Hide Trace

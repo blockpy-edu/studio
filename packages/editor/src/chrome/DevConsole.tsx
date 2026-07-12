@@ -42,7 +42,8 @@ export function DevConsole({ size = 'col-md-6', onShowStudent }: DevConsoleProps
       role="region"
       aria-label="Dev Console"
     >
-      <div className="clearfix">
+      <div className="blockpy-panel-header">
+        <strong>Dev Console:</strong>
         {onShowStudent && (
           <ConsoleToggleButton
             label="Console"
@@ -52,12 +53,11 @@ export function DevConsole({ size = 'col-md-6', onShowStudent }: DevConsoleProps
         )}
         <button
           type="button"
-          className="btn btn-sm btn-outline-secondary float-right"
+          className={`btn btn-sm btn-outline-secondary${onShowStudent ? '' : ' blockpy-panel-header-action'}`}
           onClick={clearDevConsole}
         >
           Clear
         </button>
-        <strong>Dev Console:</strong>
       </div>
       <div ref={printerRef} className="blockpy-printer blockpy-dev-printer" role="log">
         {entries.map((entry, i) => (
@@ -66,7 +66,9 @@ export function DevConsole({ size = 'col-md-6', onShowStudent }: DevConsoleProps
             className={`blockpy-printer-output blockpy-printer-${entry.kind}`}
           >
             {entry.kind === 'stderr' ? (
-              <span style={{ color: 'darkred' }}>{entry.text}</span>
+              // Grader tracebacks land here — same <pre> treatment as the
+              // student console (M3.2).
+              <pre className="blockpy-printer-traceback">{entry.text}</pre>
             ) : (
               entry.text
             )}

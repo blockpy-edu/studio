@@ -99,6 +99,7 @@ export function createEngineRunController(
             code,
             filename: 'answer.py',
             trace: runOptions?.trace ?? false,
+            allowRealRequests: runOptions?.allowRealRequests,
             // Queued inputs from the quick-menu dialog (compat-mode input
             // strategy, M1.3.4: the UI collects stdin up front).
             inputsPrefill: runOptions?.inputs,
@@ -115,24 +116,40 @@ export function createEngineRunController(
         }
         const trace = result.trace ?? [];
         const images = result.images;
+        // The student's raw traceback always reaches the student console
+        // (M3.2) — grading never swallows it.
+        const studentError = result.success
+          ? null
+          : result.error?.traceback ||
+            result.error?.message ||
+            'Execution failed.';
+        // Per-run script (the live !on_run.py from the VFS) beats the
+        // static fallback; empty/whitespace means "no grader".
+        const onRun =
+          runOptions?.onRun !== undefined
+            ? runOptions.onRun
+            : options.onRunScript;
+        // Legacy parity (engine.js:109-124): the grading pass chains after
+        // EVERY run — `failure()` resolves, so student syntax/runtime errors
+        // reach Pedal, whose own set_source → run captures them as feedback.
+        // Only the disable_feedback setting skips grading.
+        if (onRun && onRun.trim() !== '' && !runOptions?.disableFeedback) {
+          const graded = await gradeWithPedal(
+            engine,
+            code,
+            onRun,
+            handlers,
+            runOptions?.inputs,
+            runOptions?.graderFiles,
+          );
+          return {
+            ...graded,
+            error: studentError ?? graded.error,
+            trace,
+            images,
+          };
+        }
         if (result.success) {
-          // Per-run script (the live !on_run.py from the VFS) beats the
-          // static fallback; empty/whitespace means "no grader".
-          const onRun =
-            runOptions?.onRun !== undefined
-              ? runOptions.onRun
-              : options.onRunScript;
-          if (onRun && onRun.trim() !== '') {
-            const graded = await gradeWithPedal(
-              engine,
-              code,
-              onRun,
-              handlers,
-              runOptions?.inputs,
-              runOptions?.graderFiles,
-            );
-            return { ...graded, trace, images };
-          }
           return {
             error: null,
             trace,
@@ -144,11 +161,13 @@ export function createEngineRunController(
             },
           };
         }
+        // No grader (or feedback disabled): hand-built runtime/syntax
+        // feedback with student-relative lines (§6.3).
         const error = result.error;
         const where =
           error?.studentLine != null ? ` on line ${error.studentLine}` : '';
         return {
-          error: error?.traceback || error?.message || 'Execution failed.',
+          error: studentError,
           trace,
           images,
           feedback: {

@@ -262,3 +262,51 @@ Replicate decisions (D4, D6) produce no entries — they are legacy parity.
   `load_assignment` for `type == 'textbook'` or expose an
   assignment-by-url JSON endpoint; the client is already shaped for both.
 - **Wire impact:** none until the endpoint exists.
+
+## LD-17 — Fullscreen failures no longer double-log Success (Milestone 3.3)
+
+- **Legacy:** the fullscreen click handler chained `.catch().then()`
+  (interface.js:55-63), so a rejected `requestFullscreen()` logged
+  `X-Display.Fullscreen.Error` AND THEN `X-Display.Fullscreen.Success` —
+  every failure also appeared as a success in the event stream.
+- **Studio:** two-arm `.then(onSuccess, onFailure)` — fulfilled logs
+  Success, rejected logs Error (+ the legacy alert) and nothing else
+  (QuickMenu.tsx `toggleFullscreen`).
+- **Wire impact:** `X-Display.Fullscreen.Success` rows drop to their true
+  rate; research code counting fullscreen successes before Studio must
+  subtract paired Error events.
+
+## LD-18 — Prompted share dialog only on NEGATIVE feedback ratings (Milestone 3.3)
+
+- **Legacy:** ANY rating (thumbs-up or thumbs-down) opened the "It looks
+  like you are having some trouble…" prompted share dialog after the 1 s
+  thank-you (blockpy.js:801-813; the `suggestShare` parameter was dead).
+- **Studio:** only `thumbs-down` triggers the prompted share; thumbs-up
+  ends at the thank-you (Feedback.tsx `rate`). Rationale: a
+  having-trouble prompt after a positive rating was noise.
+- **Wire impact:** fewer prompted-share dialog opens; `X-Rating` logging is
+  unchanged.
+
+## LD-19 — Feedback badges for categories legacy left blank (Milestone 3.2)
+
+- **Legacy:** the category→badge switch (blockpy.js:724-783) had no case
+  for `mistakes`, `style`, `system`, or Pedal 3's `algorithmic` /
+  `specification` / `positive` / `student` / `uncategorized` — all fell to
+  `label-none` (transparent, no text), so e.g. TIFA feedback showed no
+  colored badge at all.
+- **Studio:** `categories.ts` maps the full Pedal 3 literal set
+  (pedal/core/feedback_category.py), reusing the existing legacy color
+  hooks — notably `algorithmic` → `label-semantic-error` "Algorithm Error"
+  (the reported missing-badge bug).
+- **Wire impact:** none (presentation only; Intervention events already
+  carried the raw category).
+
+## LD-20 — Console images stretch to the console width (Milestone 3.2)
+
+- **Legacy:** `.blockpy-console-image-output img { max-height: 100px }`
+  (blockpy.css) — every plot rendered as a ~100px-tall thumbnail.
+- **Studio:** `width: 100%; height: auto; max-height: 480px;
+  object-fit: contain` — plots fill the console column with a sane cap
+  (maintainer request, 2026-07-11). Applies to the minified editor too.
+- **Wire impact:** none (presentation only; the `image` submission payload
+  is unchanged).

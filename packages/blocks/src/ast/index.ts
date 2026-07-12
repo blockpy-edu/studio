@@ -45,6 +45,7 @@ import './astSubscript';
 
 // Control flow & definitions
 import './astIf';
+import './astMatch';
 import './astWhile';
 import './astFor';
 import './astTry';

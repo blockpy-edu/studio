@@ -25,12 +25,11 @@ console.log(`${graders.length} pedal graders in the corpus`);
 const { loadPyodide } = await import('pyodide');
 const pyodide = await loadPyodide({ indexURL: dirname(require.resolve('pyodide')) });
 
-// Import the environment source without a build step.
-const pedalSrc = readFileSync(
-  join(repoRoot, 'packages', 'engine', 'src', 'pedal-env.py.ts'),
+// The environment source is a real .py file (M3.0) — read it directly.
+const PEDAL_ENV_PY = readFileSync(
+  join(repoRoot, 'packages', 'engine', 'src', 'pedal-env.py'),
   'utf8',
 );
-const PEDAL_ENV_PY = pedalSrc.match(/export const PEDAL_ENV_PY = `([\s\S]*)`;/)[1];
 
 console.log('Installing wheels ...');
 await pyodide.loadPackage('micropip');

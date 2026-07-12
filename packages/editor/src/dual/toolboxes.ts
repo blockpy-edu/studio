@@ -273,6 +273,9 @@ export const TOOLBOXES: Record<string, ToolboxEntry[]> = {
       blocks: [
         'if ___: pass',
         'if ___: pass\nelse: pass',
+        // match/case (M3.6, Studio addition): only the `full` preset grows
+        // it — the legacy presets are B6 parity fixtures and stay verbatim.
+        'match ___:\n    case _:\n        pass',
         'for ___ in ___: pass',
         'while ___: pass',
         'break',

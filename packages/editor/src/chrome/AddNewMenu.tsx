@@ -211,7 +211,7 @@ export function AddNewMenu({ vfs, instructor, onAdd }: AddNewMenuProps) {
         <form onSubmit={(event) => event.preventDefault()}>
           <div className="form-group row">
             {dialogKind === 'instructor' && (
-              <div>
+              <div className="col-sm-12">
                 <p>
                   This dialog box is for creating text files (e.g., Python
                   code, Markdown, etc.) that will be accessible from Python.

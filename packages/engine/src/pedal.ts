@@ -8,7 +8,8 @@
  * default package list resolves from PyPI via micropip, which is fine for
  * dev/tests but must be pinned/bundled before Phase 2 ships.
  */
-import { PEDAL_ENV_PY } from './pedal-env.py';
+/// <reference path="./raw.d.ts" />
+import PEDAL_ENV_PY from './pedal-env.py?raw';
 
 /** Pyodide surface needed here (superset of the runner's PyodideLike). */
 export interface PedalPyodideLike {

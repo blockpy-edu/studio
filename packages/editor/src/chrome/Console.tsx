@@ -34,7 +34,7 @@ export function ConsoleToggleButton(props: {
   return (
     <button
       type="button"
-      className="btn btn-sm btn-outline-secondary float-right blockpy-console-toggle"
+      className="btn btn-sm btn-outline-secondary blockpy-panel-header-action blockpy-console-toggle"
       onClick={props.onClick}
     >
       {props.label}
@@ -82,7 +82,9 @@ function entryBody(entry: ConsoleEntry, renderImages: boolean) {
   return (
     <div className={`blockpy-printer-output blockpy-printer-${entry.kind}`}>
       {entry.kind === 'stderr' ? (
-        <span style={{ color: 'darkred' }}>{entry.text}</span>
+        // Tracebacks are multi-line and indentation-significant (M3.2):
+        // <pre> + mono via .blockpy-printer-traceback, not a wrapping span.
+        <pre className="blockpy-printer-traceback">{entry.text}</pre>
       ) : entry.kind === 'value' ? (
         <code>{entry.text}</code>
       ) : (
@@ -130,7 +132,8 @@ export function Console({ size = 'col-md-6', onEvaluate, onShowDev }: ConsolePro
       role="region"
       aria-label="Console"
     >
-      <div className="clearfix">
+      <div className="blockpy-panel-header">
+        <strong>Console:</strong>
         {onShowDev && (
           <ConsoleToggleButton
             label="Dev Console"
@@ -138,7 +141,6 @@ export function Console({ size = 'col-md-6', onEvaluate, onShowDev }: ConsolePro
             onClick={onShowDev}
           />
         )}
-        <strong>Console:</strong>
       </div>
       <div
         ref={printerRef}

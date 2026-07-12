@@ -4,7 +4,11 @@
  * this. Wall-clock enforcement lives client-side (compat mode's hard stop
  * is worker termination, §6.6); the runner is single-job-at-a-time.
  */
-import { RUNTIME_PY } from './runtime.py';
+// The reference makes the `*.py?raw` ambient module travel with this file
+// into CROSS-PACKAGE programs (source-first workspace exports) that don't
+// include engine's own tsconfig `include`.
+/// <reference path="./raw.d.ts" />
+import RUNTIME_PY from './runtime.py?raw';
 import { PedalEnvironment, type PedalPyodideLike } from './pedal';
 import type { EngineJob, EngineResult, TraceStep } from './protocol';
 
@@ -43,6 +47,7 @@ interface RuntimeHandle {
     traceLimit: number | null,
     onStdout: StreamCallback,
     onStderr: StreamCallback,
+    allowRealRequests: boolean,
   ): PyProxy;
   evaluate(expression: string, onStdout: StreamCallback, onStderr: StreamCallback): PyProxy;
   clear_namespace(): void;
@@ -78,6 +83,7 @@ const toJsDeep = (proxy: PyProxy): RuntimePayload => {
 export class JobRunner {
   private runtime: RuntimeHandle;
   private pedalEnv: PedalEnvironment | null = null;
+  private realRequestsReady = false;
 
   private constructor(
     private pyodide: PyodideLike,
@@ -96,6 +102,24 @@ export class JobRunner {
   /** Clear the retained REPL namespace (legacy: cleared on new runs). */
   clearNamespace(): void {
     this.runtime.clear_namespace();
+  }
+
+  /**
+   * Real-network `requests` (M3.5, `allow_real_requests` setting): install
+   * requests + pyodide-http once and patch urllib/requests onto browser
+   * fetch. The runtime skips its mock when the job carries the flag; the
+   * installed package lives in site-packages, so the per-job module restore
+   * adopts it into the baseline like matplotlib.
+   */
+  private async ensureRealRequests(): Promise<void> {
+    if (this.realRequestsReady) return;
+    const py = this.pyodide as unknown as PedalPyodideLike;
+    await py.loadPackage('micropip');
+    await py.runPythonAsync(
+      "import micropip\nawait micropip.install(['requests', 'pyodide-http'])\n" +
+        'import pyodide_http\npyodide_http.patch_all()',
+    );
+    this.realRequestsReady = true;
   }
 
   /** Lazy Pedal environment — wheels install on the first grading job. */
@@ -167,6 +191,14 @@ export class JobRunner {
     } catch {
       // Ignored — the run itself reports the missing module.
     }
+    if (job.allowRealRequests) {
+      try {
+        await this.ensureRealRequests();
+      } catch {
+        // Fail-soft (offline/blocked): the run proceeds and `import
+        // requests` raises Python's own ModuleNotFoundError.
+      }
+    }
     // Stage via a Python-side JSON parse to avoid proxy lifetime headaches.
     this.pyodide.runPython(
       `_studio_runtime.stage_files(__import__('json').loads(${JSON.stringify(
@@ -192,6 +224,7 @@ export class JobRunner {
               job.limits?.traceSteps ?? null,
               onStdout,
               onStderr,
+              job.allowRealRequests ?? false,
             ),
           );
 

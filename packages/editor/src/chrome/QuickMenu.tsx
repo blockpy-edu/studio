@@ -138,18 +138,19 @@ export function QuickMenu(props: QuickMenuProps) {
     // Legacy targets the container's parent (blockpy.js:1084).
     const content = rootRef.current?.closest('.blockpy-content');
     const target = content?.parentElement ?? content;
-    void target
-      ?.requestFullscreen()
-      .catch((err: Error) => {
+    // Ledger LD-17: two-arm handling. Legacy chained .catch().then()
+    // (interface.js:55-63), so Success ALSO logged after the Error path
+    // swallowed a rejection — failures now log ONLY the Error event.
+    void target?.requestFullscreen().then(
+      () => {
+        props.onLogEvent?.('X-Display.Fullscreen.Success', '');
+      },
+      (err: Error) => {
         const message = `Error attempting to enable full-screen mode: ${err.message} (${err.name})`;
         props.onLogEvent?.('X-Display.Fullscreen.Error', message);
         alert(message);
-      })
-      .then(() => {
-        // Legacy quirk (interface.js:55-63): the .catch().then() chain means
-        // Success ALSO logs after the Error path handled a rejection.
-        props.onLogEvent?.('X-Display.Fullscreen.Success', '');
-      });
+      },
+    );
   };
 
   const [shareOpen, setShareOpen] = useState(false);

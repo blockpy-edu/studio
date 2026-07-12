@@ -108,7 +108,10 @@ export class DualEditor {
       readOnly: configuration.readOnly ?? false,
       height: configuration.height ?? 500,
       viewMode: configuration.viewMode ?? 'split',
-      blockDelay: configuration.blockDelay ?? false,
+      // M3.3: default 300 ms — synchronous whole-workspace regeneration on
+      // every split/block-mode keystroke was the perceived "slow
+      // highlighting". Pass `false` for the legacy immediate behavior.
+      blockDelay: configuration.blockDelay ?? 300,
       toolbox: configuration.toolbox ?? 'normal',
       renderer: configuration.renderer ?? 'Thrasos',
       imageMode: configuration.imageMode ?? false,
@@ -192,9 +195,13 @@ export class DualEditor {
   // -- sync loop --------------------------------------------------------------
 
   private handleTextChanged(newCode: string): void {
+    // The code mirror + change listener fire IMMEDIATELY — Run/autosave must
+    // never observe stale text (M3.3). Only the expensive text→blocks
+    // regeneration debounces; in text mode the hidden block editor already
+    // defers via its own outOfDate_ stash, so typing there costs nothing.
+    this.setCode(newCode, true);
     const apply = () => {
       this.blockEditor.setCode(newCode, true);
-      this.setCode(newCode, true);
     };
     if (this.configuration.blockDelay === false) {
       apply();
@@ -241,6 +248,11 @@ export class DualEditor {
       'block-mirror-read-only',
       isReadOnly,
     );
+  }
+
+  /** Live-toggle text-editor autocomplete (M3.3; default off). */
+  setAutocomplete(enabled: boolean): void {
+    this.textEditor.setAutocomplete(enabled);
   }
 
   refresh(): void {

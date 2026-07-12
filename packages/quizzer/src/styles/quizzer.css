@@ -1,0 +1,46 @@
+/**
+ * Quizzer surface styles (M3.4 — the quizzer previously shipped NO css).
+ *
+ * Root cause of both reported sizing bugs: bootstrap-subset.css scopes its
+ * `box-sizing: border-box` reset to `.blockpy-content`, and the quiz surface
+ * never renders inside one (AssignmentSurface emits no DOM wrapper). Every
+ * `.form-control` therefore resolved as content-box — `width: 100%` PLUS
+ * padding and border — and overflowed its column. The reset is re-scoped
+ * here to the question card; quizzes deliberately do NOT get wrapped in
+ * `.blockpy-content` (that would drag in the parchment frame).
+ */
+.quizzer-question-card,
+.quizzer-question-card *,
+.quizzer-question-card *::before,
+.quizzer-question-card *::after {
+    box-sizing: border-box;
+}
+
+/* Inline fill-in-multiple-blanks inputs sit INSIDE a sentence: sized to the
+   prose, not the block-level full-width .form-control default. */
+.quizzer-question-card .quizzer-inline-blank {
+    display: inline-block;
+    width: auto;
+    min-width: 8ch;
+    height: auto;
+    padding: 0.125rem 0.375rem;
+    font-size: inherit;
+    line-height: 1.25;
+    vertical-align: baseline;
+}
+
+/* Inline dropdown slots (multiple_dropdowns) — previously rule-less. */
+.quizzer-inline-select {
+    display: inline-block;
+    width: auto;
+    max-width: 100%;
+    padding: 0.125rem 0.25rem;
+    font-size: inherit;
+    vertical-align: baseline;
+}
+
+/* Essay textareas carry inline width:100%; never let border/padding push
+   them past the card edge. */
+.quizzer-question-card textarea {
+    max-width: 100%;
+}

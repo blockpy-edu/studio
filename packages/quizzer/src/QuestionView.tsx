@@ -416,10 +416,10 @@ export function QuestionView(props: QuestionViewProps) {
               ))}
             </select>
           ) : (
-            <span className="d-inline-block">
+            <span className="d-inline-block quizzer-blank-slot">
               <input
                 type="text"
-                className="form-control"
+                className="form-control quizzer-inline-blank"
                 autoComplete="off"
                 id={`question-fimb-${index}-${slot.blank}`}
                 value={((answer ?? {}) as KeyedTextAnswer)[slot.blank] ?? ''}

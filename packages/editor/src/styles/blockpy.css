@@ -22,704 +22,743 @@
 
 /** Entire Page **/
 .blockpy-content .row {
-    border-bottom: 1px solid var(--blockpy-border-warm); /* bp.css:2-4 row seam */
+  border-bottom: 1px solid var(--blockpy-border-warm); /* bp.css:2-4 row seam */
 }
 
 .blockpy-content .blockpy-panel {
-    padding-left: 10px;
-    padding-right: 10px;
-    padding-bottom: 5px;
+  padding-left: 10px;
+  padding-right: 10px;
+  padding-bottom: 5px;
 }
 
 /* bp.css:12-18 — percentage heights likely don't bind (A8 §5.8); ported as-is */
 .blockpy-bottom {
-    height: 25%;
+  height: 25%;
 }
 
 .blockpy-header {
-    height: 25%;
+  height: 25%;
 }
 
 .blockpy-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: var(--blockpy-neutral-900);
-    filter: alpha(opacity=50);
-    -moz-opacity: 0.5;
-    -khtml-opacity: 0.5;
-    opacity: 0.5;
-    z-index: 10000;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--blockpy-neutral-900);
+  filter: alpha(opacity=50);
+  -moz-opacity: 0.5;
+  -khtml-opacity: 0.5;
+  opacity: 0.5;
+  z-index: 10000;
 }
 
 .green-check-mark {
-    font-weight: bold;
-    color: var(--blockpy-positive-green);
-    text-shadow: -1px 0 var(--blockpy-neutral-900), 0 1px var(--blockpy-neutral-900),
-        1px 0 var(--blockpy-neutral-900), 0 -1px var(--blockpy-neutral-900);
+  font-weight: bold;
+  color: var(--blockpy-positive-green);
+  text-shadow:
+    -1px 0 var(--blockpy-neutral-900),
+    0 1px var(--blockpy-neutral-900),
+    1px 0 var(--blockpy-neutral-900),
+    0 -1px var(--blockpy-neutral-900);
 }
 
 .blockpy-content .fas {
-    font-size: 12px; /* layout-relevant, must be preserved (A8 §3.2) */
+  font-size: 12px; /* layout-relevant, must be preserved (A8 §3.2) */
 }
 
 /** Pop-up **/
 
 .blockpy-dialog .modal-body {
-    overflow-y: auto;
+  overflow-y: auto;
 }
 
 .blockpy-dialog .modal-body table {
-    width: 100%;
+  width: 100%;
 }
 
 .blockpy-dialog .row {
-    border-bottom: 0;
+  border-bottom: 0;
 }
 
 .corgis-icon {
-    max-width: 32px;
+  max-width: 32px;
 }
 
 /** First Row **/
 
 .blockpy-content .blockpy-instructions pre,
 .blockpy-content .blockpy-instructions code {
-    font-family: monospace;
+  font-family: monospace;
 }
 
 .blockpy-content .blockpy-instructions blockquote {
-    font-style: italic;
+  font-style: italic;
 }
 
 .blockpy-content .blockpy-instructions p,
 .blockpy-content .blockpy-instructions pre {
-    margin-bottom: 4px;
+  margin-bottom: 4px;
 }
 
 .blockpy-instructions-reset a {
-    font-size: smaller;
+  font-size: smaller;
 }
 
 .blockpy-content .blockpy-quick-menu {
-    padding-left: 10px;
-    border-left: 1px solid var(--blockpy-border-warm); /* bp.css:87-90 */
+  padding-left: 10px;
+  border-left: 1px solid var(--blockpy-border-warm); /* bp.css:87-90 */
 }
 
 /** Second Row **/
 
 .blockpy-content .blockpy-console {
-    padding-top: 10px;
+  padding-top: 10px;
 }
 
 .blockpy-content .blockpy-show-feedback {
-    margin-top: 10px;
-    margin-left: 10px;
+  margin-top: 10px;
+  margin-left: 10px;
 }
 
 .blockpy-printer {
-    height: 200px;
-    overflow: auto;
-    resize: vertical;
-    padding-bottom: 64px;
+  height: 200px;
+  overflow: auto;
+  resize: vertical;
+  padding-bottom: 64px;
 }
 
 .blockpy-printer-default {
-    background-color: var(--blockpy-neutral-0);
-    border: 1px solid var(--blockpy-neutral-250);
+  background-color: var(--blockpy-neutral-0);
+  border: 1px solid var(--blockpy-neutral-250);
 }
 
 .blockpy-printer-inverse {
-    background-color: var(--blockpy-neutral-900);
-    border: 1px solid var(--blockpy-neutral-400);
-    color: var(--blockpy-neutral-0);
+  background-color: var(--blockpy-neutral-900);
+  border: 1px solid var(--blockpy-neutral-400);
+  color: var(--blockpy-neutral-0);
 }
 
 .blockpy-printer .blockpy-printer-output {
-    display: block;
-    padding-left: 10px;
-    border-bottom: 1px dashed var(--blockpy-neutral-250);
+  display: block;
+  padding-left: 10px;
+  border-bottom: 1px dashed var(--blockpy-neutral-250);
 }
 
 .blockpy-printer .blockpy-printer-output samp {
-    white-space: pre;
+  white-space: pre;
+}
+
+/* Tracebacks (M3.2): monospace, newline/indent preserving, wrapping only at
+   the printer edge. <pre> resets its UA margin so the dashed row separators
+   stay tight. */
+.blockpy-printer .blockpy-printer-traceback {
+  margin: 0;
+  color: darkred;
+  font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.9em;
+  white-space: pre-wrap;
+}
+
+.blockpy-printer .blockpy-printer-output:has(.blockpy-printer-traceback) {
+  border-left: 3px solid red;
 }
 
 .blockpy-console-plot-output {
-    cursor: pointer;
+  cursor: pointer;
 }
 
+/* Plots stretch to the console column with a sane cap (M3.2, ledger LD-20;
+   legacy max-height:100px thumbnails superseded). */
 .blockpy-console-image-output img {
-    max-height: 100px;
+  width: 100%;
+  height: auto;
+  max-height: 480px;
+  object-fit: contain;
 }
 
 .blockpy-console-input input {
-    width: 75%;
+  width: 75%;
 }
 
 .blockpy-btn-eval {
-    position: absolute;
-    bottom: 2px;
-    left: 20px;
+  position: absolute;
+  bottom: 2px;
+  left: 20px;
 }
 
 /* Anchor for the pinned Evaluate button (legacy relied on the nearest
    positioned ancestor; explicit here so the button sits at the bottom-left
    of the console panel per blockpy.css:143-147). */
 .blockpy-content .blockpy-console {
-    position: relative;
+  position: relative;
 }
 
 /* Dev console (STUDIO EXTENSION): instructor-only secondary console sharing
    the console slot via a header toggle. Same printer footprint as the
    student console, visually distinct (dark, terminal-like). */
 .blockpy-dev-console .blockpy-dev-printer {
-    padding-bottom: 0;
-    background-color: var(--blockpy-neutral-900);
-    border: 1px solid var(--blockpy-neutral-400);
-    color: var(--blockpy-neutral-0);
-    font-family: monospace;
-    font-size: 12px;
+  padding-bottom: 0;
+  background-color: var(--blockpy-neutral-900);
+  border: 1px solid var(--blockpy-neutral-400);
+  color: var(--blockpy-neutral-0);
+  font-family: monospace;
+  font-size: 12px;
 }
 
 .blockpy-dev-console .blockpy-dev-printer .blockpy-printer-output {
-    border-bottom: none;
+  border-bottom: none;
 }
 
 /* Unseen-entry count on the console/dev-console toggle button. */
 .blockpy-console-toggle .blockpy-console-toggle-badge {
-    background-color: var(--blockpy-status-danger);
-    color: var(--blockpy-neutral-0);
-    margin-left: 4px;
+  background-color: var(--blockpy-status-danger);
+  color: var(--blockpy-neutral-0);
+  margin-left: 4px;
 }
 
 /** Feedback **/
 
 .blockpy-content .feedback-badge {
-    font-size: 75%;
-    color: var(--blockpy-neutral-0);
+  font-size: 75%;
+  color: var(--blockpy-neutral-0);
 }
 
 .blockpy-content .label-internal-error {
-    background-color: var(--blockpy-status-internal);
+  background-color: var(--blockpy-status-internal);
 }
 
 .blockpy-content .label-syntax-error {
-    background-color: var(--blockpy-status-syntax);
+  background-color: var(--blockpy-status-syntax);
 }
 
 .blockpy-content .label-runtime-error {
-    background-color: var(--blockpy-status-danger);
+  background-color: var(--blockpy-status-danger);
 }
 
 .blockpy-content .label-semantic-error {
-    background-color: var(--blockpy-status-semantic);
+  background-color: var(--blockpy-status-semantic);
 }
 
 .blockpy-content .label-feedback-error {
-    background-color: var(--blockpy-status-warning);
+  background-color: var(--blockpy-status-warning);
 }
 
 .blockpy-content .label-problem-complete {
-    background-color: var(--blockpy-status-success);
+  background-color: var(--blockpy-status-success);
 }
 
 .blockpy-content .label-none {
-    background-color: rgba(0, 0, 0, 0);
+  background-color: rgba(0, 0, 0, 0);
 }
 
 .blockpy-content .label-no-errors {
-    background-color: var(--blockpy-status-info);
+  background-color: var(--blockpy-status-info);
 }
 
 .blockpy-content .label-instructions {
-    background-color: var(--blockpy-status-info);
+  background-color: var(--blockpy-status-info);
 }
 
 .blockpy-content .label-success {
-    background-color: var(--blockpy-status-success-dark);
+  background-color: var(--blockpy-status-success-dark);
 }
 
 .blockpy-feedback {
-    padding: 10px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
+  padding: 10px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Panel title rows (Feedback/Trace/Console): flex, action button pushed
+   right. Replaces the clearfix+float pattern whose floated .btn-sm forced
+   the row taller than the baseline-seated title — the "View Trace gap"
+   (M3.2). */
+.blockpy-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.blockpy-panel-header .blockpy-panel-header-action {
+  margin-left: auto;
 }
 
 .blockpy-feedback-traces table {
-    background: var(--blockpy-neutral-0);
-    width: 100%;
+  background: var(--blockpy-neutral-0);
+  width: 100%;
 }
 
 .blockpy-feedback-thank-you {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    opacity: 0;
-    transition: all 0.5s ease-out;
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  opacity: 0;
+  transition: all 0.5s ease-out;
 }
 
 .blockpy-feedback-thank-you.show {
-    opacity: 1;
-    transform: translateY(-16px);
+  opacity: 1;
+  transform: translateY(-16px);
 }
 
 table.pedal-table {
-    background: var(--blockpy-neutral-0);
-    width: 100%;
-    padding-top: 4px;
+  background: var(--blockpy-neutral-0);
+  width: 100%;
+  padding-top: 4px;
 }
 
 table.pedal-table tr.pedal-row {
-    border-top: 1px solid var(--blockpy-neutral-250);
+  border-top: 1px solid var(--blockpy-neutral-250);
 }
 
 table.pedal-table pre.pedal-python-code {
-    display: inline-block;
+  display: inline-block;
 }
 
 .blockpy-feedback pre {
-    background: var(--blockpy-neutral-75);
-    border: 1px solid var(--blockpy-neutral-250);
-    font-size: 12px;
-    padding: 3px 5px;
-    border-radius: 4px;
-    overflow-x: auto;
+  background: var(--blockpy-neutral-75);
+  border: 1px solid var(--blockpy-neutral-250);
+  font-size: 12px;
+  padding: 3px 5px;
+  border-radius: 4px;
+  overflow-x: auto;
 }
 
 .blockpy-feedback pre strong {
-    font-size: 12px;
+  font-size: 12px;
 }
 
 .blockpy-feedback pre span.filename {
-    color: var(--blockpy-positive-green);
-    font-weight: bold;
-    font-size: 12px;
+  color: var(--blockpy-positive-green);
+  font-weight: bold;
+  font-size: 12px;
 }
 
 .blockpy-feedback pre span.lineno {
-    color: var(--blockpy-status-semantic);
-    font-weight: bold;
-    font-size: 12px;
+  color: var(--blockpy-status-semantic);
+  font-weight: bold;
+  font-size: 12px;
 }
 
 .blockpy-feedback-unit code {
-    color: var(--blockpy-neutral-900);
-    background-color: transparent;
+  color: var(--blockpy-neutral-900);
+  background-color: transparent;
 }
 
 .blockpy-feedback-original {
-    white-space: pre-wrap;
+  white-space: pre-wrap;
 }
 
 .blockpy-content .blockpy-floating-feedback {
-    z-index: 100;
-    margin-top: 10px;
-    display: none;
-    color: var(--blockpy-alert-red); /* red wins over .text-muted-less (A8 §5.5) */
+  z-index: 100;
+  margin-top: 10px;
+  display: none;
+  color: var(--blockpy-alert-red); /* red wins over .text-muted-less (A8 §5.5) */
 }
 
 /** Trace **/
 .blockpy-content .blockpy-trace {
-    padding-top: 10px;
+  padding-top: 10px;
 }
 
 .blockpy-content .blockpy-hide-trace {
-    margin-top: 10px;
-    margin-left: 10px;
+  margin-top: 10px;
+  margin-left: 10px;
 }
 
 .blockpy-content .blockpy-trace-controls button {
-    margin-top: 0px;
-    margin-bottom: 0px;
+  margin-top: 0px;
+  margin-bottom: 0px;
 }
 
 /** Third Row **/
 
 .blockpy-content .nav-tabs {
-    border-bottom: none;
+  border-bottom: none;
 }
 
 .blockpy-content .nav-link {
-    padding: .2rem .5rem;
-    background-color: var(--blockpy-tab-bg);
-    color: var(--blockpy-neutral-900);
-    border: none;
-    border-left: 2px solid var(--blockpy-tab-border);
-    border-right: 2px solid var(--blockpy-tab-border);
-    border-radius: 0;
+  padding: 0.2rem 0.5rem;
+  background-color: var(--blockpy-tab-bg);
+  color: var(--blockpy-neutral-900);
+  border: none;
+  border-left: 2px solid var(--blockpy-tab-border);
+  border-right: 2px solid var(--blockpy-tab-border);
+  border-radius: 0;
 }
 
 .blockpy-content .nav-link.active {
-    background-color: var(--blockpy-tab-active-bg);
-    color: var(--blockpy-neutral-900);
-    border: 1px solid var(--blockpy-tab-border);
-    border-right: 2px solid var(--blockpy-tab-border);
-    border-left: 2px solid var(--blockpy-tab-border);
-    padding-bottom: .1rem;
-    font-weight: bold;
+  background-color: var(--blockpy-tab-active-bg);
+  color: var(--blockpy-neutral-900);
+  border: 1px solid var(--blockpy-tab-border);
+  border-right: 2px solid var(--blockpy-tab-border);
+  border-left: 2px solid var(--blockpy-tab-border);
+  padding-bottom: 0.1rem;
+  font-weight: bold;
 }
 
 .blockpy-content .nav-link:hover {
-    background-color: var(--blockpy-tab-border); /* #ddd shared with tab border (A8 §2.2) */
+  background-color: var(--blockpy-tab-border); /* #ddd shared with tab border (A8 §2.2) */
 }
 
 .blockpy-content .nav-link.active:hover {
-    background-color: var(--blockpy-tab-active-bg);
+  background-color: var(--blockpy-tab-active-bg);
 }
 
 .blockpy-content a.nav-link {
-    text-decoration: none;
+  text-decoration: none;
 }
 
 .blockpy-content .nav-link.uneditable {
-    color: var(--blockpy-tab-uneditable);
-    font-style: italic;
+  color: var(--blockpy-tab-uneditable);
+  font-style: italic;
 }
 
 .blockpy-content .nav-item strong {
-    vertical-align: middle;
-    padding-right: 5px;
+  vertical-align: middle;
+  padding-right: 5px;
 }
 
 .blockpy-content .nav-tabs .nav-item:first-child {
-    padding-top: 7px;
+  padding-top: 7px;
 }
 
 .blockpy-content .nav-tabs .nav-item {
-    padding-top: 5px;
+  padding-top: 5px;
 }
 
 .btn-file {
-    position: relative;
-    overflow: hidden;
-    cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
 }
 
-.btn-file input[type=file] {
-    position: absolute;
-    top: 0;
-    right: 0;
-    min-width: 100%;
-    min-height: 100%;
-    font-size: 100px;
-    text-align: right;
-    filter: alpha(opacity=0);
-    opacity: 0;
-    outline: none;
-    background: var(--blockpy-neutral-0);
-    cursor: pointer;
-    display: block;
+.btn-file input[type='file'] {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 100%;
+  min-height: 100%;
+  font-size: 100px;
+  text-align: right;
+  filter: alpha(opacity=0);
+  opacity: 0;
+  outline: none;
+  background: var(--blockpy-neutral-0);
+  cursor: pointer;
+  display: block;
 }
 
 /** View Rows **/
 
 .blockpy-content .blockpy-python-toolbar {
-    padding-left: 0px;
+  padding-left: 0px;
 }
 
 button.blockpy-run {
-    background-color: var(--blockpy-run-green);
-    color: var(--blockpy-neutral-0);
+  background-color: var(--blockpy-run-green);
+  color: var(--blockpy-neutral-0);
 }
 
 button.blockpy-run:focus {
-    background-color: var(--blockpy-run-green-focus);
+  background-color: var(--blockpy-run-green-focus);
 }
 
 .blockpy-content button.blockpy-run.blockpy-run-running {
-    background-color: var(--blockpy-run-running);
+  background-color: var(--blockpy-run-running);
 }
 
 /* Defined in legacy but never applied by legacy JS (A8 §5.2) — kept for parity */
 .blockpy-content button.blockpy-run.blockpy-run-error {
-    background-color: var(--blockpy-run-error);
+  background-color: var(--blockpy-run-error);
 }
 
 button.blockpy-delete {
-    background-color: var(--blockpy-neutral-0);
-    border-color: var(--blockpy-delete-maroon);
-    color: var(--blockpy-neutral-900);
+  background-color: var(--blockpy-neutral-0);
+  border-color: var(--blockpy-delete-maroon);
+  color: var(--blockpy-neutral-900);
 }
 
 button.blockpy-delete:focus {
-    border-color: var(--blockpy-delete-maroon-dark);
+  border-color: var(--blockpy-delete-maroon-dark);
 }
 
 button.blockpy-delete:active {
-    background-color: var(--blockpy-delete-maroon-dark);
-    color: var(--blockpy-neutral-0);
+  background-color: var(--blockpy-delete-maroon-dark);
+  color: var(--blockpy-neutral-0);
 }
 
 .blockpy-text {
-    border: 1px solid var(--blockpy-neutral-250);
+  border: 1px solid var(--blockpy-neutral-250);
 }
 
 .blockpy-upload {
-    border: 1px solid var(--blockpy-neutral-250);
+  border: 1px solid var(--blockpy-neutral-250);
 }
 
 .editor-active-line {
-    background: var(--blockpy-line-active-bg) !important;
-    color: var(--blockpy-line-active-text) !important;
+  background: var(--blockpy-line-active-bg) !important;
+  color: var(--blockpy-line-active-text) !important;
 }
 
 /* Legacy CodeMirror 5 gutter (bp.css:428-431) ... */
 .CodeMirror-gutters {
-    background-color: var(--blockpy-tab-border);
-    border-left: 1px solid var(--blockpy-gutter-border);
+  background-color: var(--blockpy-tab-border);
+  border-left: 1px solid var(--blockpy-gutter-border);
 }
 
 /* ... and its CodeMirror 6 equivalent */
 .blockpy-content .cm-gutters {
-    background-color: var(--blockpy-tab-border);
-    border-right: 1px solid var(--blockpy-gutter-border);
+  background-color: var(--blockpy-tab-border);
+  border-right: 1px solid var(--blockpy-gutter-border);
 }
 
 /* CodeMirror 5 shipped a white editor background by default; CodeMirror 6's
    .cm-editor is transparent, which would let the parchment page tint show
    through. Pin the legacy white. */
 .blockpy-content .cm-editor {
-    background-color: var(--blockpy-neutral-0);
+  background-color: var(--blockpy-neutral-0);
 }
 
 .editor-error-line {
-    background: var(--blockpy-line-error-bg) !important;
+  background: var(--blockpy-line-error-bg) !important;
 }
 
 .editor-uncovered-line {
-    background: var(--blockpy-line-uncovered-bg) !important;
+  background: var(--blockpy-line-uncovered-bg) !important;
 }
 
 .editor-traced-line {
-    background: var(--blockpy-line-active-bg) !important;
+  background: var(--blockpy-line-active-bg) !important;
 }
 
 div.blockpy-text.blockpy-editor-menu.col-md-6 {
-    padding-left: 0px;
-    padding-right: 0px;
+  padding-left: 0px;
+  padding-right: 0px;
 }
 
 div.blockpy-blocks.blockpy-editor-menu.col-md-6 {
-    padding-left: 0px;
+  padding-left: 0px;
 }
 
 /* Legacy CodeMirror 5 per-line rule (bp.css:454-456) ... */
 .CodeMirror-code div pre {
-    border-bottom: 1px dashed var(--blockpy-line-rule);
+  border-bottom: 1px dashed var(--blockpy-line-rule);
 }
 
 /* ... and its CodeMirror 6 equivalent */
 .blockpy-content .cm-line {
-    border-bottom: 1px dashed var(--blockpy-line-rule);
+  border-bottom: 1px dashed var(--blockpy-line-rule);
 }
 
 /* Legacy CodeMirror 5 read-only gray-out (bp.css:458-460) ... */
 .blockpy-read-only .CodeMirror-scroll {
-    background-color: var(--blockpy-editor-readonly-bg);
+  background-color: var(--blockpy-editor-readonly-bg);
 }
 
 /* ... and its CodeMirror 6 equivalent */
 .blockpy-read-only .cm-scroller {
-    background-color: var(--blockpy-editor-readonly-bg);
+  background-color: var(--blockpy-editor-readonly-bg);
 }
 
 /** Markdown Editor **/
 .blockpy-content .editor-preview {
-    background: var(--blockpy-bg-parchment);
-    padding: 0px;
-    /* legacy #faebcd is a typo of #faebcc, folded into the token (A8 §5.4) */
-    border: 1px solid var(--blockpy-border-warm);
+  background: var(--blockpy-bg-parchment);
+  padding: 0px;
+  /* legacy #faebcd is a typo of #faebcc, folded into the token (A8 §5.4) */
+  border: 1px solid var(--blockpy-border-warm);
 }
 
 .blockpy-content .editor-toolbar {
-    background: var(--blockpy-neutral-100);
-    border: 1px solid var(--blockpy-neutral-250)
+  background: var(--blockpy-neutral-100);
+  border: 1px solid var(--blockpy-neutral-250);
 }
 
 .blockpy-content .cm-s-easymde {
-    border-bottom: 1px solid var(--blockpy-neutral-250);
-    border-left: 1px solid var(--blockpy-neutral-250);
-    border-right: 1px solid var(--blockpy-neutral-250);
+  border-bottom: 1px solid var(--blockpy-neutral-250);
+  border-left: 1px solid var(--blockpy-neutral-250);
+  border-right: 1px solid var(--blockpy-neutral-250);
 }
 
 .blockpy-content .cm-s-easymde .CodeMirror-scroll {
-    width: 100%;
+  width: 100%;
 }
 
 /** Assignment Settings **/
 .blockpy-view-settings .row {
-    border-bottom: 0;
+  border-bottom: 0;
 }
 
 /** Footer Row **/
 
 .blockpy-content .blockpy-status span,
 .blockpy-content .blockpy-status label {
-    font-size: 12px;
+  font-size: 12px;
 }
 
 .blockpy-content .badge {
-    font-size: 75%;
-    color: var(--blockpy-neutral-0);
+  font-size: 75%;
+  color: var(--blockpy-neutral-0);
 }
 
 .blockpy-content .badge.server-status-ready {
-    background-color: var(--blockpy-status-success);
+  background-color: var(--blockpy-status-success);
 }
 
 .blockpy-content .badge.server-status-active {
-    background-color: var(--blockpy-status-info);
+  background-color: var(--blockpy-status-info);
 }
 
 .blockpy-content .badge.server-status-retrying {
-    background-color: var(--blockpy-status-warning);
+  background-color: var(--blockpy-status-warning);
 }
 
 .blockpy-content .badge.server-status-failed {
-    background-color: var(--blockpy-status-danger);
+  background-color: var(--blockpy-status-danger);
 }
 
 .blockpy-content .badge.server-status-offline {
-    background-color: var(--blockpy-status-offline);
+  background-color: var(--blockpy-status-offline);
 }
 
 .blockpy-content .blockpy-hidden-file {
-    display: none;
+  display: none;
 }
 
 .notransition {
-    -webkit-transition: none !important;
-    -moz-transition: none !important;
-    -o-transition: none !important;
-    transition: none !important;
+  -webkit-transition: none !important;
+  -moz-transition: none !important;
+  -o-transition: none !important;
+  transition: none !important;
 }
 
 .blockpy-content .blockpy-feedback-message p {
-    margin-bottom: 0;
+  margin-bottom: 0;
 }
 
-.blockpy-content .blockpy-feedback-message p+p {
-    margin-top: .5rem;
+.blockpy-content .blockpy-feedback-message p + p {
+  margin-top: 0.5rem;
 }
 
 .blockpy-content .blockpy-feedback-message pre {
-    margin: 0;
+  margin: 0;
 }
 
-.blockpy-content .blockpy-feedback-message pre+p {
-    margin-top: .5rem;
+.blockpy-content .blockpy-feedback-message pre + p {
+  margin-top: 0.5rem;
 }
 
 .blockpy-content .blockpy-feedback-message code {
-    padding: 0;
+  padding: 0;
 }
 
 .blockpy-content .blockpy-feedback-positive {
-    right: 10px;
-    bottom: 0;
+  right: 10px;
+  bottom: 0;
 }
 
 .blockpy-content .blockpy-feedback-positive .blockpy-feedback-positive-icon {
-    font-size: 16px;
-    cursor: pointer;
+  font-size: 16px;
+  cursor: pointer;
 }
 
 .blockpy-content .blockpy-dialog-student-error-message {
-    padding: 10px;
-    border: 1px solid var(--blockpy-neutral-250);
+  padding: 10px;
+  border: 1px solid var(--blockpy-neutral-250);
 }
 
 .blockpy-quick-menu .blockpy-student-error {
-    font-size: 16px;
-    cursor: pointer;
-    color: var(--blockpy-student-error-pink);
-    display: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--blockpy-student-error-pink);
+  display: none;
 }
 
 .blockpy-content sup {
-    font-size: 12px;
+  font-size: 12px;
 }
 
 .pedal-positive-mark {
-    color: var(--blockpy-positive-green);
-    font-size: 16px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  color: var(--blockpy-positive-green);
+  font-size: 16px;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif,
+    'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
 /** Pygame windows **/
 
 .blockpy-console-pygame-output {
-    z-index: 9;
-    cursor: pointer;
+  z-index: 9;
+  cursor: pointer;
 }
 
 .pygame-title-bar {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    border: 1px solid var(--blockpy-neutral-400);
-    border-bottom: none;
-    position: relative;
-    padding-left: 2px;
-    background-color: var(--blockpy-neutral-75);
-    border-top-left-radius: 1px;
-    border-top-right-radius: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid var(--blockpy-neutral-400);
+  border-bottom: none;
+  position: relative;
+  padding-left: 2px;
+  background-color: var(--blockpy-neutral-75);
+  border-top-left-radius: 1px;
+  border-top-right-radius: 1px;
 }
 
 .pygame-title-exit {
-    width: 20px;
-    height: 20px;
-    line-height: 0;
-    padding: 0;
-    margin-right: 4px;
-    vertical-align: middle;
-    text-align: center;
-    border: 1px solid var(--blockpy-pygame-exit-border);
-    background-color: var(--blockpy-pygame-exit);
-    color: var(--blockpy-neutral-0);
-    border-radius: 2px;
-    cursor: pointer;
+  width: 20px;
+  height: 20px;
+  line-height: 0;
+  padding: 0;
+  margin-right: 4px;
+  vertical-align: middle;
+  text-align: center;
+  border: 1px solid var(--blockpy-pygame-exit-border);
+  background-color: var(--blockpy-pygame-exit);
+  color: var(--blockpy-neutral-0);
+  border-radius: 2px;
+  cursor: pointer;
 }
 
 .pygame-title-exit:hover {
-    background-color: var(--blockpy-pygame-exit-hover);
+  background-color: var(--blockpy-pygame-exit-hover);
 }
 
 .pygame-title-exit:active {
-    background-color: var(--blockpy-pygame-exit-active);
+  background-color: var(--blockpy-pygame-exit-active);
 }
 
 /** Full-feedback dialog entries **/
 
 .feedback-shrunk {
-    max-height: 4em;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  max-height: 4em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .feedback-expand-on-click {
-    cursor: pointer;
-    border: 1px solid var(--blockpy-neutral-250);
+  cursor: pointer;
+  border: 1px solid var(--blockpy-neutral-250);
 }
 
 .feedback-shrunk.feedback-expand-on-click::before {
-    content: "+";
-    float: right;
+  content: '+';
+  float: right;
 }
 
 .feedback-expand-on-click:not(.feedback-shrunk)::before {
-    content: "-";
-    float: right;
+  content: '-';
+  float: right;
 }
 
 .blockpy-copy-share-link-area {
-    overflow-x: auto;
-    user-select: all;
+  overflow-x: auto;
+  user-select: all;
 }
 
 /* ==========================================================================
@@ -730,71 +769,71 @@ div.blockpy-blocks.blockpy-editor-menu.col-md-6 {
 /* Typography (rt.css:5-15) — B6 allows fonts to modernize with rationale,
    but the 14px/12px hierarchy is layout-relevant (A8 §3.1) */
 body {
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
 .blockpy-content * {
-    font-size: 14px;
+  font-size: 14px;
 }
 
 .blockpy-content .btn-sm,
 .blockpy-content .btn-sm span {
-    font-size: 12px;
+  font-size: 12px;
 }
 
 .blockpy-content a {
-    text-decoration: underline;
+  text-decoration: underline;
 }
 
 .blockpy-content {
-    background-color: var(--blockpy-bg-parchment);
-    border: 1px solid var(--blockpy-border-warm);
-    padding-left: 0px;
-    padding-right: 0px;
+  background-color: var(--blockpy-bg-parchment);
+  border: 1px solid var(--blockpy-border-warm);
+  padding-left: 0px;
+  padding-right: 0px;
 }
 
 .blockpy-content .btn {
-    margin-bottom: 5px;
-    margin-top: 5px;
+  margin-bottom: 5px;
+  margin-top: 5px;
 }
 
 .blockpy-content .btn-outline-secondary {
-    background-color: var(--blockpy-neutral-0);
-    color: var(--blockpy-neutral-800);
+  background-color: var(--blockpy-neutral-0);
+  color: var(--blockpy-neutral-800);
 }
 
 .blockpy-content .btn-outline-secondary:focus {
-    color: var(--blockpy-neutral-800);
-    border-color: var(--blockpy-neutral-500);
-    background-color: var(--blockpy-neutral-125);
+  color: var(--blockpy-neutral-800);
+  border-color: var(--blockpy-neutral-500);
+  background-color: var(--blockpy-neutral-125);
 }
 
 .blockpy-content .btn-outline-secondary:hover {
-    color: var(--blockpy-neutral-800);
-    border-color: var(--blockpy-neutral-450);
-    background-color: var(--blockpy-neutral-125);
+  color: var(--blockpy-neutral-800);
+  border-color: var(--blockpy-neutral-450);
+  background-color: var(--blockpy-neutral-125);
 }
 
 .blockpy-content .text-muted-less {
-    color: var(--blockpy-neutral-700);
+  color: var(--blockpy-neutral-700);
 }
 
 .blockpy-content .label-default {
-    background-color: var(--blockpy-neutral-600);
+  background-color: var(--blockpy-neutral-600);
 }
 
 /* Unscoped in legacy too — zeroes Bootstrap's negative row margins */
 .row {
-    margin-left: 0px;
-    margin-right: 0px;
+  margin-left: 0px;
+  margin-right: 0px;
 }
 
 .blockpy-content .alert {
-    color: var(--blockpy-neutral-900);
+  color: var(--blockpy-neutral-900);
 }
 
 .blockpy-content table {
-    background-color: var(--blockpy-neutral-0);
+  background-color: var(--blockpy-neutral-0);
 }
 
 /* ==========================================================================
@@ -803,54 +842,54 @@ body {
 
 /* bm.css:1-4 (CM5; border-left is commented out in the BlockMirror source) */
 .CodeMirror-gutters {
-    background-color: var(--blockpy-tab-border);
-    /* border-left: 1px solid var(--blockpy-gutter-border); */
+  background-color: var(--blockpy-tab-border);
+  /* border-left: 1px solid var(--blockpy-gutter-border); */
 }
 
 /* CM6 equivalent of bm.css:1-4 */
 .cm-gutters {
-    background-color: var(--blockpy-tab-border);
+  background-color: var(--blockpy-tab-border);
 }
 
 /* bm.css:6-8 (CM5) */
 .CodeMirror-code div pre {
-    border-bottom: 1px dashed var(--blockpy-line-rule);
+  border-bottom: 1px dashed var(--blockpy-line-rule);
 }
 
 /* CM6 equivalent of bm.css:6-8 */
 .cm-line {
-    border-bottom: 1px dashed var(--blockpy-line-rule);
+  border-bottom: 1px dashed var(--blockpy-line-rule);
 }
 
 /* bm.css:10-12 (CM5) */
 .block-mirror-read-only .CodeMirror-scroll {
-    background-color: var(--blockpy-editor-readonly-bg);
+  background-color: var(--blockpy-editor-readonly-bg);
 }
 
 /* CM6 equivalent of bm.css:10-12 */
 .block-mirror-read-only .cm-scroller {
-    background-color: var(--blockpy-editor-readonly-bg);
+  background-color: var(--blockpy-editor-readonly-bg);
 }
 
 .blockly-readonly-layer {
-    color: var(--blockpy-neutral-0);
-    background-color: var(--blockpy-neutral-0);
-    opacity: .25;
-    position: absolute;
-    z-index: 100;
+  color: var(--blockpy-neutral-0);
+  background-color: var(--blockpy-neutral-0);
+  opacity: 0.25;
+  position: absolute;
+  z-index: 100;
 }
 
-.blockmirror-toolbox-variable>.blocklyFlyoutLabelText {
-    font-style: normal;
-    fill: var(--blockpy-neutral-900);
+.blockmirror-toolbox-variable > .blocklyFlyoutLabelText {
+  font-style: normal;
+  fill: var(--blockpy-neutral-900);
 }
 
-.blockmirror-toolbox-variable>.blocklyFlyoutLabelBackground {
-    font-style: normal;
-    fill: var(--blockpy-neutral-0);
-    opacity: 1;
-    stroke: var(--blockpy-neutral-400);
-    transform: translate(-1px, -5px) scale(1.1, 1.5);
+.blockmirror-toolbox-variable > .blocklyFlyoutLabelBackground {
+  font-style: normal;
+  fill: var(--blockpy-neutral-0);
+  opacity: 1;
+  stroke: var(--blockpy-neutral-400);
+  transform: translate(-1px, -5px) scale(1.1, 1.5);
 }
 
 /* ==========================================================================
@@ -861,32 +900,32 @@ body {
    ========================================================================== */
 
 .blockpy-content pre code.hljs {
-    display: block;
-    overflow-x: auto;
-    padding: 1em;
+  display: block;
+  overflow-x: auto;
+  padding: 1em;
 }
 
 .blockpy-content code.hljs {
-    padding: 3px 5px;
+  padding: 3px 5px;
 }
 
 .blockpy-content .hljs {
-    background: #f3f3f3;
-    color: #444;
+  background: #f3f3f3;
+  color: #444;
 }
 
 .blockpy-content .hljs-comment {
-    color: #697070;
+  color: #697070;
 }
 
 .blockpy-content .hljs-tag,
 .blockpy-content .hljs-punctuation {
-    color: #444a;
+  color: #444a;
 }
 
 .blockpy-content .hljs-tag .hljs-name,
 .blockpy-content .hljs-tag .hljs-attr {
-    color: #444;
+  color: #444;
 }
 
 .blockpy-content .hljs-keyword,
@@ -895,7 +934,7 @@ body {
 .blockpy-content .hljs-meta .hljs-keyword,
 .blockpy-content .hljs-doctag,
 .blockpy-content .hljs-name {
-    font-weight: bold;
+  font-weight: bold;
 }
 
 .blockpy-content .hljs-type,
@@ -906,13 +945,13 @@ body {
 .blockpy-content .hljs-quote,
 .blockpy-content .hljs-template-tag,
 .blockpy-content .hljs-deletion {
-    color: #880000;
+  color: #880000;
 }
 
 .blockpy-content .hljs-title,
 .blockpy-content .hljs-section {
-    color: #880000;
-    font-weight: bold;
+  color: #880000;
+  font-weight: bold;
 }
 
 .blockpy-content .hljs-regexp,
@@ -923,34 +962,34 @@ body {
 .blockpy-content .hljs-selector-attr,
 .blockpy-content .hljs-operator,
 .blockpy-content .hljs-selector-pseudo {
-    color: #ab5656;
+  color: #ab5656;
 }
 
 .blockpy-content .hljs-literal {
-    color: #695;
+  color: #695;
 }
 
 .blockpy-content .hljs-built_in,
 .blockpy-content .hljs-bullet,
 .blockpy-content .hljs-code,
 .blockpy-content .hljs-addition {
-    color: #397300;
+  color: #397300;
 }
 
 .blockpy-content .hljs-meta {
-    color: #1f7199;
+  color: #1f7199;
 }
 
 .blockpy-content .hljs-meta .hljs-string {
-    color: #38a;
+  color: #38a;
 }
 
 .blockpy-content .hljs-emphasis {
-    font-style: italic;
+  font-style: italic;
 }
 
 .blockpy-content .hljs-strong {
-    font-weight: bold;
+  font-weight: bold;
 }
 
 /* Minified editor variant (§8.4) — compact reading-embedded editor.
@@ -959,42 +998,42 @@ body {
    also carries .blockpy-content, so the parchment frame and every scoped
    color rule (feedback badges, button retheme) match the full editor. */
 .blockpy-minified {
-    display: flex;
-    gap: 8px;
-    align-items: stretch;
-    flex-wrap: wrap;
-    padding: 6px 10px;
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  flex-wrap: wrap;
+  padding: 6px 10px;
 }
 
 .blockpy-minified .blockpy-minified-left {
-    flex: 2 1 240px;
-    display: flex;
-    flex-direction: column;
-    min-width: 200px;
+  flex: 2 1 240px;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
 }
 
 .blockpy-minified .blockpy-minified-right {
-    flex: 3 1 320px;
-    min-width: 260px;
+  flex: 3 1 320px;
+  min-width: 260px;
 }
 
 .blockpy-minified .blockpy-minified-toolbar .btn {
-    margin: 2px 0;
+  margin: 2px 0;
 }
 
 .blockpy-minified .blockpy-minified-printer {
-    height: 90px;
-    resize: none;
-    padding-bottom: 0;
+  height: 90px;
+  resize: none;
+  padding-bottom: 0;
 }
 
 /* Feedback sits on the parchment like the full editor's feedback pane
    (no white box); the warm seam above mirrors the .blockpy-content row
    border between console and feedback regions. */
 .blockpy-minified .blockpy-minified-feedback {
-    flex: 1;
-    margin-top: 4px;
-    padding: 2px 6px;
-    border-top: 1px solid var(--blockpy-border-warm);
-    overflow-y: auto;
+  flex: 1;
+  margin-top: 4px;
+  padding: 2px 6px;
+  border-top: 1px solid var(--blockpy-border-warm);
+  overflow-y: auto;
 }

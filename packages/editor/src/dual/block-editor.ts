@@ -19,6 +19,7 @@
 import * as Blockly from 'blockly/core';
 import {
   TextToBlocksConverter,
+  installVariablesFlyout,
   workspaceToPython,
   type ConverterConfiguration,
 } from '@blockpy/blocks';
@@ -91,6 +92,9 @@ export class DualBlockEditor {
       toolbox: this.makeToolbox(),
       renderer: host.renderer,
     });
+    // BlockMirror's VARIABLE category serves ast_* blocks, not the stock
+    // variables_get/set the Blockly 11 default would (M3.1).
+    installVariablesFlyout(this.workspace);
     this.workspace.addChangeListener(this.changed.bind(this));
   }
 

@@ -144,6 +144,24 @@ export interface If extends Located {
   orelse: Stmt[];
 }
 
+export interface Match extends Located {
+  _astname: 'Match';
+  subject: Expr;
+  cases: MatchCase[];
+}
+
+/**
+ * M3.6 design decision: case patterns are TEXTUAL in v1 — the raw source
+ * between `case` and the clause colon, guards included. Patterns are not
+ * expressions and BlockMirror has no precedent; revisit only if course
+ * content demands a pattern-block algebra.
+ */
+export interface MatchCase extends Located {
+  _astname: 'match_case';
+  pattern: string;
+  body: Stmt[];
+}
+
 export interface With extends Located {
   _astname: 'With';
   items: WithItem[];
@@ -239,6 +257,7 @@ export type Stmt =
   | For
   | While
   | If
+  | Match
   | With
   | Raise
   | Try

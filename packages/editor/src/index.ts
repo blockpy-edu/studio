@@ -40,6 +40,11 @@ export {
   type RunOutcome,
 } from './chrome/CodingEditor';
 export { FileTabs, computeTabs, type FileTab } from './chrome/FileTabs';
+export {
+  SettingsEditor,
+  type AssignmentFields,
+  type SettingsEditorProps,
+} from './chrome/SettingsEditor';
 export { AddNewMenu, type AddNewMenuProps } from './chrome/AddNewMenu';
 export { MinifiedEditor, type MinifiedEditorProps } from './chrome/MinifiedEditor';
 export { TraceExplorer, typeFromRepr } from './chrome/TraceExplorer';

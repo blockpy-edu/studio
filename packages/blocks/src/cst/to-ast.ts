@@ -185,6 +185,8 @@ class CstConverter {
         return [this.updateStatement(node, loc)];
       case 'IfStatement':
         return [this.ifStatement(node)];
+      case 'MatchStatement':
+        return [this.matchStatement(node, loc)];
       case 'WhileStatement':
         return [this.whileStatement(node, loc)];
       case 'ForStatement':
@@ -429,6 +431,44 @@ class CstConverter {
       lineno: first.lineno,
       col_offset: first.col_offset,
     };
+  }
+
+  /**
+   * match/case (M3.6). CST: `match` expr MatchBody{ ':' MatchClause+ };
+   * MatchClause: `case` pattern+ Guard? Body. v1 keeps each case pattern
+   * TEXTUAL — the raw source between the `case` keyword and the clause
+   * body, guards included — patterns are not expressions and BlockMirror
+   * has no precedent (plan M3.6 design decision).
+   */
+  private matchStatement(
+    node: SyntaxNode,
+    loc: { lineno: number; col_offset: number },
+  ): ir.Match {
+    const children = this.childrenOf(node);
+    const bodyIdx = children.findIndex((c) => c.name === 'MatchBody');
+    if (bodyIdx <= 1) this.fail(node, 'malformed match statement');
+    const subject = this.expressionSequence(
+      children.slice(1, bodyIdx).filter((c) => c.name !== '*'),
+      node,
+    );
+    const cases: ir.MatchCase[] = [];
+    for (const clause of this.childrenOf(children[bodyIdx]!)) {
+      if (clause.name !== 'MatchClause') continue; // ':' etc.
+      const parts = this.childrenOf(clause);
+      const body = parts[parts.length - 1];
+      if (!body || body.name !== 'Body') this.fail(clause, 'malformed case clause');
+      const caseKw = parts[0]!;
+      const pattern = this.source.slice(caseKw.to, body.from).trim();
+      cases.push({
+        _astname: 'match_case',
+        pattern,
+        body: this.body(body),
+        lineno: this.lineOf(clause),
+        col_offset: this.colOf(clause),
+      });
+    }
+    if (cases.length === 0) this.fail(node, 'match statement without cases');
+    return { _astname: 'Match', subject, cases, ...loc };
   }
 
   private whileStatement(

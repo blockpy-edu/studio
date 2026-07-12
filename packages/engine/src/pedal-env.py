@@ -1,19 +1,16 @@
-/**
- * The Pedal "blockpy environment" contract for Studio (spec §10.1),
- * validated by Spike S3 (docs/spikes/S3-pedal-pyodide.md): Pedal runs
- * natively in Pyodide; instructor `!on_run.py` scripts execute unchanged.
- *
- * Pipeline (per spike; start_trace BEFORE run is load-bearing for
- * ensure_coverage): clear → stage files → set_source → queue inputs →
- * start_trace → sandbox run → tifa → exec(on_run) → resolve.
- *
- * File staging implements the legacy engine-virtual names (A1 §3):
- * instructor-owned files (`!`, `?`, `&` prefixes) are staged prefix-stripped
- * into the working directory AND (for .py files) into an `_instructor`
- * package, because real graders do `from _instructor.helpers import ...`
- * (verified against the bakery corpus).
- */
-export const PEDAL_ENV_PY = `
+# The Pedal "blockpy environment" contract for Studio (spec 10.1), validated
+# by Spike S3 (docs/spikes/S3-pedal-pyodide.md): Pedal runs natively in
+# Pyodide; instructor !on_run.py scripts execute unchanged.
+#
+# Pipeline (per spike; start_trace BEFORE run is load-bearing for
+# ensure_coverage): clear -> stage files -> set_source -> queue inputs ->
+# start_trace -> sandbox run -> tifa -> exec(on_run) -> resolve.
+#
+# File staging implements the legacy engine-virtual names (A1 section 3):
+# instructor-owned files (!, ?, & prefixes) are staged prefix-stripped into
+# the working directory AND (for .py files) into an _instructor package,
+# because real graders do `from _instructor.helpers import ...` (verified
+# against the bakery corpus).
 import importlib
 import json
 import os
@@ -127,4 +124,3 @@ def _studio_pedal_grade(student_code, on_run, files_json, inputs):
                        'Please report this to your instructor.',
             'system_error': _tb.format_exc(),
         }
-`;

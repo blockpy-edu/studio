@@ -28,7 +28,9 @@ describe('DualEditor', () => {
     const editor = makeEditor();
     expect(editor.configuration.height).toBe(500);
     expect(editor.configuration.viewMode).toBe('split');
-    expect(editor.configuration.blockDelay).toBe(false);
+    // M3.3: text→blocks regeneration debounces 300 ms by default (the code
+    // mirror still updates immediately); `false` restores legacy-immediate.
+    expect(editor.configuration.blockDelay).toBe(300);
     expect(editor.configuration.toolbox).toBe('normal');
     expect(editor.configuration.renderer).toBe('Thrasos');
     expect(editor.getMode()).toBe('split');

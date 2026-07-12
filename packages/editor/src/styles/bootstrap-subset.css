@@ -90,6 +90,46 @@
     }
 }
 
+/* col-sm-* used by the Make-New-File dialog form grid (AddNewMenu). These
+   were missing from the subset, so the dialog's labels/inputs rendered as
+   unsized flex children — the "Add New menu messed-up layout" (M3.3). */
+.col-sm-2,
+.col-sm-4,
+.col-sm-10,
+.col-sm-12 {
+    position: relative;
+    width: 100%;
+    padding-right: 15px;
+    padding-left: 15px;
+}
+
+@media (min-width: 576px) {
+    .col-sm-2 {
+        flex: 0 0 16.666667%;
+        max-width: 16.666667%;
+    }
+
+    .col-sm-4 {
+        flex: 0 0 33.333333%;
+        max-width: 33.333333%;
+    }
+
+    .col-sm-10 {
+        flex: 0 0 83.333333%;
+        max-width: 83.333333%;
+    }
+
+    .col-sm-12 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}
+
+/* BS4 text utility used by the dialog's label columns. */
+.text-right {
+    text-align: right !important;
+}
+
 /* --------------------------------------------------------------------------
    Buttons (.btn, .btn-sm, .btn-outline-secondary, .btn-success)
    NOTE: bootstrap_retheme (ported in blockpy.css) re-skins
@@ -918,6 +958,10 @@ textarea.form-control {
 
 .mt-1 {
     margin-top: 0.25rem !important;
+}
+
+.mt-2 {
+    margin-top: 0.5rem !important;
 }
 
 .mb-1 {

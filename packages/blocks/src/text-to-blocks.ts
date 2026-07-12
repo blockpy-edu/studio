@@ -180,6 +180,25 @@ export class TextToBlocksConverter {
         this.recursiveMeasure(node.orelse[i], next);
       }
     }
+    // match/case (M3.6): case bodies measure like sibling `body` chains —
+    // a statement's extent runs to the next statement, the next case's
+    // header line, or the match's own successor for the final case.
+    if ('cases' in node) {
+      for (let c = 0; c < node.cases.length; c++) {
+        const matchCase = node.cases[c];
+        for (let i = 0; i < matchCase.body.length; i++) {
+          let next;
+          if (i + 1 < matchCase.body.length) {
+            next = matchCase.body[i + 1].lineno - 1;
+          } else if (c + 1 < node.cases.length) {
+            next = node.cases[c + 1].lineno - 1;
+          } else {
+            next = myNext;
+          }
+          this.recursiveMeasure(matchCase.body[i], next);
+        }
+      }
+    }
   }
 
   measureNode(node: Module): void {

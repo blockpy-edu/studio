@@ -69,12 +69,15 @@ export function Feedback({ size = 'col-md-6', ...props }: FeedbackProps) {
     props.onRate?.(rating);
     setHasRated(true);
     setThankYou(true);
-    // Legacy quirk (blockpy.js:801-813): after the 1 s thank-you, ANY
-    // rating opens the PROMPTED share dialog (the suggestShare parameter
-    // is dead — hasRated is already true by the time the timeout checks).
+    // Ledger LD-18: only a NEGATIVE rating suggests sharing after the 1 s
+    // thank-you. Legacy opened the "having trouble?" prompted share dialog
+    // for ANY rating (blockpy.js:801-813, dead suggestShare param) —
+    // thanking someone for a thumbs-up with a trouble dialog was noise.
     setTimeout(() => {
       setThankYou(false);
-      store.getState().requestPromptedShare();
+      if (rating === 'thumbs-down') {
+        store.getState().requestPromptedShare();
+      }
     }, 1000);
   };
 
@@ -85,18 +88,11 @@ export function Feedback({ size = 'col-md-6', ...props }: FeedbackProps) {
       className={`blockpy-feedback blockpy-panel ${size}`}
       aria-live="polite"
     >
-      {/* One header row: .blockpy-feedback is a flex column (legacy), so
-          bare inline children would stretch full-width — group them. */}
-      <div className="clearfix">
-        {hasTrace && (
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-secondary float-right"
-            onClick={() => setTraceVisible(true)}
-          >
-            <Icon name="eye" /> View Trace
-          </button>
-        )}
+      {/* One header row. Flex (not clearfix/float): a floated button inside
+          the flex-column panel forced the row to button height while the
+          inline title sat on the top baseline — the "View Trace gap"
+          (M3.2). */}
+      <div className="blockpy-panel-header">
         <strong className="feedback-header">Feedback: </strong>
         <span
           className={`badge blockpy-feedback-category feedback-badge ${presentation.badgeClass}`}
@@ -115,6 +111,15 @@ export function Feedback({ size = 'col-md-6', ...props }: FeedbackProps) {
             {' '}
             <u>(reset)</u>
           </small>
+        )}
+        {hasTrace && (
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-secondary blockpy-panel-header-action"
+            onClick={() => setTraceVisible(true)}
+          >
+            <Icon name="eye" /> View Trace
+          </button>
         )}
       </div>
       <strong className="blockpy-feedback-label">{feedback.label}</strong>

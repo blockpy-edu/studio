@@ -1,14 +1,12 @@
-/**
- * The in-worker Python runtime, embedded as a string and installed into
- * Pyodide once at boot. Implements per-job isolation (§6.2): fresh
- * `__main__` module dict per job, `sys.modules` snapshot/restore, FS
- * staging under /mnt/blockpy with artifact diff-back (spec §7.5, LD-3x),
- * scripted stdin, student-relative traceback line mapping (§6.3 —
- * instructor `answer_prefix` lines are subtracted, as legacy Skulpt did),
- * live stdout/stderr tee streaming, and opt-in sys.settrace tracing whose
- * step counter doubles as the instruction limit (E3, §6.2).
- */
-export const RUNTIME_PY = `
+# The in-worker Python runtime, installed into Pyodide once at boot
+# (bundled as a string via a Vite `?raw` import — see raw.d.ts). Implements
+# per-job isolation (spec 6.2): fresh __main__ module dict per job,
+# sys.modules snapshot/restore, FS staging under /mnt/blockpy with artifact
+# diff-back (spec 7.5, LD-3x), scripted stdin, student-relative traceback
+# line mapping (spec 6.3 — instructor answer_prefix lines are subtracted, as
+# legacy Skulpt did), live stdout/stderr tee streaming, and opt-in
+# sys.settrace tracing whose step counter doubles as the instruction limit
+# (E3, spec 6.2).
 import builtins
 import contextlib
 import io
@@ -109,10 +107,10 @@ class StudioRuntime:
     # -- mock URLs (spec 10.4, legacy configurations.js openURL) -------------
 
     def install_requests_mock(self):
-        """Install a per-job \`requests\` shim resolving \`?mock_urls.blockpy\`.
+        """Install a per-job `requests` shim resolving `?mock_urls.blockpy`.
 
         Legacy parity: ALL url access goes through the mock table — the map
-        is JSON \`{filename: [url, ...]}\`; a hit returns the staged file's
+        is JSON `{filename: [url, ...]}`; a hit returns the staged file's
         contents, no map or an unknown url raises the legacy IOError texts
         (configurations.js:135-155). The module is dynamic (no __file__), so
         restore_modules purges it after every job.
@@ -233,9 +231,10 @@ class StudioRuntime:
 
     def run(self, code, filename='answer.py', prefix='', suffix='',
             inputs=None, mode='exec', extract_result=False,
-            trace=False, trace_limit=None, on_stdout=None, on_stderr=None):
+            trace=False, trace_limit=None, on_stdout=None, on_stderr=None,
+            allow_real_requests=False):
         full = (prefix or '') + code + (suffix or '')
-        prefix_lines = (prefix or '').count('\\n')
+        prefix_lines = (prefix or '').count('\n')
         # JS null arrives as JsNull (not None) — normalize scalar options.
         if not isinstance(trace_limit, int):
             trace_limit = None
@@ -258,9 +257,12 @@ class StudioRuntime:
         old_main = sys.modules.get('__main__')
         builtins.input = scripted_input
         sys.modules['__main__'] = module
-        # Legacy parity (spec 10.4): requests always resolves through the
-        # mock-urls table, never the network.
-        self.install_requests_mock()
+        # Legacy parity (spec 10.4): requests resolves through the mock-urls
+        # table, never the network — unless the allow_real_requests setting
+        # is on (M3.5), in which case the REAL requests package (installed
+        # host-side with pyodide-http patching) stays importable.
+        if not allow_real_requests:
+            self.install_requests_mock()
         error = None
         value = None
         try:
@@ -349,4 +351,3 @@ class StudioRuntime:
 
 
 _studio_runtime = StudioRuntime()
-`;

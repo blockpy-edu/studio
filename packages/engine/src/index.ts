@@ -24,9 +24,9 @@ export type { WorkerHostOptions } from './worker-host';
 export { EngineClient } from './client';
 export type { EngineClientOptions, EnginePort, RunCallbacks } from './client';
 export { createLoopbackPort } from './loopback';
-export { RUNTIME_PY } from './runtime.py';
+export { default as RUNTIME_PY } from './runtime.py?raw';
 
 export const PACKAGE_NAME = '@blockpy/engine';
 export { PedalEnvironment, DEFAULT_PEDAL_PACKAGES } from './pedal';
 export type { PedalFeedback, PedalGradeOptions, PedalPyodideLike } from './pedal';
-export { PEDAL_ENV_PY } from './pedal-env.py';
+export { default as PEDAL_ENV_PY } from './pedal-env.py?raw';

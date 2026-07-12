@@ -42,6 +42,7 @@ import type { ComponentType } from 'react';
 import {
   AlignLeft,
   Bug,
+  WandSparkles,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
@@ -113,6 +114,9 @@ const ICONS = {
   thumbsDown: ThumbsDown,
   rateCollapse: SquareMinus,
   rateExpand: SquarePlus,
+  // Autocomplete toggle (M3.3; Studio extension, no legacy glyph —
+  // WandSparkles = "the editor suggests for you").
+  autocomplete: WandSparkles,
 } satisfies Record<string, ComponentType<LucideProps>>;
 
 export type IconName = keyof typeof ICONS;

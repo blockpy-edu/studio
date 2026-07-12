@@ -48,6 +48,13 @@ export interface EngineJob {
   /** Opt-in per run (perf) — E3. */
   trace?: boolean;
   /**
+   * `allow_real_requests` setting (M3.5): skip the ?mock_urls.blockpy
+   * `requests` shim and let the real requests package (pyodide-http
+   * patched, installed lazily by the runner) hit the network — best-effort,
+   * browser CORS still applies. Default false = legacy mock behavior.
+   */
+  allowRealRequests?: boolean;
+  /**
    * Pedal grading request (spec §10.1) — set on `instructor.on_run` /
    * `instructor.on_eval` jobs. The job's `code` is the student submission;
    * the S3 pipeline (set_source → queue_input → start_trace → run → tifa →
