@@ -286,6 +286,84 @@
   margin-left: auto;
 }
 
+/* Filesystem tree rail (M3.7; Studio extension — off by default). */
+.blockpy-file-tree-rail {
+  border-right: 1px solid var(--blockpy-border-warm);
+}
+
+.blockpy-file-tree {
+  font-size: 13px;
+  overflow-y: auto;
+  max-height: 480px;
+}
+
+.blockpy-file-tree-bucket {
+  margin-bottom: 6px;
+}
+
+.blockpy-file-tree-header {
+  font-weight: bold;
+  padding: 2px 4px;
+  border-bottom: 1px solid var(--blockpy-neutral-250);
+}
+
+.blockpy-file-tree-prefix {
+  margin-left: 6px;
+  padding: 0 4px;
+  background: var(--blockpy-tab-bg);
+  border-radius: 3px;
+}
+
+.blockpy-file-tree-row {
+  display: flex;
+  align-items: center;
+  padding: 2px 4px 2px 12px;
+  cursor: pointer;
+}
+
+.blockpy-file-tree-row:hover {
+  background: var(--blockpy-tab-border);
+}
+
+.blockpy-file-tree-row.active {
+  background: var(--blockpy-neutral-0);
+  font-weight: bold;
+}
+
+/* Read-only files match the legacy uneditable tab look (darkblue italic). */
+.blockpy-file-tree-row.uneditable .blockpy-file-tree-name {
+  color: darkblue;
+  font-style: italic;
+}
+
+.blockpy-file-tree-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blockpy-file-tree-actions {
+  display: none;
+  flex-shrink: 0;
+}
+
+.blockpy-file-tree-row:hover .blockpy-file-tree-actions,
+.blockpy-file-tree-row.active .blockpy-file-tree-actions {
+  display: inline-flex;
+}
+
+.blockpy-file-tree-action {
+  border: none;
+  background: none;
+  padding: 0 2px;
+  cursor: pointer;
+}
+
+.blockpy-file-tree-action.blockpy-file-tree-delete {
+  color: var(--blockpy-delete-maroon);
+}
+
 .blockpy-feedback-traces table {
   background: var(--blockpy-neutral-0);
   width: 100%;

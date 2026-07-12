@@ -37,6 +37,12 @@ export default tseslint.config(
     rules: {
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
+      // M5.1: `_`-prefixed params/vars are the codebase's intentional-unused
+      // convention (the `_parent` converter signature across ast/*).
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
     },
   },
   prettier,

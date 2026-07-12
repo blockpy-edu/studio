@@ -493,7 +493,9 @@ class CstConverter {
     node: SyntaxNode,
     loc: { lineno: number; col_offset: number },
   ): ir.For {
-    const children = this.childrenOf(node);
+    const rawChildren = this.childrenOf(node);
+    const isAsync = rawChildren[0]?.name === 'async';
+    const children = isAsync ? rawChildren.slice(1) : rawChildren;
     const inIdx = children.findIndex((c) => c.name === 'in');
     const bodyIdx = children.findIndex((c) => c.name === 'Body');
     const target = this.expressionSequence(children.slice(1, inIdx), node, STORE);
@@ -508,6 +510,7 @@ class CstConverter {
       iter,
       body: this.body(bodies[0]!),
       orelse: bodies.length > 1 ? this.body(bodies[1]!) : [],
+      ...(isAsync ? { is_async: true } : {}),
       ...loc,
     };
   }
@@ -565,7 +568,9 @@ class CstConverter {
     node: SyntaxNode,
     loc: { lineno: number; col_offset: number },
   ): ir.With {
-    const children = this.childrenOf(node);
+    const rawChildren = this.childrenOf(node);
+    const isAsync = rawChildren[0]?.name === 'async';
+    const children = isAsync ? rawChildren.slice(1) : rawChildren;
     const bodyIdx = children.findIndex((c) => c.name === 'Body');
     const itemNodes = children.slice(1, bodyIdx);
     const items: ir.WithItem[] = [];
@@ -593,6 +598,7 @@ class CstConverter {
       _astname: 'With',
       items,
       body: this.body(children[bodyIdx]!),
+      ...(isAsync ? { is_async: true } : {}),
       ...loc,
     };
   }
@@ -602,7 +608,11 @@ class CstConverter {
     decorators: ir.Expr[],
     loc: { lineno: number; col_offset: number },
   ): ir.FunctionDef {
-    const children = this.childrenOf(node);
+    // `async def` (M3.6): strip the leading keyword so positional indexing
+    // holds (children[1] used to read `def` as the function name).
+    const rawChildren = this.childrenOf(node);
+    const isAsync = rawChildren[0]?.name === 'async';
+    const children = isAsync ? rawChildren.slice(1) : rawChildren;
     const name = this.text(children[1]!);
     const paramList = children.find((c) => c.name === 'ParamList')!;
     const typeDef = children.find((c) => c.name === 'TypeDef');
@@ -614,6 +624,7 @@ class CstConverter {
       body: this.body(bodyNode),
       decorator_list: decorators,
       returns: typeDef !== undefined ? this.typeDefExpression(typeDef) : null,
+      ...(isAsync ? { is_async: true } : {}),
       ...loc,
     };
   }
@@ -1018,6 +1029,19 @@ class CstConverter {
         return {
           _astname: 'Await',
           value: this.expressionSequence(children.slice(1), node),
+          ...loc,
+        };
+      }
+      case 'NamedExpression': {
+        // Walrus `target := value` (M3.6): grammar is
+        // `test AssignOp{":="} test`.
+        const children = this.childrenOf(node);
+        const opIdx = children.findIndex((c) => c.name === 'AssignOp');
+        if (opIdx === -1) this.fail(node, 'malformed named expression');
+        return {
+          _astname: 'NamedExpr',
+          target: this.expressionSequence(children.slice(0, opIdx), node, STORE),
+          value: this.expressionSequence(children.slice(opIdx + 1), node),
           ...loc,
         };
       }

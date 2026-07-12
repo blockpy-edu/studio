@@ -8,7 +8,7 @@
  * engine-agnostic; the app supplies an `@blockpy/engine` adapter.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Role, Vfs } from '@blockpy/vfs';
+import { format, parse, type Role, type Space, type Vfs } from '@blockpy/vfs';
 import { DualEditorView } from '../components/DualEditorView';
 import type { DualEditor } from '../dual/dual-editor';
 import { TOOLBOXES, type ToolboxSpec } from '../dual/toolboxes';
@@ -17,6 +17,8 @@ import { DevConsole } from './DevConsole';
 import { Dialog } from './Dialog';
 import { Feedback } from './Feedback';
 import { FileTabs } from './FileTabs';
+import { FileTree } from './FileTree';
+import { Icon } from './icons';
 import { Footer, type FooterProps } from './Footer';
 import {
   editEvents,
@@ -268,6 +270,13 @@ export function CodingEditor(props: CodingEditorProps) {
   const editorRef = useRef<DualEditor | null>(null);
   const store = useEditorChromeStore;
   const pythonMode = useEditorChromeStore((state) => state.pythonMode);
+  const fileTreeOn = useEditorChromeStore((state) => state.fileTree);
+  // Tree rail gating (M3.7): user toggle AND the legacy files-UI gate
+  // (instructor || !hideFiles), and only with a VFS to list.
+  const showFileTree =
+    fileTreeOn &&
+    Boolean(props.vfs) &&
+    ((props.instructor ?? false) || !(props.hideFiles ?? true));
   const traceVisible = useEditorChromeStore((state) => state.traceVisible);
   const activeConsole = useEditorChromeStore((state) => state.activeConsole);
   const historyMode = useEditorChromeStore((state) => state.historyMode);
@@ -301,6 +310,82 @@ export function CodingEditor(props: CodingEditorProps) {
       store.getState().setHistoryMode(false);
     },
     [vfs, store],
+  );
+
+  // -- file management (M3.7 / LD-21) ---------------------------------------
+  // Legacy context: Delete existed (python.js:117-123); Rename was DEAD
+  // (files.js:518-528 references an undefined variable); namespace was only
+  // chosen at creation. Prompts follow the legacy plain-prompt convention
+  // (ImagesManager rename).
+
+  const onLogEvent = props.onLogEvent;
+  const handleDeleteFile = useCallback(
+    (legacyName: string) => {
+      if (!vfs) return;
+      if (!window.confirm(`Are you sure you want to delete ${legacyName}?`)) {
+        return;
+      }
+      if (vfs.delete(legacyName)) {
+        onLogEvent?.('X-File.Delete', '', '', '', legacyName);
+        if (legacyName === activeFile) handleSelectFile('answer.py');
+      }
+    },
+    [vfs, activeFile, handleSelectFile, onLogEvent],
+  );
+
+  const handleRenameFile = useCallback(
+    (legacyName: string) => {
+      if (!vfs) return;
+      const { space, basename } = parse(legacyName);
+      const next = window.prompt(`Rename ${legacyName} to:`, basename);
+      if (!next || next === basename) return;
+      if (vfs.rename(legacyName, next)) {
+        onLogEvent?.('X-File.Rename', '', '', next, legacyName);
+        if (legacyName === activeFile) handleSelectFile(format(space, next));
+      } else {
+        window.alert(
+          'Could not rename the file (protected name, or the target already exists).',
+        );
+      }
+    },
+    [vfs, activeFile, handleSelectFile, onLogEvent],
+  );
+
+  const handleMoveFile = useCallback(
+    (legacyName: string) => {
+      if (!vfs) return;
+      const PREFIX_TO_SPACE: Record<string, Space> = {
+        '!': 'instructor',
+        '?': 'hidden',
+        '&': 'readonly',
+        '^': 'starting',
+        '': 'student',
+      };
+      const answer = window.prompt(
+        `Move ${legacyName} to which namespace?\n` +
+          '! = instructor (inaccessible)   ? = hidden (programmatic)\n' +
+          '& = read-only   ^ = starting   (blank = student)',
+        '',
+      );
+      if (answer === null) return;
+      const target = PREFIX_TO_SPACE[answer.trim()];
+      if (target === undefined) {
+        window.alert(`Unknown namespace "${answer}".`);
+        return;
+      }
+      const { basename } = parse(legacyName);
+      if (vfs.changeSpace(legacyName, target)) {
+        onLogEvent?.('X-File.Move', '', '', target, legacyName);
+        if (legacyName === activeFile) {
+          handleSelectFile(format(target, basename));
+        }
+      } else {
+        window.alert(
+          'Could not move the file (protected name, or the target already exists).',
+        );
+      }
+    },
+    [vfs, activeFile, handleSelectFile, onLogEvent],
   );
 
   const handleCodeChange = useCallback(
@@ -688,7 +773,7 @@ export function CodingEditor(props: CodingEditorProps) {
           </div>
         </div>
       </div>
-      {vfs && (
+      {vfs && !(showFileTree && pythonMode === 'text' && !historyMode) && (
         <div className="row">
           <FileTabs
             vfs={vfs}
@@ -703,13 +788,56 @@ export function CodingEditor(props: CodingEditorProps) {
         </div>
       )}
       <div className="row">
-        <div className="blockpy-panel blockpy-editor col-md-12">
+        {showFileTree && vfs && (
+          <div className="col-md-3 blockpy-panel blockpy-file-tree-rail">
+            <div className="blockpy-panel-header">
+              <strong>Files:</strong>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary blockpy-panel-header-action"
+                title="Hide file tree"
+                onClick={() => store.getState().toggleFileTree()}
+              >
+                <Icon name="fileTree" />
+              </button>
+            </div>
+            <FileTree
+              vfs={vfs}
+              role={role}
+              activeFile={activeFile}
+              onSelect={handleSelectFile}
+              instructor={props.instructor ?? false}
+              onRename={handleRenameFile}
+              onMove={props.instructor ? handleMoveFile : undefined}
+              onDelete={handleDeleteFile}
+            />
+          </div>
+        )}
+        <div
+          className={`blockpy-panel blockpy-editor ${
+            showFileTree && vfs ? 'col-md-9' : 'col-md-12'
+          }`}
+        >
           <PythonToolbar
             onRun={() => void handleRun()}
             onStop={handleStop}
             onReset={handleReset}
             enableBlocks={(props.enableBlocks ?? true) && isAnswerFile}
             onHistory={props.loadHistory ? handleToggleHistory : undefined}
+            // File actions for the ACTIVE file (M3.7 / LD-21), gated by the
+            // VFS capability guards + role editability.
+            {...(vfs
+              ? {
+                  onDeleteFile: () => handleDeleteFile(activeFile),
+                  onRenameFile: () => handleRenameFile(activeFile),
+                  canDeleteFile:
+                    vfs.canDeleteName(activeFile) &&
+                    vfs.canEdit(activeFile, role),
+                  canRenameFile:
+                    vfs.canRenameName(activeFile) &&
+                    vfs.canEdit(activeFile, role),
+                }
+              : {})}
           />
           {historyMode && (
             <HistoryToolbar

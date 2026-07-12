@@ -15,6 +15,8 @@ import './astSet';
 import './astDict';
 import './astStarred';
 import './astJoinedStr';
+import './astBytes';
+import './astEllipsis';
 
 // Operators & expressions
 import './astBinOp';
@@ -23,6 +25,8 @@ import './astCompare';
 import './astUnaryOp';
 import './astIfExp';
 import './astLambda';
+import './astAwait';
+import './astNamedExpr';
 import './astComp';
 import './astName';
 

@@ -42,6 +42,9 @@ import type { ComponentType } from 'react';
 import {
   AlignLeft,
   Bug,
+  FolderInput,
+  FolderTree,
+  PenLine,
   WandSparkles,
   ChevronLeft,
   ChevronRight,
@@ -117,6 +120,10 @@ const ICONS = {
   // Autocomplete toggle (M3.3; Studio extension, no legacy glyph —
   // WandSparkles = "the editor suggests for you").
   autocomplete: WandSparkles,
+  // File management (M3.7; Studio extensions, no legacy glyphs).
+  fileTree: FolderTree,
+  rename: PenLine,
+  moveFile: FolderInput,
 } satisfies Record<string, ComponentType<LucideProps>>;
 
 export type IconName = keyof typeof ICONS;

@@ -85,6 +85,12 @@ export interface EditorChromeState {
    * none). Default OFF; persisted like the legacy localSettings keys.
    */
   autocomplete: boolean;
+  /**
+   * Filesystem tree rail (M3.7; STUDIO EXTENSION, no legacy analog).
+   * Default OFF; persisted. In text-only mode the tree REPLACES the
+   * horizontal tab strip.
+   */
+  fileTree: boolean;
   /** User-supplied passcode sent with every server payload (A7 §1). */
   passcode: string;
   /**
@@ -135,6 +141,7 @@ export interface EditorChromeState {
   setClearInputs(clear: boolean): void;
   toggleRenderImages(): void;
   toggleAutocomplete(): void;
+  toggleFileTree(): void;
   setPasscode(passcode: string): void;
   setDirtySubmission(dirty: boolean): void;
   setEvalState(state: EvalState): void;
@@ -169,12 +176,22 @@ const INITIAL_SERVER_STATUS = Object.fromEntries(
 
 /** localStorage key for the autocomplete preference (showRating pattern). */
 const AUTOCOMPLETE_KEY = 'BLOCKPY_display.autocomplete';
+/** localStorage key for the file-tree rail (M3.7). */
+const FILE_TREE_KEY = 'BLOCKPY_display.fileTree';
 
-function readAutocomplete(): boolean {
+function readStoredFlag(key: string): boolean {
   try {
-    return localStorage.getItem(AUTOCOMPLETE_KEY) === 'true';
+    return localStorage.getItem(key) === 'true';
   } catch {
     return false;
+  }
+}
+
+function writeStoredFlag(key: string, value: boolean): void {
+  try {
+    localStorage.setItem(key, String(value));
+  } catch {
+    // Storage unavailable (sandboxed iframe) — the toggle still works.
   }
 }
 
@@ -192,7 +209,8 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   queuedInputs: [],
   clearInputs: true,
   renderImages: true,
-  autocomplete: readAutocomplete(),
+  autocomplete: readStoredFlag(AUTOCOMPLETE_KEY),
+  fileTree: readStoredFlag(FILE_TREE_KEY),
   passcode: '',
   dirtySubmission: true,
   evalState: 'hidden',
@@ -244,12 +262,14 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   toggleAutocomplete: () =>
     set((state) => {
       const next = !state.autocomplete;
-      try {
-        localStorage.setItem(AUTOCOMPLETE_KEY, String(next));
-      } catch {
-        // Storage unavailable (sandboxed iframe) — the toggle still works.
-      }
+      writeStoredFlag(AUTOCOMPLETE_KEY, next);
       return { autocomplete: next };
+    }),
+  toggleFileTree: () =>
+    set((state) => {
+      const next = !state.fileTree;
+      writeStoredFlag(FILE_TREE_KEY, next);
+      return { fileTree: next };
     }),
   setPasscode: (passcode) => set({ passcode }),
   setDirtySubmission: (dirty) => set({ dirtySubmission: dirty }),

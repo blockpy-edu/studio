@@ -503,6 +503,11 @@ registerConverter(
     node: ir.FunctionDef,
     _parent: unknown,
   ) {
+    if (node.is_async) {
+      // M3.6: no async block v1 — throwing here triggers convertStatement's
+      // per-statement ast_Raw fallback (text preserved verbatim).
+      throw new Error('async def has no block form (raw fallback)');
+    }
     const name = node.name;
     const args = node.args;
     const body = node.body;

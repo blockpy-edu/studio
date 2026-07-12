@@ -310,3 +310,24 @@ Replicate decisions (D4, D6) produce no entries — they are legacy parity.
   (maintainer request, 2026-07-11). Applies to the minified editor too.
 - **Wire impact:** none (presentation only; the `image` submission payload
   is unchanged).
+
+## LD-21 — Working file Rename / Delete / namespace-move UI (Milestone 3.7)
+
+- **Legacy:** Delete existed as a toolbar button (python.js:117-123,
+  `DELETABLE_SIMPLE_FILES`); Rename was DEAD — the button was commented out
+  (python.js:142-147) and `FileSystem.renameFile` references an undefined
+  variable (files.js:518-528); the namespace was only choosable at file
+  creation (NEW_INSTRUCTOR_FILE_DIALOG).
+- **Studio:** working Rename and Delete for the active file in the Python
+  toolbar and per-row in the new file-tree rail, plus a net-new
+  instructor-only namespace-move. All three enforce the legacy
+  UNRENAMABLE/magic-name guards (files.js:229/234) via
+  `Vfs.canRenameName`/`canDeleteName`; renames/moves refuse to clobber.
+  New `X-File.Rename` / `X-File.Move` / `X-File.Delete` extension events.
+  The file-tree rail itself is a Studio extension (off by default,
+  persisted `BLOCKPY_display.fileTree`); in text-only mode it replaces the
+  horizontal tab strip.
+- **Wire impact:** rename/move are CLIENT-side today — the renamed file
+  persists under its new name through the normal save channels on the next
+  edit; no server-side rename call exists (server-team flag if stale
+  old-name artifacts on the submission become a problem).

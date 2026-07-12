@@ -20,6 +20,15 @@ export interface PythonToolbarProps {
    * `isHistoryAvailable` = loadHistory endpoint connected).
    */
   onHistory?(): void;
+  /**
+   * File management for the ACTIVE file (M3.7 / LD-21). Legacy had a
+   * working Delete (python.js:117-123) and a DEAD Rename; Studio ships
+   * both. Buttons render only with a handler and enable per `can*`.
+   */
+  onDeleteFile?(): void;
+  onRenameFile?(): void;
+  canDeleteFile?: boolean;
+  canRenameFile?: boolean;
 }
 
 const MODE_TABS: { name: string; iconName: IconName; mode: DualEditorMode }[] =
@@ -35,6 +44,10 @@ export function PythonToolbar({
   onReset,
   enableBlocks = true,
   onHistory,
+  onDeleteFile,
+  onRenameFile,
+  canDeleteFile = false,
+  canRenameFile = false,
 }: PythonToolbarProps) {
   const runState = useEditorChromeStore((state) => state.runState);
   const pythonMode = useEditorChromeStore((state) => state.pythonMode);
@@ -137,6 +150,32 @@ export function PythonToolbar({
           <Icon name="history" /> History
         </button>
       </div>
+      {(onDeleteFile || onRenameFile) && (
+        <div className="btn-group mr-2" role="group" aria-label="File actions">
+          {onRenameFile && (
+            <button
+              type="button"
+              className="btn btn-outline-secondary"
+              disabled={!canRenameFile}
+              title="Rename the current file"
+              onClick={onRenameFile}
+            >
+              <Icon name="rename" /> Rename
+            </button>
+          )}
+          {onDeleteFile && (
+            <button
+              type="button"
+              className="btn btn-outline-secondary blockpy-delete-file"
+              disabled={!canDeleteFile}
+              title="Delete the current file"
+              onClick={onDeleteFile}
+            >
+              <Icon name="delete" /> Delete
+            </button>
+          )}
+        </div>
+      )}
       <div className="btn-group mr-2" role="group">
         <button type="button" className="btn btn-outline-secondary" disabled>
           <Icon name="extra" />

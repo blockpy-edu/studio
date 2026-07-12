@@ -69,6 +69,10 @@ const convertFor: Converter = function (
   node: ir.For,
   _parent: unknown,
 ) {
+  if (node.is_async) {
+    // M3.6: per-statement ast_Raw fallback (see astFunctionDef).
+    throw new Error('async for has no block form (raw fallback)');
+  }
   const target = node.target;
   const iter = node.iter;
   const body = node.body;

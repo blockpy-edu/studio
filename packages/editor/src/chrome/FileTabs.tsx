@@ -11,6 +11,8 @@
 import { useEffect, useState } from 'react';
 import { parse, type Role, type Vfs } from '@blockpy/vfs';
 import { AddNewMenu } from './AddNewMenu';
+import { Icon } from './icons';
+import { useEditorChromeStore } from './store';
 
 /** Legacy instructor tab order (files.js): [legacy name, label, hideWhenEmpty]. */
 const INSTRUCTOR_TABS: [string, string, boolean][] = [
@@ -100,11 +102,26 @@ export function FileTabs({
     () => vfs.onChange(() => setVersion((v) => v + 1)),
     [vfs],
   );
+  const fileTree = useEditorChromeStore((state) => state.fileTree);
+  const toggleFileTree = useEditorChromeStore((state) => state.toggleFileTree);
   const tabs = computeTabs(vfs, role);
   return (
     <div className="blockpy-panel blockpy-files col-md-12">
       <ul className="nav nav-tabs" role="tablist">
         <li className="nav-item">
+          {/* File-tree rail toggle (M3.7; Studio extension, default off). */}
+          <button
+            type="button"
+            className={
+              'btn btn-sm btn-outline-secondary blockpy-toggle-filetree' +
+              (fileTree ? ' active' : '')
+            }
+            aria-pressed={fileTree}
+            title="Toggle file tree"
+            onClick={toggleFileTree}
+          >
+            <Icon name="fileTree" />
+          </button>{' '}
           <strong>View: </strong>
         </li>
         {tabs.map((tab) => (

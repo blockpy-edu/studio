@@ -40,6 +40,7 @@ export {
   type RunOutcome,
 } from './chrome/CodingEditor';
 export { FileTabs, computeTabs, type FileTab } from './chrome/FileTabs';
+export { FileTree, type FileTreeProps } from './chrome/FileTree';
 export {
   SettingsEditor,
   type AssignmentFields,

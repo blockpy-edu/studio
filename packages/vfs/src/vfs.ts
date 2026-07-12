@@ -107,6 +107,61 @@ export class Vfs {
     return true;
   }
 
+  /**
+   * Magic-name capability checks (M3.7 / LD-21). Legacy context: Delete
+   * existed but rename was DEAD (files.js:518-528 references an undefined
+   * variable) and namespace was only chosen at creation — Studio ships
+   * working versions; magic names stay immovable/unrenamable
+   * (UNRENAMABLE_FILES, files.js:234).
+   */
+  canDeleteName(legacyName: string): boolean {
+    const magic = magicName(legacyName);
+    return magic ? magic.deletable : true;
+  }
+
+  canRenameName(legacyName: string): boolean {
+    return magicName(legacyName) === undefined;
+  }
+
+  /**
+   * Rename within the same space (LD-21; additive — legacy rename was dead
+   * code). Refuses magic names and clobbering an existing target.
+   */
+  rename(legacyName: string, newBasename: string): boolean {
+    if (!this.canRenameName(legacyName)) return false;
+    const { space, basename } = parse(legacyName);
+    const contents = this.spaces.get(space)?.get(basename);
+    if (contents === undefined) return false;
+    const target = format(space, newBasename);
+    if (magicName(target) !== undefined) return false;
+    if (this.spaces.get(space)?.has(newBasename)) return false;
+    this.write(target, contents);
+    this.spaces.get(space)!.delete(basename);
+    this.dirtyNames.add(legacyName);
+    this.emit({ type: 'delete', legacyName });
+    return true;
+  }
+
+  /**
+   * Move a file to another namespace, keeping the basename (M3.7; net-new —
+   * legacy chose the namespace only at creation). Same guards as rename.
+   */
+  changeSpace(legacyName: string, targetSpace: Space): boolean {
+    if (!this.canRenameName(legacyName)) return false;
+    const { space, basename } = parse(legacyName);
+    if (space === targetSpace) return false;
+    const contents = this.spaces.get(space)?.get(basename);
+    if (contents === undefined) return false;
+    const target = format(targetSpace, basename);
+    if (magicName(target) !== undefined) return false;
+    if (this.spaces.get(targetSpace)?.has(basename)) return false;
+    this.write(target, contents);
+    this.spaces.get(space)!.delete(basename);
+    this.dirtyNames.add(legacyName);
+    this.emit({ type: 'delete', legacyName });
+    return true;
+  }
+
   /** All entries, optionally limited to one space. */
   list(space?: Space): VfsEntry[] {
     const result: VfsEntry[] = [];

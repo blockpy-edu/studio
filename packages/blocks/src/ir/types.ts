@@ -79,6 +79,8 @@ export interface FunctionDef extends Located {
   body: Stmt[];
   decorator_list: Expr[];
   returns: Expr | null;
+  /** `async def` (M3.6) — converters raw-fallback when set (no block v1). */
+  is_async?: boolean;
 }
 
 export interface ClassDef extends Located {
@@ -128,6 +130,8 @@ export interface For extends Located {
   iter: Expr;
   body: Stmt[];
   orelse: Stmt[];
+  /** `async for` (M3.6) — converters raw-fallback when set (no block v1). */
+  is_async?: boolean;
 }
 
 export interface While extends Located {
@@ -166,6 +170,8 @@ export interface With extends Located {
   _astname: 'With';
   items: WithItem[];
   body: Stmt[];
+  /** `async with` (M3.6) — converters raw-fallback when set (no block v1). */
+  is_async?: boolean;
 }
 
 export interface WithItem {
@@ -367,6 +373,13 @@ export interface Await extends Located {
   value: Expr;
 }
 
+/** Walrus operator `target := value` (M3.6). */
+export interface NamedExpr extends Located {
+  _astname: 'NamedExpr';
+  target: Expr;
+  value: Expr;
+}
+
 export interface Compare extends Located {
   _astname: 'Compare';
   left: Expr;
@@ -486,6 +499,7 @@ export type Expr =
   | Yield
   | YieldFrom
   | Await
+  | NamedExpr
   | Compare
   | Call
   | Num

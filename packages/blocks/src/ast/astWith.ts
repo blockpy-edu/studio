@@ -130,6 +130,10 @@ generator.forBlock['ast_With'] = function (block) {
 registerConverter(
   'With',
   function (this: TextToBlocksConverter, node: ir.With, _parent: unknown) {
+    if (node.is_async) {
+      // M3.6: per-statement ast_Raw fallback (see astFunctionDef).
+      throw new Error('async with has no block form (raw fallback)');
+    }
     const items = node.items;
     const body = node.body;
 
