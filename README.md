@@ -597,7 +597,7 @@ Record full HTTP traffic of the legacy client performing a scripted session (loa
 
 1. **Phase 0** — Freeze appendices: verified prefix table, event vocabulary, quiz schema fixtures, settings-key inventory, golden transcripts.
 2. **Phase 1** — Ship `engine`, `vfs`, `editor` behind a per-course feature flag; server templates unchanged (`mountLegacy` path). Skulpt client remains default.
-3. **Phase 2** — Ship `navigation` + `AssignmentHost` + `reader` + `quizzer`; the React app owns the whole `editor.html` body for flagged courses. Kettle/Explain (and possibly Textbook) load the _old_ frontend bundle inside a sandboxed island (`legacy-shim` hosts Knockout for just that component).
+3. **Phase 2** — Ship `navigation` + `AssignmentHost` + `reader` + `quizzer`; the React app owns the whole `editor.html` body for flagged courses.
 4. **Phase 3** — Default-on; legacy client kept installable for one semester; remove Jinja inline scripts in favor of the BootConfig JSON block.
 5. **Permitted additive changes** (each behind a flag, never breaking G3): tightened postMessage origins; batched event logging; new `X-` events; new engine endpoints (e.g., wheel hosting) added to the server as pure additions.
 

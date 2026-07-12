@@ -222,8 +222,15 @@ test('group navigation: dual headers, boundaries, markCorrect, clock (§9/§16.1
   await expect(headers).toHaveCount(2);
   const top = headers.first();
   const bottom = headers.last();
-  await expect(top.locator('option')).toHaveText(['Hello World', 'Reading: Variables']);
-  await expect(top.locator('.completion-box')).toHaveText('(0/2 completed)');
+  await expect(top.locator('option')).toHaveText([
+    'Hello World',
+    'Quiz: All Question Types',
+    'Textbook: Chapter 1',
+    'Java Legacy Problem',
+    'Plotting Temperatures',
+    'Reading: Variables',
+  ]);
+  await expect(top.locator('.completion-box')).toHaveText('(0/6 completed)');
   // Boundaries: at the first assignment, First/Back disabled, Next/Last live.
   await expect(top.locator('.assignment-selector-first')).toBeDisabled();
   await expect(top.locator('.assignment-selector-back')).toBeDisabled();
@@ -241,8 +248,8 @@ test('group navigation: dual headers, boundaries, markCorrect, clock (§9/§16.1
   // Completion-box click expands the selector to a list box in both
   // instances; the state persists across a reload (exact localStorage key).
   await top.locator('.completion-box').click();
-  await expect(top.locator('select.assignment-selector')).toHaveJSProperty('size', 2);
-  await expect(bottom.locator('select.assignment-selector')).toHaveJSProperty('size', 2);
+  await expect(top.locator('select.assignment-selector')).toHaveJSProperty('size', 5);
+  await expect(bottom.locator('select.assignment-selector')).toHaveJSProperty('size', 5);
   expect(
     await page.evaluate(() => localStorage.getItem('blockpy_assignmentSelectorExpanded')),
   ).toBe('true');
@@ -273,7 +280,7 @@ test('group navigation: dual headers, boundaries, markCorrect, clock (§9/§16.1
   await page.locator('.blocklySvg').first().waitFor();
   await expect(
     page.locator('.assignment-selector-div').first().locator('select.assignment-selector'),
-  ).toHaveJSProperty('size', 2);
+  ).toHaveJSProperty('size', 5);
 });
 
 test('reading assignment: content, load⇒correct, runnable block (§11.2)', async ({ page }) => {
@@ -313,11 +320,14 @@ test('reading assignment: content, load⇒correct, runnable block (§11.2)', asy
   );
   // Runnable python fence (part id): Run button hydrates the minified
   // editor in place and hides the highlighted pre; the plain fence stays.
-  await expect(reading.locator('.reader-launch-blockpy')).toBeVisible();
-  await reading.getByRole('button', { name: 'Run' }).click();
+  await expect(reading.locator('.reader-launch-blockpy')).toHaveCount(2); // part1 + part2
+  await expect(reading.locator('.reader-launch-blockpy').first()).toBeVisible();
+  await reading.getByRole('button', { name: 'Run' }).first().click();
   await expect(reading.locator('.blockpy-minified')).toBeVisible();
   await expect(reading.locator('.blockpy-minified .cm-content')).toContainText('age = 5');
-  await expect(reading.locator('.reader-launch-blockpy')).toBeHidden();
+  // Only the launched block's pre hides; the second stays visible.
+  await expect(reading.locator('.reader-launch-blockpy').first()).toBeHidden();
+  await expect(reading.locator('.reader-launch-blockpy').nth(1)).toBeVisible();
   await expect(reading.locator('pre:not(.reader-launch-blockpy) code.language-python')).toBeVisible();
   // Back to the coding assignment: the editor returns intact.
   await page
@@ -392,6 +402,45 @@ test('quiz assignment: attempt lifecycle, autosave, server grading (§11.3)', as
       .altAssignmentChangingFunction(101),
   );
   await expect(page.locator('.blockpy-host-editor')).toBeVisible();
+});
+
+test('persistent instructor mode reaches the quiz editor from any surface', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.blocklySvg').first().waitFor();
+  // The toggle lives in the app shell (top right), not the editor chrome —
+  // it survives switching to a quiz surface.
+  const toggle = page.locator('#blockpy-instructor-mode');
+  await expect(toggle).toBeVisible();
+  await page.evaluate(() =>
+    (window as never as { altAssignmentChangingFunction(id: number): Promise<void> })
+      .altAssignmentChangingFunction(104),
+  );
+  await expect(page.locator('.blockpy-host-quiz')).toBeVisible();
+  await expect(toggle).toBeVisible(); // still there on the quiz surface
+  await toggle.check();
+  // Instructors land in the visual quiz editor (the new normal workflow).
+  const editor = page.locator('.quizzer-quiz-editor');
+  await expect(editor).toBeVisible();
+  await expect(editor.getByRole('button', { name: 'Save Quiz' })).toBeVisible();
+  // Live validation flags the calculated_question demo — the latest engine
+  // (bakery quiz_check) dropped it from the valid type list.
+  await expect(page.locator('.quizzer-editor-issue-count')).toContainText('1 issue (1 error)');
+  await expect(
+    editor.locator('[data-question-id="legacy1"] .quizzer-editor-issues'),
+  ).toContainText('Invalid question type');
+  // All-types quiz: one editor card per question (14 in assignment 104).
+  await expect(editor.locator('.quizzer-editor-question')).toHaveCount(14);
+  // Fallback modes + Try It are a click away.
+  await editor.getByRole('button', { name: 'Raw Editor' }).click();
+  await expect(editor.locator('.quizzer-editor-instructions-text')).toBeVisible();
+  await editor.getByRole('button', { name: 'Try It' }).click();
+  await expect(editor.getByRole('button', { name: 'Start Quiz' }).first()).toBeVisible();
+  // The student surface stays available behind "Actual Quiz".
+  await page.getByRole('button', { name: 'Actual Quiz' }).click();
+  await expect(page.locator('.blockpy-host-quiz').getByText('View As Student')).toBeVisible();
+  // Untoggling returns the student view everywhere.
+  await toggle.uncheck();
+  await expect(page.locator('.quizzer-quiz-editor')).toHaveCount(0);
 });
 
 test('History mode: toolbar + merge diff + Use adopts the old version', async ({ page }) => {

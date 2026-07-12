@@ -81,6 +81,11 @@ export function App({ config, extras, registerActions }: AppProps) {
   // exposes the grader toggle for debugging; real role gating (ui.role
   // .isGrader) arrives with AssignmentHost (M2.1).
   const [instructorView, setInstructorView] = useState(display.instructor);
+  // Live handle for the reading/quiz surfaces: seeds from the real role and
+  // only graders ever see the toggle, so production behavior is unchanged —
+  // but the dev harness's "as instructor" checkbox reaches the quiz editor.
+  const instructorViewRef = useRef(display.instructor);
+  instructorViewRef.current = instructorView;
   // Preview toggle between the full editor and the §8.4 minified variant.
   const [minified, setMinified] = useState(false);
   const [loaded, setLoaded] = useState<LoadedAssignment | null>(null);
@@ -623,7 +628,7 @@ export function App({ config, extras, registerActions }: AppProps) {
           : {})}
         runController={runController}
         blocklyMediaPath={paths.blocklyMedia}
-        isInstructor={() => config.display.instructor}
+        isInstructor={() => instructorViewRef.current}
         {...(api.isEndpointConnected('startAssignment')
           ? {
               startAssignment: async (assignmentId: number, dateStarted: string) => ({
@@ -708,7 +713,7 @@ export function App({ config, extras, registerActions }: AppProps) {
         markCorrect={markCorrectEverywhere}
         logEvent={surfaceLogEvent}
         downloadUrl={downloadUrl}
-        isInstructor={() => config.display.instructor}
+        isInstructor={() => instructorViewRef.current}
         // Subordinate-reading preamble beneath no one: the quiz renders the
         // reading ABOVE itself (quiz_ui.ts:194-208).
         renderReading={(readingId) => reading(readingId, true)}
@@ -751,6 +756,27 @@ export function App({ config, extras, registerActions }: AppProps) {
         </button>
       </p>
       <h1 className="sr-only">BlockPy Studio</h1>
+      {/* Persistent instructor-mode toggle: unlike the editor chrome's
+          "View as instructor" (QuickMenu, legacy parity), this one survives
+          assignment-type switches so the quiz editor and instructor views
+          are reachable from ANY surface. Same gating story as
+          quickMenu.grader: the dev shell always exposes it; real role
+          gating (ui.role.isGrader) is a pending TODO shared with M2.1. */}
+      <div
+        className="blockpy-instructor-bar"
+        style={{ position: 'sticky', top: 0, zIndex: 100, textAlign: 'right', padding: '2px 8px' }}
+      >
+        <label className="form-check-label" htmlFor="blockpy-instructor-mode">
+          <input
+            className="form-check-input"
+            type="checkbox"
+            id="blockpy-instructor-mode"
+            checked={instructorView}
+            onChange={(event) => setInstructorView(event.target.checked)}
+          />{' '}
+          Instructor mode
+        </label>
+      </div>
       {loadError !== null && <div className="alert alert-warning">{loadError}</div>}
       {versionOutdated && (
         <div className="alert alert-warning blockpy-version-outdated">
