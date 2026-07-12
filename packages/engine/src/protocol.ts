@@ -65,12 +65,32 @@ export interface EngineJob {
 }
 
 export interface PedalJobRequest {
-  /** The instructor grading script (`!on_run.py`), executed unchanged. */
+  /**
+   * The instructor grading script: `!on_run.py` for `instructor.on_run`
+   * jobs, `!on_eval.py` for `instructor.on_eval` jobs.
+   */
   onRun: string;
   /** Scripted stdin consumed by Pedal's sandbox (queue_input). */
   inputs?: string[];
   /** Override the wheel list (defaults to DEFAULT_PEDAL_PACKAGES). */
   packages?: string[];
+  /**
+   * Console-eval grading (on_eval.js): the expression the student
+   * evaluated. Presence selects the on_eval pipeline, which reuses the
+   * LAST grading pass's report/sandbox (no re-run, no re-stage).
+   */
+  evaluation?: string;
+  /**
+   * STUDENT-visible file view for the Pedal Submission (legacy
+   * getAllStudentFiles); `EngineJob.files` stays the instructor DISK view.
+   */
+  studentFiles?: Record<string, string>;
+  /** Legacy disable_tifa setting. */
+  skipTifa?: boolean;
+  /** Legacy disable_instructor_run setting (sandbox not re-run). */
+  skipRun?: boolean;
+  /** Pool-question seed (legacy submission.id; LD-22). */
+  seed?: string;
 }
 
 /** One compact trace event (E3): powers the Trace/State Explorer. */

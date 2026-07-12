@@ -6,11 +6,22 @@
  * (feedback.js:46-74 + blockpy.js:789-817) and the instructor score/reset
  * header controls (feedback.js:32-38).
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { categoryPresentation } from './categories';
 import { highlightCodeBlocks } from './highlight';
 import { Icon } from './icons';
+import { renderInstructions } from './Instructions';
 import { useEditorChromeStore } from './store';
+
+/**
+ * Legacy updateFeedback ran EVERY presented message through the markdown
+ * pipeline (feedback.js:213 — `utilities.markdown(message)` = the same
+ * EasyMDE/marked path as instructions) with the `<pre>\n` doubling quirk.
+ * Inline HTML passes through marked untouched (D4-A: unsanitized).
+ */
+export function renderFeedbackMessage(message: string): string {
+  return renderInstructions(message).replace(/<pre>\n/g, '<pre>\n\n');
+}
 
 /** Legacy localSettings key (LocalStorageWrapper "BLOCKPY" prefix). */
 const SHOW_RATING_KEY = 'BLOCKPY_display.showRating';
@@ -50,10 +61,15 @@ export function Feedback({ size = 'col-md-6', ...props }: FeedbackProps) {
   const [thankYou, setThankYou] = useState(false);
   const store = useEditorChromeStore;
 
+  const renderedMessage = useMemo(
+    () => renderFeedbackMessage(feedback.message),
+    [feedback.message],
+  );
+
   // Legacy highlights feedback code immediately (no debounce).
   useEffect(() => {
     if (messageRef.current) highlightCodeBlocks(messageRef.current);
-  }, [feedback.message]);
+  }, [renderedMessage]);
 
   const flipRating = () => {
     const next = !showRating;
@@ -127,9 +143,23 @@ export function Feedback({ size = 'col-md-6', ...props }: FeedbackProps) {
         ref={messageRef}
         className="blockpy-feedback-message"
         // Legacy renders feedback HTML unsanitized (D4-A applies here too —
-        // the message body comes from instructor Pedal scripts).
-        dangerouslySetInnerHTML={{ __html: feedback.message }}
+        // the message body comes from instructor Pedal scripts), AFTER the
+        // markdown pass (feedback.js:213).
+        dangerouslySetInnerHTML={{ __html: renderedMessage }}
       />
+      {(feedback.positives ?? []).length > 0 && (
+        <div className="blockpy-feedback-positives">
+          {feedback.positives!.map((positive, i) => (
+            <div
+              key={i}
+              className="blockpy-feedback-positive"
+              title={positive.title}
+            >
+              <Icon name="star" /> {positive.message}
+            </div>
+          ))}
+        </div>
+      )}
       <div style={{ position: 'relative' }}>
         <span
           className={`blockpy-feedback-thank-you${thankYou ? ' show' : ''}`}

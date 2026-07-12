@@ -117,6 +117,84 @@ if student.data.get("data") == "expected-value":
     });
     expect(feedback.success).toBe(true);
   });
+
+  // -- legacy on_run.js / on_eval.js wrapper fidelity ------------------------
+
+  it('preloads the instructor namespace like the legacy wrapper', () => {
+    // parse_program + core/sandbox commands available WITHOUT imports
+    // (on_run.js:33-36); graders written against legacy rely on this.
+    // (The variable must be USED or TIFA outranks set_success — see above.)
+    const feedback = env.grade({
+      studentCode: 'x = 7\nprint(x)',
+      onRun: `
+ast = parse_program()
+if ast.find_all("Assign") and evaluate("x") == 7:
+    set_success()
+`,
+    });
+    expect(feedback.success).toBe(true);
+  });
+
+  it('skip_run leaves the sandbox unexecuted (disable_instructor_run)', () => {
+    const feedback = env.grade({
+      studentCode: 'print("SHOULD NOT RUN")',
+      onRun: `
+from pedal import *
+if not get_output():
+    set_success()
+`,
+      skipRun: true,
+    });
+    expect(feedback.success).toBe(true);
+  });
+
+  it('surfaces positives alongside the main feedback (on_run.js:78-88)', () => {
+    // NOTE: raw markdown (backticks etc.) stays raw HERE — the legacy
+    // markdown pass happens at PRESENTATION (feedback.js:213), ported as
+    // renderFeedbackMessage in the chrome.
+    const feedback = env.grade({
+      studentCode: 'total = 1 + 1\nprint(total)',
+      onRun: `
+from pedal import *
+compliment("Nice addition!", label="nice_add")
+gently("Check your total variable", label="check_total")
+`,
+    });
+    expect((feedback.positives ?? []).map((p) => p.label)).toContain('nice_add');
+    expect(feedback.label).toBe('check_total');
+  });
+
+  it('on_eval grades console evaluations via pedal evaluate (on_eval.js)', () => {
+    // Establish the sandbox with a grading pass first (legacy ordering).
+    const ran = env.grade({
+      studentCode: 'def double(n):\n    return n * 2',
+      onRun: 'from pedal import *',
+    });
+    expect(ran.category).not.toBe('system');
+    const evaluated = env.evaluateGrade({
+      evaluation: 'double(21)',
+      onEval: `
+from pedal import *
+if student.data.get("_") == 42:
+    set_success()
+else:
+    gently("Try evaluating double(21).", label="eval_miss")
+`,
+    });
+    expect(evaluated.success).toBe(true);
+    const missed = env.evaluateGrade({
+      evaluation: 'double(2)',
+      onEval: `
+from pedal import *
+if student.data.get("_") == 42:
+    set_success()
+else:
+    gently("Try evaluating double(21).", label="eval_miss")
+`,
+    });
+    expect(missed.success).toBe(false);
+    expect(missed.label).toBe('eval_miss'); // the gently() label
+  });
 });
 
 describe.runIf(!enabled)('PedalEnvironment (skipped)', () => {

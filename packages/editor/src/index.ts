@@ -30,6 +30,7 @@ export {
   CodingEditor,
   resolveToolboxSetting,
   type CodingEditorProps,
+  type EvalOptions,
   type EvalOutcome,
   type GradeResult,
   type LogEventFn,

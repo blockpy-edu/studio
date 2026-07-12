@@ -45,6 +45,7 @@ import {
   FolderInput,
   FolderTree,
   PenLine,
+  Star,
   WandSparkles,
   ChevronLeft,
   ChevronRight,
@@ -124,6 +125,8 @@ const ICONS = {
   fileTree: FolderTree,
   rename: PenLine,
   moveFile: FolderInput,
+  // Positive feedback stars (legacy fa-star, feedback.js addPositiveFeedback).
+  star: Star,
 } satisfies Record<string, ComponentType<LucideProps>>;
 
 export type IconName = keyof typeof ICONS;

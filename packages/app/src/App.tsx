@@ -975,6 +975,11 @@ export function App({ config, extras, registerActions }: AppProps) {
               : undefined
           }
           allowRealRequests={settingBool(settings['allow_real_requests'] ?? false)}
+          disableTifa={settingBool(settings['disable_tifa'] ?? false)}
+          disableInstructorRun={settingBool(settings['disable_instructor_run'] ?? false)}
+          // Pool-question seed (on_run.js:43-45; LD-22): legacy currentSeed
+          // = poolSeed || submission.id — no poolSeed UI yet (M2 deferral).
+          seed={active?.submission?.id != null ? String(active.submission.id) : undefined}
           // Settings form (M3.5): assignment columns prefill from the
           // decoded assignment; Save persists blob + columns through
           // save_assignment (legacy saveAssignmentSettings) and live-applies

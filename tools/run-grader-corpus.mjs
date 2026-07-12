@@ -51,7 +51,7 @@ for (const assignment of graders) {
     // engine does — graders import them via _instructor and open() them.
     const extra = (assignment.extra_instructor_files ?? '').trim();
     const files = extra.startsWith('{') ? extra : '{}';
-    const proxy = grade(assignment.starting_code ?? '', assignment.on_run, files, []);
+    const proxy = grade(assignment.starting_code ?? '', assignment.on_run, files, [], '{}');
     const feedback = proxy.toJs({ dict_converter: Object.fromEntries });
     proxy.destroy();
     if (feedback.system_error) {

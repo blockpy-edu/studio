@@ -51,6 +51,34 @@ through the Studio Pedal environment (`tools/run-grader-corpus.mjs`,
 - TIFA feedback (e.g. unused-variable) can outrank `set_success()` in the
   resolver — expected Pedal semantics, worth remembering when writing
   fixtures.
+- **Legacy-wrapper fidelity pass (2026-07-12).** The environment is now
+  built on `pedal.environments.blockpy.setup_environment`, the same call
+  legacy's WRAP_INSTRUCTOR_CODE used (on_run.js:38-53): HtmlFormatter,
+  source `verify`, tifa-unless-`disable_tifa`, `set_input`,
+  `start_trace → run` (or `get_sandbox` under `disable_instructor_run`).
+  The instructor namespace is preloaded with `parse_program` + the
+  sandbox/core command star-imports (on_run.js:33-36); bakery's
+  `student_tests.reset()` runs per pass (on_run.js:30-31 — REQUIRED here
+  because site-packages modules are baseline-adopted and survive across
+  runs); pool seeding happens AFTER environment setup (LD-22 — the legacy
+  before-setup ordering was erased by `report.clear()`, so legacy pools
+  were never actually seeded). `final.instructions` / `final.positives`
+  (else_message quirk) / `final.systems` (log/debug → dev console) /
+  `DATA['location'].line` all extract into the payload. **on_eval** is the
+  on_eval.js port: keep the last pass's report + sandbox, clear the
+  presented feedback (legacy's "backup" list was never read — effectively
+  a clear), pedal-`evaluate` the console expression, exec `!on_eval.py`,
+  re-resolve. Client side, feedback messages get the legacy markdown pass
+  at PRESENTATION (feedback.js:213 — Pedal sends raw markdown; the
+  HtmlFormatter only formats structured pieces) plus the Instructor/
+  "explain" and Instructor/"No errors" remaps, compared case-insensitively
+  because Pedal 3 emits "No Errors" where Pedal 2 said "No errors".
+- **Still absent from the CPython environment (deferred, fail-soft):** the
+  Skulpt-side `utility` module (`get_model_info`, `set_instructions`,
+  `console_log` as callables INSIDE grader code — the wrapper-level uses
+  are ported natively); `instructionsPool` extraction of on_run from pools
+  (M2 pools deferral); `GracefulExit`; the instructor full-feedback table
+  (feedback.js getAllFeedbacks/updateFullFeedback).
 
 ## Student-runtime behaviors (implemented, verified by tests)
 

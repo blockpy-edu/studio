@@ -6,7 +6,9 @@
  */
 // The reference makes the `*.py?raw` ambient module travel with this file
 // into CROSS-PACKAGE programs (source-first workspace exports) that don't
-// include engine's own tsconfig `include`.
+// include engine's own tsconfig `include`. An `import` can't do this: the
+// declaration file has no runtime module behind it.
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference path="./raw.d.ts" />
 import RUNTIME_PY from './runtime.py?raw';
 import { PedalEnvironment, type PedalPyodideLike } from './pedal';
@@ -143,12 +145,24 @@ export class JobRunner {
     const request = job.pedal!;
     try {
       const env = await this.ensurePedal(request.packages);
-      const feedback = env.grade({
-        studentCode: job.code,
-        onRun: request.onRun,
-        files: job.files,
-        inputs: request.inputs ?? job.inputsPrefill,
-      });
+      const feedback =
+        request.evaluation !== undefined
+          ? // on_eval pipeline (on_eval.js): reuses the last grading
+            // pass's report/sandbox — no staging, no student re-run.
+            env.evaluateGrade({
+              evaluation: request.evaluation,
+              onEval: request.onRun,
+            })
+          : env.grade({
+              studentCode: job.code,
+              onRun: request.onRun,
+              files: job.files,
+              inputs: request.inputs ?? job.inputsPrefill,
+              studentFiles: request.studentFiles,
+              skipTifa: request.skipTifa,
+              skipRun: request.skipRun,
+              seed: request.seed,
+            });
       return {
         jobId: job.id,
         success: true,

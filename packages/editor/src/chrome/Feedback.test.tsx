@@ -1,8 +1,24 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render } from '@testing-library/react';
-import { Feedback } from './Feedback';
+import { Feedback, renderFeedbackMessage } from './Feedback';
 import { useEditorChromeStore } from './store';
+
+describe('renderFeedbackMessage (feedback.js:213 markdown pass)', () => {
+  it('renders markdown like legacy utilities.markdown', () => {
+    // Inline code backticks become <code> at PRESENTATION time — Pedal
+    // sends raw markdown; the legacy env relied on this exact client pass.
+    expect(renderFeedbackMessage('Check your `total` variable')).toContain(
+      '<code>total</code>',
+    );
+    // Inline HTML passes through (D4-A unsanitized).
+    expect(renderFeedbackMessage('a <b>bold</b> claim')).toContain('<b>bold</b>');
+    // The legacy <pre>\n doubling quirk (feedback.js:213) fires on literal
+    // instructor HTML — marked itself emits `<pre><code>` with no newline,
+    // exactly as legacy's EasyMDE pipeline did.
+    expect(renderFeedbackMessage('<pre>\nx = 1</pre>')).toContain('<pre>\n\n');
+  });
+});
 
 describe('Feedback rating region (feedback.js:46-74, blockpy.js:789-817)', () => {
   beforeEach(() => {

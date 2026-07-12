@@ -331,3 +331,21 @@ Replicate decisions (D4, D6) produce no entries — they are legacy parity.
   persists under its new name through the normal save channels on the next
   edit; no server-side rename call exists (server-team flag if stale
   old-name artifacts on the submission become a problem).
+
+## LD-22 — Pool-question seeding actually works (Pedal env fidelity pass)
+
+- **Legacy:** on_run.js:43-45 called `set_seed(str(submission.id))` BEFORE
+  `setup_environment(...)` — but `set_seed` stores into
+  `report['questions']['seed']` (pedal/questions/setup.py:53) and
+  `Environment.__init__` begins with `report.clear()`, which wipes
+  `_tool_data`. The submission-id seed was therefore ERASED before any pool
+  selection ran: legacy pool questions were never actually seeded per
+  student (everyone got the default-seed selection).
+- **Studio:** `_studio_pedal_grade` seeds AFTER `setup_environment`, so the
+  seed sticks. The seed value is the legacy intent: submission id (the
+  `poolSeed` instructor override joins when that M2-deferred control
+  lands).
+- **Wire impact:** none directly, but graders using `pedal.questions` pools
+  now vary questions per submission id where legacy showed everyone the
+  same pool pick. Course authors relying (unknowingly) on the frozen
+  selection will see per-student variation — the documented intent.

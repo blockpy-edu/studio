@@ -369,6 +369,15 @@
   width: 100%;
 }
 
+/* Positive feedback (legacy addPositiveFeedback green stars). */
+.blockpy-feedback-positives {
+  margin-top: 4px;
+}
+
+.blockpy-feedback-positive {
+  color: var(--blockpy-positive-green);
+}
+
 .blockpy-feedback-thank-you {
   position: absolute;
   bottom: 0;

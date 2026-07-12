@@ -19,6 +19,11 @@ export interface FeedbackState {
   label: string;
   /** HTML body — rendered unsanitized, D4-A legacy parity. */
   message: string;
+  /**
+   * Pedal final.positives (on_run.js:78-88): green-star compliments shown
+   * under the main message (legacy addPositiveFeedback).
+   */
+  positives?: { title: string; label: string; message: string }[];
 }
 
 export type RunState = 'idle' | 'running' | 'error';
@@ -120,6 +125,12 @@ export interface EditorChromeState {
    * dialog and clears the flag.
    */
   promptedShare: boolean;
+  /**
+   * Pedal questions support (on_run.js:74-76): a grader's
+   * final.instructions REPLACES the instructions pane (legacy
+   * set_instructions) until the next assignment load.
+   */
+  instructionsOverride: string | null;
 
   setPythonMode(mode: DualEditorMode): void;
   toggleHistoryMode(): void;
@@ -151,6 +162,7 @@ export interface EditorChromeState {
   setActiveConsole(which: 'student' | 'dev'): void;
   requestPromptedShare(): void;
   clearPromptedShare(): void;
+  setInstructionsOverride(instructions: string | null): void;
 }
 
 /**
@@ -219,6 +231,7 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   consoleUnseen: 0,
   devUnseen: 0,
   promptedShare: false,
+  instructionsOverride: null,
 
   setPythonMode: (mode) => set({ pythonMode: mode }),
   toggleHistoryMode: () =>
@@ -290,5 +303,7 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
         : { activeConsole: which, consoleUnseen: 0 },
     ),
   requestPromptedShare: () => set({ promptedShare: true }),
+  setInstructionsOverride: (instructions) =>
+    set({ instructionsOverride: instructions }),
   clearPromptedShare: () => set({ promptedShare: false }),
 }));

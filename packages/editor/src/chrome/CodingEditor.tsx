@@ -102,6 +102,12 @@ export interface RunOptions {
    * mock and lets the real package hit the network (CORS best-effort).
    */
   allowRealRequests?: boolean;
+  /** Legacy `disable_tifa` setting → BlockPyEnvironment skip_tifa. */
+  disableTifa?: boolean;
+  /** Legacy `disable_instructor_run` setting → skip_run (no sandbox run). */
+  disableInstructorRun?: boolean;
+  /** Pool-question seed (legacy currentSeed = poolSeed || submission.id). */
+  seed?: string;
 }
 
 /** Legacy countTestCases tallies — the Intervention `unitTests` block (A2). */
@@ -149,12 +155,36 @@ export interface RunOutcome {
   trace?: TraceStepView[];
   /** Base64 PNGs of matplotlib figures the run produced (§10.2). */
   images?: string[];
+  /**
+   * Pedal questions (on_run.js:74-76): replaces the instructions pane
+   * (legacy set_instructions) when a grader emitted instructions feedback.
+   */
+  instructions?: string | null;
+  /**
+   * First error line from the winning feedback's DATA['location']
+   * (feedback.js findFirstErrorLine) — drives editor-error-line.
+   */
+  errorLine?: number | null;
+}
+
+/** Per-evaluation options for the on_eval grading pass (on_eval.js). */
+export interface EvalOptions {
+  /** The instructor `!on_eval.py` script; empty/absent = no grading. */
+  onEval?: string;
+  /** Legacy disable_feedback: skip the grading pass. */
+  disableFeedback?: boolean;
+  /** Instructor staging view (grader helper imports). */
+  graderFiles?: Record<string, string>;
 }
 
 export interface EvalOutcome {
   /** repr() of the expression, or null when it errored. */
   value: string | null;
   error: string | null;
+  /** on_eval grading results (on_eval.js success: presentFeedback + POST). */
+  feedback?: FeedbackState | null;
+  grade?: GradeResult | null;
+  instructions?: string | null;
 }
 
 export interface RunController {
@@ -164,7 +194,11 @@ export interface RunController {
     options?: RunOptions,
   ): Promise<RunOutcome>;
   /** REPL evaluation against the persistent run namespace (§6.4). */
-  evaluate?(expression: string, handlers: RunHandlers): Promise<EvalOutcome>;
+  evaluate?(
+    expression: string,
+    handlers: RunHandlers,
+    options?: EvalOptions,
+  ): Promise<EvalOutcome>;
   stop?(): void;
 }
 
@@ -196,6 +230,12 @@ export interface CodingEditorProps {
   disableFeedback?: boolean;
   /** `allow_real_requests` setting (M3.5): real network for `requests`. */
   allowRealRequests?: boolean;
+  /** Legacy `disable_tifa` setting (skips the static analyzer). */
+  disableTifa?: boolean;
+  /** Legacy `disable_instructor_run` setting (grader sandbox not run). */
+  disableInstructorRun?: boolean;
+  /** Pool-question seed — legacy currentSeed = poolSeed ?? submission.id. */
+  seed?: string;
   /**
    * Assignment-level columns shown in the Settings form (M3.5); the section
    * renders only when provided.
@@ -270,7 +310,15 @@ export function CodingEditor(props: CodingEditorProps) {
   const editorRef = useRef<DualEditor | null>(null);
   const store = useEditorChromeStore;
   const pythonMode = useEditorChromeStore((state) => state.pythonMode);
+  const instructionsOverride = useEditorChromeStore(
+    (state) => state.instructionsOverride,
+  );
   const fileTreeOn = useEditorChromeStore((state) => state.fileTree);
+  // Keyed remount = new assignment: grader-set instructions reset (legacy
+  // set_instructions persisted only until the next load).
+  useEffect(() => {
+    store.getState().setInstructionsOverride(null);
+  }, [store]);
   // Tree rail gating (M3.7): user toggle AND the legacy files-UI gate
   // (instructor || !hideFiles), and only with a VFS to list.
   const showFileTree =
@@ -479,6 +527,9 @@ export function CodingEditor(props: CodingEditorProps) {
           inputs: runInputs,
           disableFeedback: props.disableFeedback,
           allowRealRequests: props.allowRealRequests,
+          disableTifa: props.disableTifa,
+          disableInstructorRun: props.disableInstructorRun,
+          seed: props.seed,
           // Grade with the CURRENT !on_run.py — instructor edits to the On
           // Run tab apply on the very next run (§7: the VFS is the source
           // of truth) — and stage the live VFS into both jobs: the student
@@ -558,6 +609,21 @@ export function CodingEditor(props: CodingEditorProps) {
           true,
         );
       }
+      // Questions support (on_run.js:74-76): a grader's instructions
+      // feedback REPLACES the instructions pane (legacy set_instructions).
+      if (outcome.instructions) {
+        store.getState().setInstructionsOverride(outcome.instructions);
+      }
+      // First-error-line highlight from the winning feedback's location
+      // (feedback.js:242-246): cleared on every presentation, set when the
+      // grader pinned a line.
+      editorRef.current?.clearHighlightedLines('editor-error-line');
+      if (outcome.errorLine != null) {
+        editorRef.current?.setHighlightedLines(
+          [outcome.errorLine],
+          'editor-error-line',
+        );
+      }
       // §14.3 ordering: the verdict reaches the submission lifecycle only
       // AFTER the feedback is presented (on_run.js:162-175).
       if (outcome.grade) {
@@ -610,11 +676,22 @@ export function CodingEditor(props: CodingEditorProps) {
       props.onLogEvent?.('X-File.Add', '', '', expression, 'evaluations');
       props.onLogEvent?.('Compile', '', '', expression, 'evaluations');
       void controller
-        .evaluate(expression, {
-          stdout: (text) => appendConsole({ kind: 'stdout', text }),
-          stderr: (text) => appendConsole({ kind: 'stderr', text }),
-          system: handleSystem,
-        })
+        .evaluate(
+          expression,
+          {
+            stdout: (text) => appendConsole({ kind: 'stdout', text }),
+            stderr: (text) => appendConsole({ kind: 'stderr', text }),
+            system: handleSystem,
+          },
+          // on_eval grading (engine.js:146-156): runs only when the
+          // assignment HAS an on_eval script and feedback isn't disabled —
+          // the controller enforces both; we supply the live VFS script.
+          {
+            onEval: vfs ? (vfs.read('!on_eval.py') ?? '') : '',
+            disableFeedback: props.disableFeedback,
+            ...(vfs ? { graderFiles: vfs.stageFiles('instructor') } : {}),
+          },
+        )
         .then((outcome) => {
           store.getState().setServerStatus('onExecution', 'ready', '');
           if (outcome.error !== null) {
@@ -627,9 +704,46 @@ export function CodingEditor(props: CodingEditorProps) {
               appendConsole({ kind: 'value', text: outcome.value });
             }
           }
+          // on_eval feedback presents exactly like on_run's
+          // (on_eval.js success: presentFeedback → updateSubmission).
+          if (outcome.feedback) {
+            store.getState().setFeedback(outcome.feedback);
+            props.onLogEvent?.(
+              'Intervention',
+              outcome.feedback.category ?? '',
+              outcome.feedback.label,
+              JSON.stringify({
+                message: outcome.feedback.message,
+                syntaxError: false,
+                runtimeError: false,
+                unitTests: outcome.grade?.unitTests ?? {
+                  tests: 0,
+                  feedbacks: 0,
+                  successes: 0,
+                  feedbackSuccess: 0,
+                },
+              }),
+              'answer.py',
+              true,
+            );
+          }
+          if (outcome.instructions) {
+            store.getState().setInstructionsOverride(outcome.instructions);
+          }
+          if (outcome.grade) {
+            props.onGraded?.(outcome.grade);
+          }
         });
     },
-    [props.runController, props.onLogEvent, store, handleSystem],
+    [
+      props.runController,
+      props.onLogEvent,
+      props.onGraded,
+      props.disableFeedback,
+      vfs,
+      store,
+      handleSystem,
+    ],
   );
 
   const handleTraceLine = useCallback((studentLine: number | null) => {
@@ -721,7 +835,9 @@ export function CodingEditor(props: CodingEditorProps) {
     <div className="blockpy-content container-fluid">
       <div className="row">
         <Instructions
-          markdown={props.instructions ?? ''}
+          // Pedal questions (on_run.js:74-76): grader-set instructions win
+          // until the next assignment load (the mount effect clears them).
+          markdown={instructionsOverride ?? props.instructions ?? ''}
           assignmentName={props.assignmentName}
         />
         <QuickMenu {...props.quickMenu} onRun={() => void handleRun()} />

@@ -12,7 +12,9 @@
  * syntax categories with student-relative line numbers (§6.3).
  */
 import { EngineClient, type EnginePort } from '@blockpy/engine';
+import type { PedalFeedback } from '@blockpy/engine';
 import type {
+  EvalOptions,
   EvalOutcome,
   RunController,
   RunHandlers,
@@ -134,14 +136,7 @@ export function createEngineRunController(
         // reach Pedal, whose own set_source → run captures them as feedback.
         // Only the disable_feedback setting skips grading.
         if (onRun && onRun.trim() !== '' && !runOptions?.disableFeedback) {
-          const graded = await gradeWithPedal(
-            engine,
-            code,
-            onRun,
-            handlers,
-            runOptions?.inputs,
-            runOptions?.graderFiles,
-          );
+          const graded = await gradeWithPedal(engine, code, onRun, handlers, runOptions);
           return {
             ...graded,
             error: studentError ?? graded.error,
@@ -185,6 +180,7 @@ export function createEngineRunController(
     async evaluate(
       expression: string,
       handlers: RunHandlers,
+      evalOptions?: EvalOptions,
     ): Promise<EvalOutcome> {
       const engine = ensureClient();
       const result = await engine.run(
@@ -207,7 +203,35 @@ export function createEngineRunController(
             result.error?.message ?? result.error?.traceback ?? 'Evaluation failed.',
         };
       }
-      return { value: result.value ?? null, error: null };
+      const outcome: EvalOutcome = { value: result.value ?? null, error: null };
+      // on_eval grading (engine.js:146-156): only when an on_eval script
+      // exists and feedback is enabled. Legacy chained it after the student
+      // evaluation; Pedal's `evaluate` re-runs the expression inside the
+      // grading sandbox retained from the last on_run pass.
+      const onEval = evalOptions?.onEval;
+      if (onEval && onEval.trim() !== '' && !evalOptions?.disableFeedback && pedalReady) {
+        const graded = await engine.run(
+          {
+            id: `harness-oneval-${++jobCounter}`,
+            phase: 'instructor.on_eval',
+            files: evalOptions?.graderFiles ?? {},
+            code: expression,
+            pedal: { onRun: onEval, evaluation: expression },
+            limits: { wallMs: 15_000 },
+          },
+          {
+            onStdout: (chunk) => handlers.system?.(chunk),
+            onStderr: (chunk) => handlers.system?.(chunk),
+          },
+        );
+        if (graded.success && graded.feedback) {
+          const shaped = shapePedalFeedback(graded.feedback, handlers);
+          outcome.feedback = shaped.feedback;
+          outcome.grade = shaped.grade;
+          outcome.instructions = shaped.instructions;
+        }
+      }
+      return outcome;
     },
 
     stop(): void {
@@ -220,14 +244,73 @@ export function createEngineRunController(
 
 let pedalReady = false;
 
+/**
+ * Map a resolved PedalFeedback onto the pane shapes, porting legacy
+ * updateFeedback's presentation behaviors (feedback.js:182-264):
+ * the Instructor/"explain" and Instructor/"No errors" remaps, positives,
+ * the instructions replacement, the first-error line, and system
+ * log/debug messages (→ dev console via handlers.system).
+ */
+function shapePedalFeedback(
+  feedback: PedalFeedback,
+  handlers: RunHandlers,
+): {
+  feedback: NonNullable<RunOutcome['feedback']>;
+  grade: NonNullable<RunOutcome['grade']>;
+  instructions: string | null;
+  errorLine: number | null;
+} {
+  if (feedback.system_error) {
+    // Fail-soft grader crash (§10.1): log for instructors, generic category.
+    console.error('Pedal system_error:', feedback.system_error);
+    handlers.system?.(feedback.system_error);
+  }
+  // System messages (on_run.js:90-95): console_log/console_debug → the
+  // instructor-only dev console.
+  for (const system of feedback.systems ?? []) {
+    handlers.system?.(`[${system.label}] ${system.title}: ${system.message}`);
+  }
+  let category = feedback.category;
+  let label = feedback.title || feedback.label;
+  // Remap to expected BlockPy labels (feedback.js:202-210). Pedal 3 emits
+  // lowercase categories and "No Errors" (Pedal 2 said "No errors") —
+  // compare case-insensitively so both eras remap.
+  if (category.toLowerCase() === 'instructor' && label.toLowerCase() === 'explain') {
+    label = 'Instructor Feedback';
+  }
+  // Don't present a lack of error as being incorrect.
+  if (category.toLowerCase() === 'instructor' && label.toLowerCase() === 'no errors') {
+    category = 'no errors';
+  }
+  return {
+    feedback: {
+      category,
+      label,
+      // Pedal messages may embed HTML (D4-A); the chrome runs the legacy
+      // markdown pass on presentation (renderFeedbackMessage).
+      message: feedback.message,
+      positives: feedback.positives ?? [],
+    },
+    // The SUCCESS/SCORE/HIDE triple for the §14.3 submission lifecycle —
+    // only a real resolver pass produces one (fail-softs return none).
+    grade: {
+      success: feedback.success,
+      score: feedback.score,
+      hideCorrectness: feedback.hide_correctness === true,
+      unitTests: feedback.unit_tests,
+    },
+    instructions: feedback.instructions ?? null,
+    errorLine: feedback.line ?? null,
+  };
+}
+
 /** Run the instructor grading pass and map Pedal feedback onto the pane. */
 async function gradeWithPedal(
   engine: EngineClient,
   studentCode: string,
   onRunScript: string,
   handlers: RunHandlers,
-  inputs?: string[],
-  graderFiles?: Record<string, string>,
+  runOptions?: RunOptions,
 ): Promise<RunOutcome> {
   if (!pedalReady) {
     handlers.system?.('Loading feedback engine…');
@@ -237,10 +320,20 @@ async function gradeWithPedal(
       id: `harness-grade-${Date.now()}`,
       phase: 'instructor.on_run',
       // The instructor view of the VFS (grader helper imports, A1 §3).
-      files: graderFiles ?? {},
+      files: runOptions?.graderFiles ?? {},
       code: studentCode,
-      // Same stdin script the student run consumed (Pedal queue_input).
-      pedal: { onRun: onRunScript, inputs },
+      pedal: {
+        onRun: onRunScript,
+        // Same stdin script the student run consumed (Pedal set_input).
+        inputs: runOptions?.inputs,
+        // The STUDENT view feeds the Pedal Submission (legacy
+        // getAllStudentFiles, instructor.js:69-83).
+        studentFiles: runOptions?.files,
+        // Legacy settings (on_run.js:40-45 / BlockPyEnvironment).
+        skipTifa: runOptions?.disableTifa,
+        skipRun: runOptions?.disableInstructorRun,
+        seed: runOptions?.seed,
+      },
       // First grading job includes the wheel install; later ones are ~ms.
       limits: { wallMs: pedalReady ? 15_000 : 180_000 },
     },
@@ -262,27 +355,13 @@ async function gradeWithPedal(
     };
   }
   pedalReady = true;
-  const feedback = result.feedback;
-  if (feedback.system_error) {
-    // Fail-soft grader crash (§10.1): log for instructors, generic category.
-    console.error('Pedal system_error:', feedback.system_error);
-  }
+  const shaped = shapePedalFeedback(result.feedback, handlers);
   return {
     error: null,
-    feedback: {
-      category: feedback.category,
-      label: feedback.title || feedback.label,
-      // Pedal messages may embed HTML (D4-A: rendered unsanitized).
-      message: feedback.message,
-    },
-    // The SUCCESS/SCORE/HIDE triple for the §14.3 submission lifecycle —
-    // only a real resolver pass produces one (fail-softs above return none).
-    grade: {
-      success: feedback.success,
-      score: feedback.score,
-      hideCorrectness: feedback.hide_correctness === true,
-      unitTests: feedback.unit_tests,
-    },
+    feedback: shaped.feedback,
+    grade: shaped.grade,
+    instructions: shaped.instructions,
+    errorLine: shaped.errorLine,
   };
 }
 
