@@ -1,0 +1,100 @@
+/**
+ * Textbook page styles — port of the textbook.html:14-36 inline styles.
+ */
+.book-item {
+  cursor: pointer;
+  padding: 5px;
+}
+
+.book-item.disabled {
+  cursor: default;
+}
+
+@media (max-width: 768px) {
+  .textbook-navigation {
+    height: 300px;
+    overflow: auto;
+  }
+}
+
+.list-group-item.disabled.list-group-item-secondary {
+  color: #383d41;
+  background-color: #d6d8db;
+}
+
+/* Bootstrap 4.6 list-group defaults the textbook sidebar relies on
+   (pinned like styles/bootstrap-subset.css — the app shell loads no real
+   Bootstrap). */
+.blockpy-textbook .list-group {
+  display: flex;
+  flex-direction: column;
+  padding-left: 0;
+  margin-bottom: 0;
+  border-radius: 0.25rem;
+}
+
+.blockpy-textbook .list-group-item {
+  position: relative;
+  display: block;
+  background-color: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.125);
+  margin-bottom: -1px;
+}
+
+.blockpy-textbook .list-group-item-action {
+  width: 100%;
+  color: #495057;
+  text-align: inherit;
+}
+
+.blockpy-textbook .list-group-item-action:hover {
+  color: #495057;
+  background-color: #f8f9fa;
+}
+
+.blockpy-textbook .list-group-item-info {
+  color: #0c5460;
+  background-color: #bee5eb;
+}
+
+.blockpy-textbook .list-group-item.active {
+  z-index: 2;
+  color: #fff;
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+.blockpy-textbook .row {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.blockpy-textbook .col-md-4 {
+  flex: 0 0 33.333333%;
+  max-width: 33.333333%;
+}
+
+.blockpy-textbook .col-md-8 {
+  flex: 0 0 66.666667%;
+  max-width: 66.666667%;
+}
+
+@media (min-width: 992px) {
+  .blockpy-textbook .col-lg-3 {
+    flex: 0 0 25%;
+    max-width: 25%;
+  }
+
+  .blockpy-textbook .col-lg-9 {
+    flex: 0 0 75%;
+    max-width: 75%;
+  }
+}
+
+@media (max-width: 768px) {
+  .blockpy-textbook .col-md-4,
+  .blockpy-textbook .col-md-8 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+}

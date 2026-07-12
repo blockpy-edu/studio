@@ -23,6 +23,7 @@
  *     the seed field, pool badges, and question ids are.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { AssignmentSurface } from '@blockpy/editor';
 import { renderReadingMarkdown } from '@blockpy/reader';
 import {
   buildSubmissionDocument,
@@ -392,8 +393,26 @@ export function Quizzer(props: QuizzerProps) {
     [loaded],
   );
 
+  // The quiz OWNS its surface (§12): its events/persistence carry its own
+  // ids; the preamble reading renders as a child surface with the
+  // READING's ids (the legacy AssignmentInterfaces each built payloads
+  // from their own loaded pair).
+  const withSurface = (children: ReactNode, ids: { a: number | null; s: number | null }) => (
+    <AssignmentSurface
+      assignmentId={ids.a}
+      submissionId={ids.s}
+      variant="full"
+      {...(props.logEvent ? { logEvent: props.logEvent } : {})}
+    >
+      {children}
+    </AssignmentSurface>
+  );
+
   if (!loaded) {
-    return <div className="blockpy-quizzer">{errorMessage || 'Loading quiz…'}</div>;
+    return withSurface(
+      <div className="blockpy-quizzer">{errorMessage || 'Loading quiz…'}</div>,
+      { a: null, s: null },
+    );
   }
 
   // The visual editor is the instructor's normal workflow (new requirement,
@@ -422,7 +441,7 @@ export function Quizzer(props: QuizzerProps) {
     const quizId = loaded.assignment.id;
     const submissionId = loaded.submission?.id ?? null;
     const { saveQuizAssignment, saveAnswer, submitQuiz } = props;
-    return (
+    return withSurface(
       <div className="blockpy-quizzer" style={{ backgroundColor: '#fcf8e3' }}>
         {viewToggle}
         <QuizEditor
@@ -448,7 +467,8 @@ export function Quizzer(props: QuizzerProps) {
             ? { downloadUrl: (filename: string) => props.downloadUrl!(quizId, filename) }
             : {})}
         />
-      </div>
+      </div>,
+      { a: quizId, s: submissionId },
     );
   }
 
@@ -534,7 +554,7 @@ export function Quizzer(props: QuizzerProps) {
     </div>
   );
 
-  return (
+  return withSurface(
     <div
       className="blockpy-quizzer"
       style={{ backgroundColor: '#fcf8e3', paddingBottom: '1px', paddingTop: '1px' }}
@@ -625,6 +645,7 @@ export function Quizzer(props: QuizzerProps) {
       {errorMessage.length > 0 && (
         <div className="alert alert-warning p-1 border rounded">{errorMessage}</div>
       )}
-    </div>
+    </div>,
+    { a: loaded.assignment.id, s: loaded.submission?.id ?? null },
   );
 }

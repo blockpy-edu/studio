@@ -14,7 +14,7 @@
  * part-id saveFile composition is noted in the plan as pending).
  */
 import { useState } from 'react';
-import { MinifiedEditor, type RunController } from '@blockpy/editor';
+import { AssignmentSurface, MinifiedEditor, type RunController } from '@blockpy/editor';
 import { Play } from 'lucide-react';
 
 export interface RunnableSlot {
@@ -60,12 +60,16 @@ export interface RunnableBlockProps {
 export function RunnableBlock({ pre, source, runController, blocklyMediaPath }: RunnableBlockProps) {
   const [launched, setLaunched] = useState(false);
   if (launched) {
+    // A minified child surface (§12): inherits the hosting reading's ids
+    // and page engine, so its events attribute to the READING.
     return (
-      <MinifiedEditor
-        initialCode={source}
-        runController={runController}
-        blocklyMediaPath={blocklyMediaPath}
-      />
+      <AssignmentSurface variant="minified">
+        <MinifiedEditor
+          initialCode={source}
+          runController={runController}
+          blocklyMediaPath={blocklyMediaPath}
+        />
+      </AssignmentSurface>
     );
   }
   return (

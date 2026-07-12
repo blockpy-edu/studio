@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@blockpy/editor": "workspace:*",
     "@blockpy/engine": "workspace:*",
     "@blockpy/reader": "workspace:*"
   },

@@ -17,7 +17,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { RunController } from '@blockpy/editor';
+import { AssignmentSurface, type RunController } from '@blockpy/editor';
 import { Download, ExternalLink } from 'lucide-react';
 import { renderReadingMarkdown } from './markdown';
 import { parseReaderSettings, rememberVoiceChoice, type ReaderSettings } from './settings';
@@ -433,8 +433,22 @@ export function Reader(props: ReaderProps) {
       });
   }, []);
 
+  // The reading OWNS this surface (§12): nested minified editors inherit
+  // its ids and page engine; a preamble reading is 'embedded' in its host.
+  const surfaceVariant = props.asPreamble ? ('embedded' as const) : ('full' as const);
+
   if (!loaded) {
-    return <div className="blockpy-reader">{errorMessage || 'Loading reading…'}</div>;
+    return (
+      <AssignmentSurface
+        assignmentId={null}
+        submissionId={null}
+        variant={surfaceVariant}
+        {...(props.logEvent ? { logEvent: props.logEvent } : {})}
+        {...(props.runController ? { runController: props.runController } : {})}
+      >
+        <div className="blockpy-reader">{errorMessage || 'Loading reading…'}</div>
+      </AssignmentSurface>
+    );
   }
 
   const { assignment, submission, settings } = loaded;
@@ -464,6 +478,13 @@ export function Reader(props: ReaderProps) {
   };
 
   return (
+    <AssignmentSurface
+      assignmentId={assignment.id}
+      submissionId={submission?.id ?? null}
+      variant={surfaceVariant}
+      {...(props.logEvent ? { logEvent: props.logEvent } : {})}
+      {...(props.runController ? { runController: props.runController } : {})}
+    >
     <div className="blockpy-reader">
       {errorMessage && <div className="alert alert-warning">{errorMessage}</div>}
       {settings.allowPopout && popoutBase && (
@@ -587,5 +608,6 @@ export function Reader(props: ReaderProps) {
         ),
       )}
     </div>
+    </AssignmentSurface>
   );
 }

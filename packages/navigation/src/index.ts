@@ -13,3 +13,4 @@ export {
   type TimeLimitInfo,
 } from './store';
 export { formatAmount, formatClockDuration, parseTimeLimit } from './format';
+export { publishNavigationGlobals, type NavigationGlobalsOptions } from './globals';

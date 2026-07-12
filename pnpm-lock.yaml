@@ -213,6 +213,9 @@ importers:
       '@blockpy/app':
         specifier: workspace:*
         version: link:../app
+      '@blockpy/lti-embed':
+        specifier: workspace:*
+        version: link:../lti-embed
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -243,6 +246,9 @@ importers:
 
   packages/quizzer:
     dependencies:
+      '@blockpy/editor':
+        specifier: workspace:*
+        version: link:../editor
       '@blockpy/engine':
         specifier: workspace:*
         version: link:../engine
@@ -293,12 +299,25 @@ importers:
 
   packages/textbook:
     dependencies:
+      '@blockpy/editor':
+        specifier: workspace:*
+        version: link:../editor
       '@blockpy/reader':
         specifier: workspace:*
         version: link:../reader
-      react:
+    devDependencies:
+      '@types/react':
         specifier: ^18.3.0
+        version: 18.3.31
+      '@types/react-dom':
+        specifier: ^18.3.0
+        version: 18.3.7(@types/react@18.3.31)
+      react:
+        specifier: ^18.3.1
         version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
 
   packages/vfs: {}
 

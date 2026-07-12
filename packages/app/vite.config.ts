@@ -215,6 +215,70 @@ const QUIZ_FEEDBACKS = {
   pool_b: { message: 'Good name.', correct: true, score: 1, status: 'graded' },
 };
 
+/**
+ * The harness textbook (105): a chaptered composition over reading 103
+ * (spec §11.4). NOTE the stub serves REHYDRATED object references — on the
+ * wire the v1 document carries url strings and only the server's dedicated
+ * textbook route rehydrates them (ledger LD-16 flags the JSON-endpoint
+ * gap); the harness demonstrates the resolved shape plus the legacy
+ * "Missing Reading" fallback.
+ */
+const DEV_TEXTBOOK = {
+  success: true,
+  assignment: {
+    id: 105,
+    name: 'Textbook: Chapter 1',
+    url: 'textbook_chapter_1',
+    type: 'textbook',
+    version: 1,
+    instructions: JSON.stringify({
+      version: 1,
+      settings: {},
+      content: [
+        {
+          header: 'Chapter 1) Variables',
+          content: [
+            {
+              reading: {
+                id: 103,
+                url: 'reading_variables',
+                name: 'Reading: Variables',
+                missing: false,
+              },
+            },
+            {
+              header: 'Part A',
+              group: { id: 11, url: 'group_a', name: 'Group A', missing: false },
+              content: [{ reading: { name: 'Missing Reading', missing: true } }],
+            },
+          ],
+        },
+      ],
+    }),
+    starting_code: '',
+    on_run: '',
+    on_change: null,
+    on_eval: null,
+    extra_instructor_files: '',
+    extra_starting_files: '',
+    settings: '{}',
+    hidden: false,
+    reviewed: false,
+    public: true,
+    points: 1,
+  },
+  submission: {
+    id: 5005,
+    code: '',
+    extra_files: '',
+    version: 1,
+    correct: false,
+    score: 0,
+    submission_status: 'Started',
+    grading_status: 'NotReady',
+  },
+};
+
 /** A second coding problem (107): different starter, gentle grader. */
 const DEV_ASSIGNMENT_2 = {
   success: true,
@@ -424,6 +488,7 @@ function devApi(): Plugin {
         case '103': return DEV_READING;
         case '102': return DEV_QUIZ;
         case '104': return DEV_QUIZ_FULL;
+        case '105': return DEV_TEXTBOOK;
         case '107': return DEV_ASSIGNMENT_2;
         default: return DEV_ASSIGNMENT;
       }

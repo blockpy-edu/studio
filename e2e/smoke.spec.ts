@@ -227,10 +227,11 @@ test('group navigation: dual headers, boundaries, markCorrect, clock (§9/§16.1
     'Quiz: All Question Types',
     'Textbook: Chapter 1',
     'Java Legacy Problem',
+    'Kettle: TypeScript Intro',
     'Plotting Temperatures',
     'Reading: Variables',
   ]);
-  await expect(top.locator('.completion-box')).toHaveText('(0/6 completed)');
+  await expect(top.locator('.completion-box')).toHaveText('(0/7 completed)');
   // Boundaries: at the first assignment, First/Back disabled, Next/Last live.
   await expect(top.locator('.assignment-selector-first')).toBeDisabled();
   await expect(top.locator('.assignment-selector-back')).toBeDisabled();
@@ -441,6 +442,105 @@ test('persistent instructor mode reaches the quiz editor from any surface', asyn
   // Untoggling returns the student view everywhere.
   await toggle.uncheck();
   await expect(page.locator('.quizzer-quiz-editor')).toHaveCount(0);
+});
+
+test('textbook: sidebar composition opens readings through the reader (§11.4)', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.blocklySvg').first().waitFor();
+  // The reading auto-opens as the textbook's first page and marks ITSELF
+  // read (the textbook never marks correct — legacy no-op markCorrect).
+  const markReadPost = page.waitForRequest(
+    (request) =>
+      request.url().includes('update_submission') &&
+      request.method() === 'POST' &&
+      (request.postData() ?? '').includes('assignment_id=103'),
+  );
+  await page
+    .locator('.assignment-selector-div')
+    .first()
+    .locator('select.assignment-selector')
+    .selectOption('105');
+  const textbook = page.locator('.blockpy-host-textbook');
+  await expect(textbook).toBeVisible();
+  // Sidebar per the textbook.html macro: disabled secondary headers,
+  // clickable readings, missing entries inert.
+  const chapter = textbook.locator('.book-item', { hasText: 'Chapter 1) Variables' });
+  await expect(chapter).toHaveClass(/disabled/);
+  // Nested one level under the chapter: NO info accent (top-level readings
+  // only, textbook.html:62) — but active as the open page.
+  const readingItem = textbook.locator('.book-item', { hasText: 'Reading: Variables' });
+  await expect(readingItem).toHaveClass(/active/);
+  await expect(readingItem).not.toHaveClass(/list-group-item-info/);
+  await expect(textbook.locator('.book-item', { hasText: 'Missing Reading' })).toHaveClass(
+    /disabled/,
+  );
+  // First page auto-opened: the full Reader renders inside the textbook,
+  // and its markRead posted with the READING's id (§12 owning-id rule).
+  const reader = textbook.locator('.blockpy-reader');
+  await expect(reader.getByRole('heading', { name: 'Variables' })).toBeVisible();
+  expect((await markReadPost).postData() ?? '').toContain('correct=true');
+  // Clicking a reading pushes the ?page= URL contract and titles the tab.
+  await readingItem.click();
+  expect(new URL(page.url()).searchParams.get('page')).toBe('reading_variables');
+  expect(await page.title()).toBe(
+    'Reading: Variables - Textbook: Chapter 1 - BlockPy Textbook',
+  );
+  // Instructor mode exposes the RAW editor (legacy EDITOR_HTML RAW mode).
+  await page.locator('#blockpy-instructor-mode').check();
+  await textbook.getByLabel(/Raw Editor/).check();
+  await expect(textbook.locator('.textbook-editor-instructions')).toBeVisible();
+  await expect(textbook.getByRole('button', { name: 'Save Assignment' })).toBeVisible();
+  await textbook.getByLabel(/Actual Textbook/).check();
+  await expect(textbook.locator('.blockpy-reader')).toBeVisible();
+  await page.locator('#blockpy-instructor-mode').uncheck();
+});
+
+test('kettle island degrades gracefully without the legacy bundle (§17)', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.blocklySvg').first().waitFor();
+  await page
+    .locator('.assignment-selector-div')
+    .first()
+    .locator('select.assignment-selector')
+    .selectOption('108');
+  // No window.ko on the dev harness: the island renders its notice instead
+  // of crashing, and the editor stays hidden-but-mounted.
+  const island = page.locator('.blockpy-legacy-kettle');
+  await expect(island).toBeVisible();
+  await expect(island.locator('.blockpy-legacy-island-missing')).toContainText(
+    'needs the legacy BlockPy frontend bundle',
+  );
+  await expect(page.locator('.blockpy-host-editor')).toBeHidden();
+});
+
+test('LTI page environment: loading screen removed, cookie flag published (§13)', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.blocklySvg').first().waitFor();
+  // The harness page ships the legacy .delete-on-load span; mounting
+  // removes it (editor.html:383).
+  await expect(page.locator('.delete-on-load')).toHaveCount(0);
+  // The cookie fallback published the boot flag (editor.html:27).
+  expect(
+    await page.evaluate(() => (window as never as { ltiLoadedCorrectly: boolean }).ltiLoadedCorrectly),
+  ).toBe(true);
+  // §15.3 compatibility globals from the app-owned navigation.
+  const globals = await page.evaluate(() => {
+    const w = window as never as Record<string, unknown>;
+    return {
+      firstId: w['FIRST_ID'],
+      lastId: w['LAST_ID'],
+      indices: w['INDICES'],
+      urlMap: w['URL_MAP'],
+      hasLoadNavigation: typeof w['loadNavigation'] === 'function',
+      fullSelectorDiv: typeof w['FULL_SELECTOR_DIV'],
+    };
+  });
+  expect(globals.firstId).toBe(101);
+  expect(globals.lastId).toBe(103);
+  expect(globals.indices).toEqual([101, 104, 105, 106, 108, 107, 103]);
+  expect((globals.urlMap as Record<string, string>)['101']).toBe('#101');
+  expect(globals.hasLoadNavigation).toBe(true);
+  expect(globals.fullSelectorDiv).toBe('string');
 });
 
 test('History mode: toolbar + merge diff + Use adopts the old version', async ({ page }) => {

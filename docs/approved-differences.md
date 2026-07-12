@@ -200,3 +200,65 @@ Replicate decisions (D4, D6) produce no entries — they are legacy parity.
   header-id generation and rare typographic details may differ between the
   libraries. No course content is known to depend on either.
 - **Wire impact:** none (client-side rendering only).
+
+## LD-14 — LTI put_data handshake posts the GENERATED UUIDs (Milestone 2.5)
+
+- **Legacy:** the cookie-blocked fallback (editor.html:27-99) generates
+  `messageId` and `stateId` UUIDs but then posts the LITERAL placeholder
+  strings — `key: "blockpy_<state_id>", value: "<state_id>"` and
+  `key: "nonce_<nonce_value>", value: "<nonce_value>"` (editor.html:85-98).
+  The interpolation was never written; the platform stores the placeholder
+  text. Additionally, with `platformOrigin = '*'` the response listener's
+  origin check (`event.origin !== platformOrigin`) can never pass, so the
+  `lti.put_data.response` confirmation is unreachable.
+- **Studio:** `@blockpy/lti-embed`'s `installCookieFallback` substitutes the
+  generated UUIDs (`blockpy_${stateId}`/`stateId`, `nonce_${nonce}`/`nonce`)
+  per spec §13's "with generated UUIDs". The `'*'` origin caveat is kept
+  verbatim behind the `PLATFORM_ORIGIN` constant — including the
+  consequently-unreachable success path — so it can be corrected when
+  platforms comply, exactly as §13 directs.
+- **Wire impact:** the two postMessages now carry usable values; message
+  count, shape, and origin are unchanged.
+
+## LD-15 — Textbook assignment type rendered per textbook.html, not the ko stub (Milestone 2.5)
+
+- **Legacy:** TWO textbook surfaces exist. The standalone route
+  (`/assignments/textbook/<url>`, templates/blockpy/textbook.html) WORKS:
+  server-rendered chapter sidebar (the recursive `textbook_item` macro) +
+  a `<reader asPreamble: true>` bound to the open page, `?page=` history
+  contract, no-op markCorrect. The `<textbook>` knockout COMPONENT used by
+  editor.html's assignment-type dispatch is UNFINISHED: its content
+  renderer is commented out (textbook.ts:251-266 renders a JSON dump), the
+  template begins with the literal word "Testing", editor.html passes it no
+  `textbook` param, and `foreach: textbook.content` on the resulting
+  undefined crashes the binding. A textbook inside an assignment group is
+  effectively broken in legacy.
+- **Studio:** per README §11.4 (decided at M2.5 kickoff), `@blockpy/textbook`
+  is a thin composition over `reader` replicating the WORKING standalone
+  page's observables — sidebar macro classes/indentation, first-reading
+  default page, `?page=` pushState/popstate/title contract, no-op
+  markCorrect (readings still post their own markRead), the legacy
+  "Missing Reading" fallback — and serves BOTH the group-embedded type slot
+  and (later) standalone pages. The legacy RAW instructor editor
+  (instructions + settings textareas) is ported; the FORM mode
+  (jsoneditor/filepond) is deferred.
+- **Wire impact:** none new — loads ride `load_assignment`, page opens are
+  full `Reader` loads, edits ride `save_file`/`save_assignment`.
+
+## LD-16 — Textbook references rehydrate client-side only via an OPTIONAL resolver (Milestone 2.5; server-team flag)
+
+- **Legacy:** the v1 textbook document stores `reading`/`group` as URL
+  strings; only the SERVER's dedicated textbook route rehydrates them to
+  `{id, name, url, missing}` (models/data_formats/textbook.py:83-130)
+  before rendering. `load_assignment` returns the raw url-string document
+  and there is NO by-url JSON endpoint a client could use.
+- **Studio:** `parseTextbookDocument` accepts both shapes (raw strings and
+  rehydrated objects, round-tripping unknown fields per §14.5); the
+  `Textbook` component takes an optional `resolveAssignment(url)` and
+  renders unresolvable references in the legacy MISSING_READING style. On
+  an unmodified server the group-embedded textbook therefore shows its
+  structure but cannot open pages — matching the (broken) legacy baseline.
+  **Server-team flag:** either rehydrate textbook instructions in
+  `load_assignment` for `type == 'textbook'` or expose an
+  assignment-by-url JSON endpoint; the client is already shaped for both.
+- **Wire impact:** none until the endpoint exists.

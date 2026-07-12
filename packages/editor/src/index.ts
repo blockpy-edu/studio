@@ -90,5 +90,14 @@ export {
   type TraceStepView,
 } from './chrome/store';
 export { categoryPresentation } from './chrome/categories';
+export {
+  AssignmentSurface,
+  MAX_SURFACE_DEPTH,
+  useAssignmentSurface,
+  type AssignmentSurfaceProps,
+  type AssignmentSurfaceValue,
+  type SurfaceLogEvent,
+  type SurfaceVariant,
+} from './surface';
 
 export const PACKAGE_NAME = '@blockpy/editor';

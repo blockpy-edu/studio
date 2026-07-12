@@ -6,7 +6,12 @@
  * swaps in (M1.6).
  */
 import { installLegacyShim } from './facade';
+import { installFrontendStub } from './frontend-stub';
 
 installLegacyShim();
+// §15.3: only when the real frontend bundle is absent (pages that still
+// load it must win).
+installFrontendStub();
 
 export { BlockPy, installLegacyShim } from './facade';
+export { Server, installFrontendStub } from './frontend-stub';

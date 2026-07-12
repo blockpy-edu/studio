@@ -19,8 +19,21 @@ import {
   type DecodedAssignment,
   type DecodedSubmission,
   type RawRecord,
+  type WirePayload,
 } from '@blockpy/api';
-import { GroupNav, createGroupNavStore, type GroupNavStore } from '@blockpy/navigation';
+import {
+  GroupNav,
+  createGroupNavStore,
+  publishNavigationGlobals,
+  type GroupNavStore,
+} from '@blockpy/navigation';
+import { Textbook } from '@blockpy/textbook';
+import { LegacyIsland, createLegacyServerBridge } from './LegacyIsland';
+import {
+  installCookieFallback,
+  installFrameResize,
+  removeLoadingScreen,
+} from '@blockpy/lti-embed';
 import { Reader, type ReaderLoadResult } from '@blockpy/reader';
 import { Quizzer } from '@blockpy/quizzer';
 import { createEngineRunController } from './engine-adapter';
@@ -32,6 +45,7 @@ import '@blockpy/editor/styles/bootstrap-subset.css';
 import '@blockpy/editor/styles/blockpy.css';
 import '@blockpy/navigation/styles/navigation.css';
 import '@blockpy/reader/styles/reader.css';
+import '@blockpy/textbook/styles/textbook.css';
 import type { BootConfig, LegacyAssignmentPayload } from './boot-config';
 import type { MountExtras, StudioActions } from './studio-handle';
 
@@ -102,7 +116,7 @@ export function App({ config, extras, registerActions }: AppProps) {
   const store = useEditorChromeStore;
 
   // -- server client (spec §14): built once per mount ------------------------
-  const api = useMemo(() => {
+  const apiBundle = useMemo(() => {
     if (Object.keys(config.urls).length === 0) return null;
     const context: ApiContext = {
       assignmentId: assignment.currentAssignmentId,
@@ -133,8 +147,11 @@ export function App({ config, extras, registerActions }: AppProps) {
       transport,
       readOnly: () => config.display.readOnly,
     });
-    return holder.client;
+    // The transport rides along for the legacy-island server bridge
+    // (raw named-endpoint posts, §17 islands).
+    return { client: holder.client, transport };
   }, [config, assignment, user, extras]);
+  const api = apiBundle?.client ?? null;
 
   // Grading success reaches the group header (spec §9.3) AND any host-page
   // hook; the ref breaks the memo cycle (sync → markCorrect → navStore →
@@ -247,6 +264,23 @@ export function App({ config, extras, registerActions }: AppProps) {
     }
   }, [assignment, api, adoptAssignmentData, loadAssignment, config.passcodeProtected]);
 
+  // LTI page environment (§13): cookie fallback + loading-screen removal
+  // once at mount; frame resize while embedded. Shim pages (unmodified
+  // templates) run the cookie script inline themselves — the
+  // ltiLoadedCorrectly guard keeps the handshake from double-running.
+  useEffect(() => {
+    const globals = window as unknown as Record<string, unknown>;
+    const cookieResult =
+      globals['ltiLoadedCorrectly'] === undefined ? installCookieFallback() : null;
+    removeLoadingScreen();
+    return () => cookieResult?.dispose();
+  }, []);
+  useEffect(() => {
+    // Legacy gates the resize loop on `{% if embed %}` (editor.html:351).
+    if (!display.embed) return;
+    return installFrameResize();
+  }, [display.embed]);
+
   // §14.4 event stream: the chrome fires at the legacy call sites; drop
   // silently when no server is attached (legacy offline behavior).
   const logEvent = useCallback(
@@ -337,6 +371,13 @@ export function App({ config, extras, registerActions }: AppProps) {
       delete globals['ACTIVITY_GET_DURATION'];
     };
   }, [getGroupDuration]);
+  // §15.3 navigation compatibility globals (URL_MAP, INDICES, …): published
+  // only when we own the navigation; on unmodified templates the
+  // assignment_groups.html macro defines them itself and always wins.
+  useEffect(() => {
+    if (!config.group) return;
+    return publishNavigationGlobals(config.group);
+  }, [config.group]);
 
   // -- dev-harness fallback (no server, no inline payload) --------------------
   const harnessVfs = useMemo(() => {
@@ -524,36 +565,37 @@ export function App({ config, extras, registerActions }: AppProps) {
   // legacy AssignmentInterface builds payloads from its own pair).
   const assignmentRenderers = useMemo(() => {
     if (!api) return undefined;
-    // One reading/quiz mounts at a time, so shared id slots suffice.
-    const surfaceContext = {
-      assignmentId: null as number | null,
-      submissionId: null as number | null,
-    };
-    const loadPair = async (id: number) => {
-      const response = await api.loadAssignment(id);
+    // Per-surface owning-id slots (§12): a quiz and its preamble reading
+    // mount TOGETHER, so one shared slot pair would cross-attribute their
+    // events — each requested id keeps its own loaded pair instead.
+    const surfaceIds = new Map<
+      number,
+      { assignmentId: number | null; submissionId: number | null }
+    >();
+    const loadPair = async (requestedId: number) => {
+      const response = await api.loadAssignment(requestedId);
       if (!response.success || !response.assignment) return null;
-      surfaceContext.assignmentId = response.assignment.id ?? id;
-      surfaceContext.submissionId = response.submission?.id ?? null;
+      surfaceIds.set(requestedId, {
+        assignmentId: response.assignment.id ?? requestedId,
+        submissionId: response.submission?.id ?? null,
+      });
       return response;
     };
-    const surfaceLogEvent = (
-      eventType: string,
-      category: string,
-      label: string,
-      message: string,
-      filePath: string,
-    ) => {
-      try {
-        void api
-          .logEvent(eventType, category, label, message, filePath, false, {
-            assignment_id: surfaceContext.assignmentId,
-            submission_id: surfaceContext.submissionId,
-          })
-          .catch(() => undefined);
-      } catch {
-        // clientMayEmit refused the type — never break the surface.
-      }
-    };
+    const makeSurfaceLogEvent =
+      (requestedId: number) =>
+      (eventType: string, category: string, label: string, message: string, filePath: string) => {
+        const ids = surfaceIds.get(requestedId);
+        try {
+          void api
+            .logEvent(eventType, category, label, message, filePath, false, {
+              assignment_id: ids?.assignmentId ?? null,
+              submission_id: ids?.submissionId ?? null,
+            })
+            .catch(() => undefined);
+        } catch {
+          // clientMayEmit refused the type — never break the surface.
+        }
+      };
     const downloadUrl = (assignmentId: number, filename: string) =>
       // Legacy leaves the filename unencoded (plugins.ts:272).
       `${config.urls.downloadFile}?placement=assignment&directory=${assignmentId}&filename=${filename}`;
@@ -618,7 +660,7 @@ export function App({ config, extras, registerActions }: AppProps) {
         // A preamble reading never touches navigation — the legacy quizzer
         // passes markCorrect: ()=>{} to it (quiz_ui.ts:201).
         markCorrect={preamble ? () => undefined : markCorrectEverywhere}
-        logEvent={surfaceLogEvent}
+        logEvent={makeSurfaceLogEvent(readingId)}
         downloadUrl={downloadUrl}
         {...(typeof urlRoot === 'string'
           ? {
@@ -711,7 +753,7 @@ export function App({ config, extras, registerActions }: AppProps) {
           };
         }}
         markCorrect={markCorrectEverywhere}
-        logEvent={surfaceLogEvent}
+        logEvent={makeSurfaceLogEvent(quizId)}
         downloadUrl={downloadUrl}
         isInstructor={() => instructorViewRef.current}
         // Subordinate-reading preamble beneath no one: the quiz renders the
@@ -730,14 +772,89 @@ export function App({ config, extras, registerActions }: AppProps) {
       />
     );
 
-    return { reading: (id: number) => reading(id), quiz };
+    // Textbook (spec §11.4): a thin reader composition; each opened page is
+    // a full Reader rendered as an embedded surface with a NO-OP markCorrect
+    // (textbook.html:109) — the reading still posts its own markRead.
+    const textbook = (textbookId: number) => (
+      <Textbook
+        assignmentId={textbookId}
+        loadAssignment={async (id) => {
+          const response = await loadPair(id);
+          if (!response) return null;
+          return {
+            assignment: {
+              id: response.assignment!.id ?? id,
+              name: response.assignment!.name,
+              url: response.assignment!.url,
+              instructions: response.assignment!.instructions,
+              settings: response.assignment!.settings,
+            },
+            submission: response.submission ? { id: response.submission.id } : null,
+          };
+        }}
+        renderReading={(readingId) => reading(readingId, true)}
+        isInstructor={() => instructorViewRef.current}
+        logEvent={makeSurfaceLogEvent(textbookId)}
+        saveTextbookAssignment={async (assignmentId, instructionsText, settingsText) => {
+          // Legacy textbook.ts:111-119: !instructions.md via saveFile plus
+          // saveAssignmentSettings (points/name/url editing deferred, like
+          // the quiz editor's).
+          const ids = { assignment_id: assignmentId };
+          const first = await api.saveFile('!instructions.md', instructionsText, ids);
+          if (first.success !== true) return { success: false };
+          if (!api.isEndpointConnected('saveAssignment')) return { success: true };
+          const second = await api.saveAssignment({ ...ids, settings: settingsText });
+          return { success: second.success === true };
+        }}
+      />
+    );
+
+    // Kettle/Explain stay on the legacy frontend bundle (§17 islands); the
+    // bridge gives the old components their $MAIN_BLOCKPY_EDITOR server
+    // surface, delegating to the api client/transport.
+    const islandBridge = createLegacyServerBridge({
+      buildPayload: () => api.buildPayload(),
+      post: (endpointName, payload) => {
+        const url = config.urls[endpointName];
+        if (!url) {
+          return Promise.reject(new Error(`No URL configured for endpoint "${endpointName}"`));
+        }
+        return apiBundle!.transport.post(url, payload as WirePayload);
+      },
+    });
+    const island = (component: 'kettle' | 'explain') => (islandId: number) => (
+      <LegacyIsland
+        component={component}
+        assignmentId={islandId}
+        courseId={user.courseId}
+        assignmentGroupId={assignment.assignmentGroupId}
+        isInstructor={config.display.instructor}
+        markCorrect={markCorrectEverywhere}
+        user={{ id: user.id, name: user.name }}
+        serverBridge={islandBridge}
+        passcode={() => api.context.passcode}
+      />
+    );
+
+    return {
+      reading: (id: number) => reading(id),
+      quiz,
+      textbook,
+      typescript: island('kettle'),
+      explain: island('explain'),
+    };
   }, [
     api,
+    apiBundle,
     markCorrectEverywhere,
-    config.urls.downloadFile,
+    config.urls,
     config.display.instructor,
     runController,
     paths.blocklyMedia,
+    user.courseId,
+    user.id,
+    user.name,
+    assignment.assignmentGroupId,
   ]);
 
   return (
@@ -801,7 +918,13 @@ export function App({ config, extras, registerActions }: AppProps) {
         loadEditorAssignment={loadAssignment}
         renderAssignment={
           assignmentRenderers
-            ? { reading: assignmentRenderers.reading, quiz: assignmentRenderers.quiz }
+            ? {
+                reading: assignmentRenderers.reading,
+                quiz: assignmentRenderers.quiz,
+                textbook: assignmentRenderers.textbook,
+                typescript: assignmentRenderers.typescript,
+                explain: assignmentRenderers.explain,
+              }
             : {}
         }
         onReady={(dispatch) => {
