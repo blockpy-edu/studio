@@ -14,7 +14,7 @@ const okFetch =
 
 describe('auth placement (A2 §1.1)', () => {
   it('sends the access token as a Bearer header, never in the body', async () => {
-    let captured: { headers: Record<string, string>; body: string | FormData } | undefined;
+    let captured: { headers: Record<string, string>; body?: string | FormData } | undefined;
     const fetch: FetchLike = async (_url, init) => {
       captured = init;
       return { ok: true, json: async () => ({ success: true }) };
@@ -118,5 +118,32 @@ describe('IP-change detection (LD-2c)', () => {
     await t.postRetry('/x', {});
     await t.postRetry('/x', {}); // legacy's _postRetry path never detected this
     expect(changes).toEqual(['1.1.1.1->2.2.2.2']);
+  });
+});
+
+describe('getJson (M4.7 — the GET-only /assignments/by_url route)', () => {
+  it('builds the query string, sends the Bearer header, parses the envelope', async () => {
+    let captured: { url: string; method?: string; headers?: Record<string, string> } | undefined;
+    const fetch: FetchLike = async (url, init) => {
+      captured = { url: String(url), ...init };
+      return { ok: true, json: async () => ({ success: true, assignment: { id: 5 } }) };
+    };
+    const t = new Transport({ fetch, accessToken: 'tok', schedule: (fn) => fn() });
+    const parsed = await t.getJson('/assignments/by_url', {
+      url: 'reading variables',
+      course_id: 1,
+    });
+    expect(captured!.url).toBe('/assignments/by_url?url=reading+variables&course_id=1');
+    expect(captured!.method).toBe('GET');
+    expect(captured!.headers!['Authorization']).toBe('Bearer tok');
+    expect(parsed['assignment']).toEqual({ id: 5 });
+  });
+
+  it('throws on transport-level failure (callers fail soft)', async () => {
+    const fetch: FetchLike = async () => ({ ok: false, json: async () => ({}) });
+    const t = new Transport({ fetch, schedule: (fn) => fn() });
+    await expect(t.getJson('/by_url', { url: 'x' })).rejects.toThrow(
+      'GET /by_url failed at transport level',
+    );
   });
 });

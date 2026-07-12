@@ -23,6 +23,19 @@ export interface LegacyUrlMap {
   instructionsAssignmentSetup?: string;
   openaiProxy?: string;
   shareUrl?: string;
+  /**
+   * Group organizer (M4.6; STUDIO EXTENSION keys). The server routes are
+   * legacy (`/assignment_group/edit|move_membership`) but the editor page
+   * never published them — templates add these keys to enable the UI.
+   */
+  editAssignmentGroup?: string;
+  moveMembership?: string;
+  /**
+   * `/assignments/by_url` (M4.7; closes LD-16): GET-only legacy route the
+   * editor page never published — templates add the key to enable textbook
+   * url-reference rehydration.
+   */
+  loadAssignmentByUrl?: string;
   [key: string]: string | undefined;
 }
 

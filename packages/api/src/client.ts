@@ -89,6 +89,68 @@ export class ApiClient {
     return this.options.transport.postRetry(this.url('saveAssignment'), this.buildPayload(fields));
   }
 
+  /**
+   * Group organizer endpoints (M4.6 slice 1). Server routes exist today
+   * (`/assignment_group/edit`, `/assignment_group/move_membership`,
+   * assignment_groups.py:89-137) but the legacy editor template never
+   * published their URLs — capability-detected via `isEndpointConnected`.
+   */
+  async editAssignmentGroup(fields: {
+    assignment_group_id: number;
+    new_name: string;
+    new_url?: string;
+  }): Promise<LegacyResponse> {
+    if (this.guardReadOnly()) return { success: false, readOnly: true };
+    return this.options.transport.postRetry(
+      this.url('editAssignmentGroup'),
+      this.buildPayload(fields as unknown as WirePayload),
+    );
+  }
+
+  /**
+   * `/assignments/by_url` (M4.7; closes LD-16): resolve an assignment url
+   * slug to its record. GET-only route; returns null on any failure — the
+   * textbook renders unresolved refs as Missing Reading.
+   */
+  async loadAssignmentByUrl(
+    url: string,
+  ): Promise<{ id: number; name: string; url: string } | null> {
+    if (!this.isEndpointConnected('loadAssignmentByUrl')) return null;
+    try {
+      const courseId = this.options.context.courseId;
+      const response = await this.options.transport.getJson(
+        this.url('loadAssignmentByUrl'),
+        { url, ...(courseId !== null ? { course_id: courseId } : {}) },
+      );
+      const record = response['assignment'] as
+        | { id?: unknown; name?: unknown; url?: unknown }
+        | undefined;
+      if (response.success !== true || !record || typeof record.id !== 'number') {
+        return null;
+      }
+      return {
+        id: record.id,
+        name: typeof record.name === 'string' ? record.name : `Assignment ${record.id}`,
+        url: typeof record.url === 'string' ? record.url : url,
+      };
+    } catch {
+      return null; // Fail soft: unresolved = legacy Missing Reading style.
+    }
+  }
+
+  /** `new_group_id: -1` removes the assignment from any group. */
+  async moveMembership(fields: {
+    assignment_id: number;
+    old_group_id: number;
+    new_group_id: number;
+  }): Promise<LegacyResponse> {
+    if (this.guardReadOnly()) return { success: false, readOnly: true };
+    return this.options.transport.postRetry(
+      this.url('moveMembership'),
+      this.buildPayload(fields as unknown as WirePayload),
+    );
+  }
+
   async loadHistory(): Promise<LegacyResponse> {
     return this.options.transport.postRetry(this.url('loadHistory'), this.buildPayload());
   }

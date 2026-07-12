@@ -10,7 +10,7 @@ interface Posted {
 function harness(overrides: Partial<SubmissionSyncOptions> = {}, urls?: Record<string, string>) {
   const posted: Posted[] = [];
   let respondWith: Record<string, unknown> = { success: true };
-  const fetchStub = async (url: string, init: { body: string | FormData }) => {
+  const fetchStub = async (url: string, init: { body?: string | FormData }) => {
     posted.push({ url, body: new URLSearchParams(String(init.body)) });
     return { ok: true, json: async () => respondWith };
   };

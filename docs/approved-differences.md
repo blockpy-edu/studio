@@ -262,6 +262,16 @@ Replicate decisions (D4, D6) produce no entries — they are legacy parity.
   `load_assignment` for `type == 'textbook'` or expose an
   assignment-by-url JSON endpoint; the client is already shaped for both.
 - **Wire impact:** none until the endpoint exists.
+- **CLOSED (M4.7, 2026-07-12):** the by-url JSON endpoint DOES exist —
+  `/assignments/by_url` (assignments.py:341-355, GET-only,
+  login_required); the original survey missed it. `ApiClient.
+  loadAssignmentByUrl` (Transport.getJson — our one GET call) now feeds
+  the Textbook's `resolveAssignment`. Remaining server-team ask shrinks
+  to: publish the `loadAssignmentByUrl` URL key on the editor template
+  ($blockPyUrls). Unresolved refs still render Missing Reading. The
+  standalone route also landed: BootConfig `assignment.textbookPath`
+  (the `load_textbook` `<path>`) resolves by-url-then-numeric-id at boot
+  and dispatches; the initial `?page=` was already honored in-component.
 
 ## LD-17 — Fullscreen failures no longer double-log Success (Milestone 3.3)
 
@@ -426,3 +436,50 @@ Replicate decisions (D4, D6) produce no entries — they are legacy parity.
 - **Wire impact:** none — same files, same save channels; only the editing
   surface changed. CSV serialization normalizes CRLF to LF and pads
   ragged rows (visible in the very first save after a grid edit).
+
+## LD-27 — Image preview & sprite pixel editor (Milestone 4.5)
+
+- **Legacy:** graphic files had no editor at all — uploads were listed in
+  the images manager; a `.png` working file opened as garbage text.
+- **Storage decision (plan M4.5 task, decided 2026-07-12):** the editable
+  representation is the file's VFS TEXT CONTENTS AS A DATA-URL. Edits ride
+  the normal code-change path (VFS write → autosave → dirty tracking) like
+  every working file, so nothing new touches the wire. Server-side uploads
+  (placement files) remain ImagesManager-only (M1.6 path): preview/replace
+  by upload, no pixel editing — their bytes never enter the VFS.
+- **Studio:** `.png/.jpg/.jpeg/.gif/.bmp` tabs render the ImageEditor:
+  checkerboard-backed preview with zoom (0.5–8×) and a natural-dimensions
+  readout; an "Edit Pixels" mode for sprite-scale images (≤ 64×64):
+  palette + custom color + eraser, click/drag painting, width/height
+  resize preserving the top-left, Apply re-encodes to a PNG data-URL.
+  Non-data-URL contents (fresh files) offer a blank-canvas creator. The
+  raw-text escape/return matches the M4.4 editors; `&`-space files are
+  preview-only (D3-A).
+- **Wire impact:** none structurally — image working files save as text
+  data-URLs through existing channels. Consequence for runs: a student
+  `open('sprite.png')` reads the data-URL STRING (text staging), which is
+  also what legacy would have done with text contents.
+
+## LD-28 — Assignment-group organizer, slice 1 (Milestone 4.6)
+
+- **Legacy:** group management lived only on the server-rendered course
+  pages (`courses/edit_settings.html`, a bulk form) — nothing was
+  reachable from the editor, and the editor template never published the
+  `/assignment_group/*` endpoint URLs.
+- **Studio:** an instructor-only "Organize Group" dialog in the app shell
+  over endpoints that already exist server-side: group rename/url
+  (`POST /assignment_group/edit` — `assignment_group_id`/`new_name`/
+  `new_url`), per-assignment name/url/points/public/hidden/reviewed
+  (`POST save_assignment` — ONLY touched fields go on the wire; boot data
+  doesn't carry points/public/reviewed, so untouched means unknown, never
+  false), and move-out/move-in (`POST /assignment_group/move_membership`;
+  `new_group_id = -1` removes). The group-nav header refreshes in place
+  (new `GroupNavStore.renameEntry`/`removeEntry`).
+- **Capability detection:** `editAssignmentGroup` and `moveMembership` are
+  NEW `$blockPyUrls` keys — server templates must publish them to light up
+  the group-edit/move controls (server-team flag, R10); per-assignment
+  saves work on every editor page today. Slice 2 (true reordering, type
+  changes, subordinate JSON toggle) stays open pending server endpoints.
+- **Wire impact:** POSTs to two legacy-but-previously-unlinked routes,
+  carrying the standard eleven base fields plus the routes' documented
+  parameters. No new server code required for slice 1.

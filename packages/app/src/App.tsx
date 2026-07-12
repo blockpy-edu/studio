@@ -39,6 +39,7 @@ import { Quizzer } from '@blockpy/quizzer';
 import { createEngineRunController } from './engine-adapter';
 import { parseAssignmentSettings, vfsFromAssignment } from './assignment-loader';
 import { AssignmentHost } from './AssignmentHost';
+import { GroupOrganizer } from './GroupOrganizer';
 import { SubmissionSync } from './submission-sync';
 import '@blockpy/editor/styles/tokens.css';
 import '@blockpy/editor/styles/bootstrap-subset.css';
@@ -119,6 +120,8 @@ export function App({ config, extras, registerActions }: AppProps) {
   // Focused editor mode (M4.2) hides the group-nav headers around the
   // editor — the flag lives in the editor chrome store.
   const focusedMode = useEditorChromeStore((state) => state.focusedMode);
+  // Group organizer dialog (M4.6 slice 1, LD-28).
+  const [organizerOpen, setOrganizerOpen] = useState(false);
 
   // -- server client (spec §14): built once per mount ------------------------
   const apiBundle = useMemo(() => {
@@ -261,6 +264,24 @@ export function App({ config, extras, registerActions }: AppProps) {
     ) {
       const load = dispatchRef.current ?? loadAssignment;
       void load(assignment.currentAssignmentId).catch(() => undefined);
+    } else if (assignment.textbookPath && api) {
+      // Standalone textbook route (M4.7; the load_textbook contract,
+      // assignments.py:95-130): resolve the path BY URL FIRST, THEN as a
+      // numeric id — the flagged server template passes the raw <path>
+      // instead of resolving it. The initial ?page= is honored by the
+      // Textbook component itself (url-then-id, Textbook.tsx pageParam).
+      const path = assignment.textbookPath;
+      void (async () => {
+        const byUrl = await api.loadAssignmentByUrl(path);
+        const resolved =
+          byUrl?.id ?? (/^\d+$/.test(path) ? Number(path) : null);
+        if (resolved === null) {
+          setLoadError(`There is no textbook at "${path}".`);
+          return;
+        }
+        const load = dispatchRef.current ?? loadAssignment;
+        await load(resolved);
+      })().catch(() => undefined);
     }
     if (config.passcodeProtected) requestPasscode();
     // Drain events queued while offline (legacy checkCaches, LIFO).
@@ -500,7 +521,10 @@ export function App({ config, extras, registerActions }: AppProps) {
     active === null &&
     loadError === null &&
     (assignment.assignmentData !== undefined ||
-      (assignment.currentAssignmentId !== null && Boolean(config.urls.loadAssignment)));
+      ((assignment.currentAssignmentId !== null ||
+        // Standalone textbook boot (M4.7) resolves then loads.
+        assignment.textbookPath !== undefined) &&
+        Boolean(config.urls.loadAssignment)));
   const vfs = active?.vfs ?? harnessVfs;
   const instructions = active
     ? active.assignment.instructions
@@ -798,6 +822,10 @@ export function App({ config, extras, registerActions }: AppProps) {
           };
         }}
         renderReading={(readingId) => reading(readingId, true)}
+        // LD-16 closure (M4.7): url-string sidebar refs rehydrate through
+        // the GET-only /assignments/by_url route when the template
+        // publishes its key; otherwise Missing Reading, as before.
+        resolveAssignment={(slug) => api.loadAssignmentByUrl(slug)}
         isInstructor={() => instructorViewRef.current}
         logEvent={makeSurfaceLogEvent(textbookId)}
         saveTextbookAssignment={async (assignmentId, instructionsText, settingsText) => {
@@ -888,6 +916,18 @@ export function App({ config, extras, registerActions }: AppProps) {
         className="blockpy-instructor-bar"
         style={{ position: 'sticky', top: 0, zIndex: 100, textAlign: 'right', padding: '2px 8px' }}
       >
+        {/* Group organizer (M4.6 slice 1, LD-28): instructor tooling over
+            the current group; renders only with an API + group context. */}
+        {instructorView && api && config.group && (
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-secondary blockpy-organize-group"
+            style={{ marginRight: '8px' }}
+            onClick={() => setOrganizerOpen(true)}
+          >
+            Organize Group
+          </button>
+        )}
         <label className="form-check-label" htmlFor="blockpy-instructor-mode">
           <input
             className="form-check-input"
@@ -899,6 +939,16 @@ export function App({ config, extras, registerActions }: AppProps) {
           Instructor mode
         </label>
       </div>
+      {instructorView && api && config.group && organizerOpen && (
+        <GroupOrganizer
+          api={api}
+          groupId={assignment.assignmentGroupId}
+          assignments={config.group.assignments}
+          navStore={navStore}
+          visible={organizerOpen}
+          onClose={() => setOrganizerOpen(false)}
+        />
+      )}
       {loadError !== null && <div className="alert alert-warning">{loadError}</div>}
       {versionOutdated && (
         <div className="alert alert-warning blockpy-version-outdated">

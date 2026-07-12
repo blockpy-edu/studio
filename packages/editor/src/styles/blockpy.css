@@ -485,6 +485,86 @@
   margin-bottom: 4px;
 }
 
+/* Image preview + pixel editor (M4.5; Studio extension). */
+.blockpy-image-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  flex-wrap: wrap;
+}
+
+/* Classic transparency checkerboard. */
+.blockpy-image-checkerboard {
+  background-image:
+    linear-gradient(45deg, var(--blockpy-neutral-250) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--blockpy-neutral-250) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--blockpy-neutral-250) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--blockpy-neutral-250) 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+  background-color: var(--blockpy-neutral-0);
+}
+
+.blockpy-image-preview {
+  overflow: auto;
+  max-height: 400px;
+  border: 1px solid var(--blockpy-neutral-250);
+  padding: 8px;
+}
+
+.blockpy-image-preview img {
+  image-rendering: pixelated;
+}
+
+.blockpy-image-dimensions {
+  font-family: monospace;
+}
+
+.blockpy-image-error {
+  color: var(--blockpy-status-danger);
+  padding: 4px 0;
+}
+
+.blockpy-pixel-grid {
+  overflow: auto;
+  max-height: 400px;
+  border: 1px solid var(--blockpy-neutral-250);
+  width: fit-content;
+}
+
+.blockpy-pixel-row {
+  display: flex;
+  height: 14px;
+}
+
+.blockpy-pixel-cell {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border: none;
+  outline: 1px solid var(--blockpy-line-rule);
+  background: transparent;
+  padding: 0;
+  cursor: crosshair;
+}
+
+.blockpy-pixel-swatch {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--blockpy-neutral-350);
+  padding: 0;
+  cursor: pointer;
+}
+
+.blockpy-pixel-swatch.active {
+  outline: 2px solid var(--blockpy-status-info);
+}
+
+.blockpy-pixel-size {
+  width: 60px;
+}
+
 /* Focused editor mode drawer (M4.2; Studio extension). */
 .blockpy-focus-drawer {
   border-top: 1px solid var(--blockpy-border-warm);

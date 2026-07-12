@@ -9,7 +9,7 @@ import type { ApiContext } from './context';
 
 interface Call {
   url: string;
-  body: string | FormData;
+  body?: string | FormData;
   headers: Record<string, string>;
 }
 
@@ -56,7 +56,7 @@ function harness(responses: Array<{ ok: boolean; payload?: unknown; text?: strin
   return { api, transport, calls };
 }
 
-const formEntries = (body: string | FormData): Record<string, unknown> =>
+const formEntries = (body: string | FormData | undefined): Record<string, unknown> =>
   Object.fromEntries((body as FormData).entries());
 
 describe('multipart uploads transport (server.js FormData paths)', () => {

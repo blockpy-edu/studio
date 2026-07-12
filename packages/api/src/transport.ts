@@ -22,7 +22,8 @@ export interface LegacyResponse {
 
 export type FetchLike = (
   url: string,
-  init: { method: 'POST'; headers: Record<string, string>; body: string | FormData },
+  // GET has no body — it exists solely for /assignments/by_url (M4.7).
+  init: { method: 'POST' | 'GET'; headers: Record<string, string>; body?: string | FormData },
 ) => Promise<{ ok: boolean; json(): Promise<unknown>; text?(): Promise<string> }>;
 
 /** Minimal key-value storage (localStorage-compatible subset). */
@@ -94,6 +95,35 @@ export class Transport {
       body: encodeForm(payload),
     });
     if (!response.ok) throw new Error(`POST ${url} failed at transport level`);
+    const parsed = (await response.json()) as LegacyResponse;
+    if (typeof parsed.ip === 'string') this.checkIp(parsed.ip);
+    return parsed;
+  }
+
+  /**
+   * Plain GET with query params (M4.7): the `/assignments/by_url` route is
+   * GET-only (assignments.py:341-342) — the only legacy endpoint we call
+   * that refuses POST. No retry loop; resolution failures are cosmetic
+   * (Missing Reading style) so callers fail soft.
+   */
+  async getJson(
+    url: string,
+    params: Record<string, string | number>,
+  ): Promise<LegacyResponse> {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      query.set(key, String(value));
+    }
+    const headers: Record<string, string> = {};
+    if (this.options.accessToken) {
+      headers['Authorization'] = `Bearer ${this.options.accessToken}`;
+    }
+    const separator = url.includes('?') ? '&' : '?';
+    const response = await this.options.fetch(`${url}${separator}${query.toString()}`, {
+      method: 'GET',
+      headers,
+    });
+    if (!response.ok) throw new Error(`GET ${url} failed at transport level`);
     const parsed = (await response.json()) as LegacyResponse;
     if (typeof parsed.ip === 'string') this.checkIp(parsed.ip);
     return parsed;

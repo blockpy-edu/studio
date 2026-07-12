@@ -24,6 +24,7 @@ import { JsonEditor } from './JsonEditor';
 import { FileTabs } from './FileTabs';
 import { FileTree } from './FileTree';
 import { Icon } from './icons';
+import { ImageEditor } from './ImageEditor';
 import { Footer, type FooterProps } from './Footer';
 import {
   editEvents,
@@ -114,6 +115,9 @@ export interface RunOptions {
   /** Pool-question seed (legacy currentSeed = poolSeed || submission.id). */
   seed?: string;
 }
+
+/** Graphic extensions served by the ImageEditor tab body (M4.5, LD-27). */
+const IMAGE_FILE = /\.(png|jpe?g|gif|bmp)$/i;
 
 /** Legacy countTestCases tallies — the Intervention `unitTests` block (A2). */
 export interface UnitTestCounts {
@@ -1082,6 +1086,17 @@ export function CodingEditor(props: CodingEditorProps) {
                 props.onSaveSettings?.(blob, fields);
               }}
             />
+          ) : !rawStructured && IMAGE_FILE.test(activeFile) ? (
+            // M4.5 (LD-27): image preview + sprite pixel editor. The
+            // editable representation is the file's VFS contents as a
+            // data-URL; uploads stay in the ImagesManager.
+            <ImageEditor
+              key={activeFile}
+              value={code}
+              readOnly={fileReadOnly}
+              onChange={handleCodeChange}
+              onRawView={() => setRawStructured(true)}
+            />
           ) : !rawStructured &&
             activeFile.toLowerCase().endsWith('.csv') &&
             parseCsv(code) !== null ? (
@@ -1128,7 +1143,8 @@ export function CodingEditor(props: CodingEditorProps) {
             >
               {rawStructured &&
                 (activeFile.toLowerCase().endsWith('.csv') ||
-                  activeFile.toLowerCase().endsWith('.json')) && (
+                  activeFile.toLowerCase().endsWith('.json') ||
+                  IMAGE_FILE.test(activeFile)) && (
                   <button
                     type="button"
                     className="btn btn-sm btn-outline-secondary blockpy-structured-return"
@@ -1137,7 +1153,9 @@ export function CodingEditor(props: CodingEditorProps) {
                     Back to{' '}
                     {activeFile.toLowerCase().endsWith('.csv')
                       ? 'Grid'
-                      : 'JSON'}{' '}
+                      : IMAGE_FILE.test(activeFile)
+                        ? 'Image'
+                        : 'JSON'}{' '}
                     Editor
                   </button>
                 )}

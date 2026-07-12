@@ -306,22 +306,22 @@ All additive with no legacy analog (or explicitly superseding a legacy screen); 
 - [x] Extension dispatch in the tab body: `.csv` → `CsvEditor` grid (chrome/csv.ts RFC-4180-ish parse/serialize, header toggle, add/remove rows/columns, cell edits through handleCodeChange so VFS/autosave/dirty just work); `.json` → `JsonEditor` (CM6 lang-json + jsonParseLinter gutter + synchronous validity badge + collapsible tree view).
 - [x] "Raw Text" escape with a "Back to Grid/JSON Editor" return (reset on file switch); unparseable CSV (unclosed quote → `parseCsv` null) degrades to the text editor; `&`-space read-only rides `fileReadOnly` (D3-A).
 
-### Milestone 4.5 — Image preview & pixel editor
+### Milestone 4.5 — Image preview & pixel editor ✅ (landed 2026-07-12, LD-27)
 
-- [ ] Graphic extensions (.png/.jpg/.gif/.bmp) get a preview tab body: checkerboard backdrop, zoom, dimensions readout.
-- [ ] Pixel-grid editor for small (sprite-scale) images: paint/erase, palette, new/resize canvas; writes back as data-URLs. Storage decision task FIRST: uploads placements vs data-URL VFS contents (the ImagesManager/uploads path landed in M1.6 — reuse it where the file lives server-side).
+- [x] Graphic extensions (.png/.jpg/.jpeg/.gif/.bmp) dispatch to `ImageEditor`: checkerboard backdrop, 0.5–8× zoom, natural-dimensions readout; raw-text escape/return matches M4.4.
+- [x] Pixel-grid editor for sprite-scale images (≤ 64×64): palette + custom color + eraser, click/drag paint, resize preserving top-left, blank-canvas creator for fresh files; Apply re-encodes to a PNG data-URL. Pure grid model (`pixel-grid.ts`) unit-tests without a canvas backend. **Storage decision (task closed):** editable representation = VFS text contents as a data-URL (normal save channels); uploads stay ImagesManager-only (preview/replace, no pixel editing).
 
 ### Milestone 4.6 — Assignment-group organizer (instructor)
 
 Reference investigated 2026-07-11: `courses/edit_settings.html` is a bulk FORM, not a drag-drop UI — per-assignment name/url + public/hidden/reviewed/subordinate booleans, per-group name/url; `subordinate` is a plain boolean (no parent pointer exists); server `position` columns exist but ordering-by-position is commented out (course.py:204-244). Studio builds the group-scoped equivalent, not a port.
 
-- [ ] **Slice 1 (existing endpoints):** an organizer for the CURRENT group reachable from instructor view — rename/edit the group (`POST /assignment_group/edit`), rename assignments + url/points/public/hidden/reviewed (`POST /blockpy/save_assignment`), move an assignment out/in (`POST /assignment_group/move_membership`; `new_group_id=-1` removes). Group-nav store refreshes after each edit; type changes remount through AssignmentHost's dispatch.
+- [x] **Slice 1 (existing endpoints)** ✅ (landed 2026-07-12, LD-28): `GroupOrganizer` dialog from the instructor bar — group rename/url (`editAssignmentGroup`), per-assignment name/url/points/public/hidden/reviewed with touched-fields-only saves (`saveAssignment`), remove/add via `moveMembership` (`new_group_id=-1` removes). Nav header refreshes in place (`GroupNavStore.renameEntry`/`removeEntry`). The two `/assignment_group/*` URLs are NEW `$blockPyUrls` keys — capability-detected until templates publish them (server-team flag).
 - [ ] **Slice 2 (server-team flags, LD-16 style):** true reordering (pass `position` through move_membership — the route currently drops it — and re-enable the position `order_by`), change assignment `type` (NO endpoint exists today; server must extend `save_assignment`), `subordinate` toggle via JSON (today bulk-form-only). Client ships capability-detected: controls appear when the server accepts them.
 
-### Milestone 4.7 — Textbook URL routes (supersedes the M2.5 deferral)
+### Milestone 4.7 — Textbook URL routes (supersedes the M2.5 deferral) ✅ (landed 2026-07-12; LD-16 closed)
 
-- [ ] **Close LD-16 for real:** ApiClient method for `/assignments/by_url` (assignments.py:341-355) + wire a `resolveAssignment` implementation into App's `<Textbook>` render (App.tsx:778-810 passes none today, so url-only sidebar refs render "Missing Reading" against an unmodified server).
-- [ ] **Standalone route:** a boot path for `/blockpy/assignments/textbook/<path>?page=…` (the `load_textbook` contract, assignments.py:95-130): resolve the textbook assignment by url-then-id, honor the initial `?page=` (the in-component pushState/popstate/title contract already works — Textbook.tsx:93-222), flagged template swap server-side. Studio still has no general client router — this lands as a boot-config entry mode, not a router.
+- [x] **LD-16 closed:** `ApiClient.loadAssignmentByUrl` over the GET-only `/assignments/by_url` route (new `Transport.getJson` — the only GET in the client; fail-soft null) wired into App's `<Textbook resolveAssignment>`. Capability-detected via the new `loadAssignmentByUrl` `$blockPyUrls` key (server-team ask shrinks to publishing it).
+- [x] **Standalone route:** BootConfig `assignment.textbookPath` entry mode (used only when `currentAssignmentId` is null): resolve `<path>` by url THEN numeric id, dispatch through the host; boot spinner covers the resolution; unresolvable paths surface the load error. The initial `?page=` was already honored in-component (Textbook.tsx pageParam, url-then-id). Server side stays a flagged template swap.
 
 ---
 

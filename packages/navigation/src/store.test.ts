@@ -91,7 +91,7 @@ describe('markCorrect (assignment_groups.html:124-142, A7 §2)', () => {
     const store = makeStore();
     expect(store.getSnapshot().numerator).toBe(1); // 103 seeded correct
     store.markCorrect(101);
-    let snap = store.getSnapshot();
+    const snap = store.getSnapshot();
     expect(snap.correct.has(101)).toBe(true);
     expect(snap.numerator).toBe(2);
     expect(snap.nextSuccess).toBe(true);
@@ -333,5 +333,28 @@ describe('lifecycle', () => {
     vi.advanceTimersByTime(600_000);
     expect(store.getSnapshot().clockText).toBe(frozen);
     expect((globalThis as Record<string, unknown>)['$TIME_CHECKER_ID']).toBeUndefined();
+  });
+});
+
+describe('organizer refresh (M4.6; Studio extension)', () => {
+  it('renameEntry updates the header list in place', () => {
+    const store = makeStore();
+    store.renameEntry(103, 'Reading: Renamed');
+    expect(
+      store.getSnapshot().entries.find((entry) => entry.id === 103)!.name,
+    ).toBe('Reading: Renamed');
+    // Unknown ids are no-ops (subordinates are not in the header).
+    store.renameEntry(102, 'nope');
+    expect(store.getSnapshot().entries).toHaveLength(3);
+  });
+
+  it('removeEntry drops the assignment from the header', () => {
+    const store = makeStore();
+    store.removeEntry(103);
+    expect(store.getSnapshot().entries.map((entry) => entry.id)).toEqual([
+      101, 104,
+    ]);
+    store.removeEntry(999); // unknown id: no-op
+    expect(store.getSnapshot().entries).toHaveLength(2);
   });
 });

@@ -64,6 +64,14 @@ export interface BootConfig {
     assignmentGroupId: number | null;
     /** For the legacy editor.loadAssignmentData_ path. */
     assignmentData?: LegacyAssignmentPayload;
+    /**
+     * Standalone textbook route (M4.7): the raw `<path>` segment of
+     * `/blockpy/assignments/textbook/<path>?page=…` — resolved client-side
+     * by url THEN numeric id (the load_textbook contract). Used only when
+     * `currentAssignmentId` is null; the flagged server template supplies
+     * it instead of resolving the assignment itself.
+     */
+    textbookPath?: string;
     typeIndex: AssignmentTypeIndex;
   };
   group?: GroupBootData;

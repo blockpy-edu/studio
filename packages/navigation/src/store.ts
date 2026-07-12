@@ -224,6 +224,32 @@ export class GroupNavStore {
     }
   }
 
+  // -- organizer refresh (M4.6; STUDIO EXTENSION, no legacy analog) ------------
+
+  /** Rename an entry in place (group organizer save_assignment success). */
+  renameEntry(assignmentId: number, name: string): void {
+    if (!this.snapshot.entries.some((entry) => entry.id === assignmentId)) {
+      return;
+    }
+    this.setState({
+      entries: this.snapshot.entries.map((entry) =>
+        entry.id === assignmentId ? { ...entry, name } : entry,
+      ),
+    });
+  }
+
+  /** Drop an entry (moved out of the group via move_membership). */
+  removeEntry(assignmentId: number): void {
+    if (!this.snapshot.entries.some((entry) => entry.id === assignmentId)) {
+      return;
+    }
+    this.setState({
+      entries: this.snapshot.entries.filter(
+        (entry) => entry.id !== assignmentId,
+      ),
+    });
+  }
+
   // -- markCorrect (assignment_groups.html:124-142) ----------------------------
 
   /**
