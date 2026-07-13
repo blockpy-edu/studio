@@ -93,6 +93,8 @@ export function JsonEditor({ value, readOnly, onChange, onRawView }: JsonEditorP
           foldGutter(),
           bracketMatching(),
           json(),
+          // Accessible name (WCAG audit M6.1 — axe aria-input-field-name).
+          EditorView.contentAttributes.of({ 'aria-label': 'JSON editor' }),
           linter(jsonParseLinter()),
           syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
           readOnlyCompartment.current.of(EditorState.readOnly.of(readOnly ?? false)),

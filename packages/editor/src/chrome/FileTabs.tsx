@@ -103,7 +103,12 @@ export function FileTabs({
   const tabs = computeTabs(vfs, role);
   return (
     <div className="blockpy-panel blockpy-files col-md-12">
-      <ul className="nav nav-tabs" role="tablist">
+      {/* Plain navigation list, NOT an ARIA tab widget (audit M6.1): the
+          strip mixes non-tab children (View label + toggle, Add New menu)
+          and never annotated a tabpanel, so tablist/tab/aria-selected were
+          an incomplete contract axe rightly rejects. The active file is
+          announced via aria-current instead. */}
+      <ul className="nav nav-tabs">
         <li className="nav-item">
           {/* File-tree rail toggle (M3.7; Studio extension, default off). */}
           <button
@@ -131,9 +136,8 @@ export function FileTabs({
                 (tab.legacyName === activeFile ? ' active' : '') +
                 (tab.uneditable ? ' uneditable' : '')
               }
-              role="tab"
               href="#"
-              aria-selected={tab.legacyName === activeFile}
+              aria-current={tab.legacyName === activeFile ? 'true' : undefined}
               onClick={(event) => {
                 event.preventDefault();
                 onSelect(tab.legacyName);

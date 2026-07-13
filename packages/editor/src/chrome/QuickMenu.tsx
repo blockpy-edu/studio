@@ -226,7 +226,11 @@ export function QuickMenu(props: QuickMenuProps) {
     <div
       ref={rootRef}
       className="col-md-3 blockpy-panel blockpy-quick-menu"
-      role="menubar"
+      // Legacy said role=menubar (interface.js:117), but the children are
+      // plain buttons, not menuitems — menubar's required-children ARIA
+      // contract fails (WCAG audit M6.1). toolbar matches the actual
+      // widgetry; non-visual delta.
+      role="toolbar"
       aria-label="Quick Menu"
       title="Quick Menu"
     >

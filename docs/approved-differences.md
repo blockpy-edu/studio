@@ -483,3 +483,31 @@ Replicate decisions (D4, D6) produce no entries — they are legacy parity.
 - **Wire impact:** POSTs to two legacy-but-previously-unlinked routes,
   carrying the standard eleven base fields plus the routes' documented
   parameters. No new server code required for slice 1.
+
+## LD-29 — WCAG AA fixes: ARIA roles, accessible names, contrast (Milestone 6.1)
+
+- **Legacy:** never audited; the §16.3 acceptance criteria (WCAG 2.1 AA on
+  navigation/quiz/text editing) are a Studio requirement.
+- **Studio (axe-core audit, e2e/a11y.spec.ts — now a CI-runnable gate over
+  the editor, quiz, reading, and textbook surfaces):**
+  - **ARIA:** quick menu `role` menubar → toolbar (children are buttons,
+    not menuitems); the file strip dropped its INCOMPLETE tab ARIA
+    (tablist/tab/aria-selected with no tabpanel and non-tab children) for
+    a plain navigation list with `aria-current` on the active file;
+    CM6 editors carry `aria-label`s (Python/JSON); icon-only toolbar
+    buttons, the assignment selector, and every quiz input
+    (matching/dropdown selects, short-answer/numerical/essay/blank
+    fields) gained accessible names.
+  - **Contrast (all visual deltas, deliberately breaking exact color
+    parity where legacy fails AA):** `.text-muted` and
+    `.btn-outline-secondary` text `#6c757d` → `#62696f` (4.39:1 on
+    parchment → 5.2:1); `.btn-success` `#28a745` → `#1e7e34` (3.13 →
+    5.1); textbook active item `#007bff` → `#0a58ca` (3.97 → 6.4);
+    footer server badges — ready `#5cb85c` → `#358535` (2.48 → 4.6),
+    active `#5bc0de` → `#1a7a96`, failed `#d9534f` → `#b52b27`,
+    retrying keeps amber with dark text (1.9 → 7.9).
+- **Residual (Phase 6 full audit):** the feedback `label-*` badge colors
+  are A8 §4.5-normative and still fail AA with white text when shown
+  (e.g. no-errors `#5bc0de`); keyboard-only/manual passes (completion-box
+  span, Blockly keyboard-nav plugin) are separate §16.3 lines.
+- **Wire impact:** none — roles/labels/colors are client-side only.

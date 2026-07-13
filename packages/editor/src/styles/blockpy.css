@@ -913,20 +913,26 @@ div.blockpy-blocks.blockpy-editor-menu.col-md-6 {
   color: var(--blockpy-neutral-0);
 }
 
+/* Footer badges carry 12px white text — the Bootstrap-3 brand hues fail
+   WCAG AA there (ready green was 2.5:1; audit M6.1, LD-29). Same hue
+   families, darkened to >=4.5:1; retrying keeps its light amber with dark
+   text instead. The feedback badges (label-*) keep the A8-normative
+   colors pending the full Phase 6 audit. */
 .blockpy-content .badge.server-status-ready {
-  background-color: var(--blockpy-status-success);
+  background-color: var(--blockpy-status-success-dark);
 }
 
 .blockpy-content .badge.server-status-active {
-  background-color: var(--blockpy-status-info);
+  background-color: #1a7a96; /* darkened --blockpy-status-info, 4.9:1 */
 }
 
 .blockpy-content .badge.server-status-retrying {
   background-color: var(--blockpy-status-warning);
+  color: #212529; /* white on amber is 1.9:1 — dark text is 7.9:1 */
 }
 
 .blockpy-content .badge.server-status-failed {
-  background-color: var(--blockpy-status-danger);
+  background-color: #b52b27; /* darkened --blockpy-status-danger, 6.3:1 */
 }
 
 .blockpy-content .badge.server-status-offline {

@@ -337,10 +337,11 @@ Lint baseline (2026-07-11, `pnpm lint`): **136 problems** — 72 `@typescript-es
 
 ## 7. Phase 6 — Hardening & Default-On (spec §17 Phase 3)
 
-- **Non-functional acceptance (§16.3):** engine lazy-load after UI paint, wasm/package caching, 10-minified-editor memory budget, WCAG 2.1 AA on navigation/quiz/text editing, Blockly keyboard-nav plugin, Safari compat-mode verification, i18n externalization + Blockly locale wiring.
-- Finish the Skulpt-compat instructor appendix (§6.7).
-- Default-on rollout; legacy client installable for one semester; server templates shrink to BootConfig JSON block (§17 Phase 3).
-- Permitted flagged extensions as capacity allows (§17.5): tightened postMessage origins, batched logging, `X-` events, wheel hosting.
+- [x] **M6.1 — WCAG 2.1 AA automated audit + fixes** ✅ (landed 2026-07-13, LD-29): `e2e/a11y.spec.ts` runs axe-core (wcag2a/aa/21a/21aa) over the editor+nav, quiz, reading, and textbook surfaces as a standing e2e gate (Blockly SVG excluded — keyboard-nav plugin territory). Fixed: quick-menu role menubar→toolbar; file strip's incomplete tab ARIA replaced with a plain nav list + `aria-current`; CM6 `aria-label`s; accessible names for icon buttons, the assignment selector, and every quiz input; contrast fixes for text-muted/btn-outline-secondary/btn-success/textbook-active/footer badges (ratios in LD-29). **Residual:** feedback `label-*` badge colors (A8-normative, still sub-AA when shown), keyboard-only/manual passes.
+- [ ] **M6.2 — Remaining §16.3 non-functional acceptance:** engine lazy-load after UI paint (already true — verify + document), wasm/package caching, 10-minified-editor memory budget, Blockly keyboard-nav plugin (also closes part of the M6.1 residual), Safari compat-mode verification, i18n externalization + Blockly locale wiring.
+- [ ] **M6.3 — Finish the Skulpt-compat instructor appendix (§6.7):** needs the real-student-submission corpus (§16.1.3) for the float-repr/error-wording/time deltas.
+- [ ] **M6.4 — Default-on rollout:** legacy client installable for one semester; server templates shrink to BootConfig JSON block (§17 Phase 3); server-team flags land (`$blockPyUrls` keys for editAssignmentGroup/moveMembership/loadAssignmentByUrl; M4.6 slice-2 endpoints).
+- [ ] **M6.5 — Flagged extensions as capacity allows (§17.5):** tightened postMessage origins, batched logging, `X-` events, wheel hosting (utility module + curriculum_ctvt/bakery_canvas bundling).
 
 ---
 

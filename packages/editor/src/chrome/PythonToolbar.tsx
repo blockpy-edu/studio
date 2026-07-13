@@ -123,7 +123,12 @@ export function PythonToolbar({
         <button type="button" className="btn btn-outline-secondary" disabled>
           <Icon name="upload" /> Upload
         </button>
-        <button type="button" className="btn btn-outline-secondary" disabled>
+        <button
+          type="button"
+          className="btn btn-outline-secondary"
+          aria-label="Download the current file"
+          disabled
+        >
           <Icon name="download" />
         </button>
       </div>
@@ -214,7 +219,12 @@ export function PythonToolbar({
         </div>
       )}
       <div className="btn-group mr-2" role="group">
-        <button type="button" className="btn btn-outline-secondary" disabled>
+        <button
+          type="button"
+          className="btn btn-outline-secondary"
+          aria-label="More options"
+          disabled
+        >
           <Icon name="extra" />
         </button>
       </div>

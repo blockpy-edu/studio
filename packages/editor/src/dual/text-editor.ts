@@ -199,6 +199,9 @@ export class DualTextEditor {
           bracketMatching(),
           indentUnit.of('    '),
           python(),
+          // Accessible name for the contenteditable (WCAG audit M6.1 —
+          // axe aria-input-field-name).
+          EditorView.contentAttributes.of({ 'aria-label': 'Python code editor' }),
           syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
           // OFF by default (M3.3): legacy CM5 had no autocomplete, and the
           // popup distracts novices. A toolbar toggle reconfigures it live.

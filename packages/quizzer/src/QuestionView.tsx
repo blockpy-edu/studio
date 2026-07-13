@@ -292,6 +292,7 @@ export function QuestionView(props: QuestionViewProps) {
                   <select
                     className="custom-select"
                     id={`question-mat-${index}-${statementIndex}`}
+                    aria-label={`Match for statement ${statementIndex + 1} of question ${index}`}
                     value={chosen[statementIndex] ?? ''}
                     disabled={readOnly}
                     onChange={(event) => {
@@ -322,6 +323,7 @@ export function QuestionView(props: QuestionViewProps) {
               className="form-control"
               autoComplete="off"
               id={`question-sa-${index}`}
+              aria-label={`Answer to question ${index}`}
               value={(answer ?? '') as string}
               disabled={readOnly}
               onChange={(event) => props.onChange(event.target.value)}
@@ -334,6 +336,7 @@ export function QuestionView(props: QuestionViewProps) {
             style={{ width: '100%', height: '300px' }}
             autoComplete="off"
             id={`question-es-${index}`}
+            aria-label={`Answer to question ${index}`}
             value={(answer ?? '') as string}
             disabled={readOnly}
             onChange={(event) => props.onChange(event.target.value)}
@@ -401,6 +404,7 @@ export function QuestionView(props: QuestionViewProps) {
             <select
               className="quizzer-inline-select"
               id={`question-md-${index}-${slot.blank}`}
+              aria-label={`Answer for blank ${slot.blank} of question ${index}`}
               value={((answer ?? {}) as KeyedTextAnswer)[slot.blank] ?? ''}
               disabled={readOnly}
               onChange={(event) => setKeyed(slot.blank, event.target.value)}
@@ -418,6 +422,7 @@ export function QuestionView(props: QuestionViewProps) {
                 className="form-control quizzer-inline-blank"
                 autoComplete="off"
                 id={`question-fimb-${index}-${slot.blank}`}
+                aria-label={`Answer for blank ${slot.blank} of question ${index}`}
                 value={((answer ?? {}) as KeyedTextAnswer)[slot.blank] ?? ''}
                 disabled={readOnly}
                 onChange={(event) => setKeyed(slot.blank, event.target.value)}

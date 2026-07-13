@@ -61,6 +61,7 @@ export function GroupNav({ store }: GroupNavProps) {
             </button>
             <select
               className="assignment-selector m-1"
+              aria-label="Select assignment"
               value={currentId}
               // Legacy: size = min(5, document-wide options / 2) — with the
               // dual-rendered header that resolves to min(5, N) (:97).

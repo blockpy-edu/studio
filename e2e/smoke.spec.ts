@@ -142,7 +142,11 @@ test('Add New menu creates and opens files (instructor view)', async ({ page }) 
   await page.getByRole('link', { name: 'On Change' }).click();
   await expect(page.locator('.nav-link.active')).toHaveText('On Change');
   await page.getByRole('button', { name: 'Add New' }).click();
-  await expect(page.getByRole('link', { name: 'On Change' })).toHaveCount(0);
+  // Scoped to the dropdown: the created On Change TAB is itself a link now
+  // (the strip dropped the incomplete tab ARIA in the M6.1 audit).
+  await expect(page.locator('.dropdown-menu').getByRole('link', { name: 'On Change' })).toHaveCount(
+    0,
+  );
 });
 
 test('images.blockpy tab opens the uploaded-files manager (§14.2 uploads)', async ({ page }) => {

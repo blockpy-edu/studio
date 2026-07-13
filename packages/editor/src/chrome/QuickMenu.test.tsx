@@ -77,7 +77,9 @@ describe('QuickMenu component', () => {
     const { container } = render(<QuickMenu />);
     const menu = container.querySelector('.blockpy-quick-menu');
     expect(menu).not.toBeNull();
-    expect(menu!.getAttribute('role')).toBe('menubar');
+    // toolbar, not legacy's menubar: the children are plain buttons, so
+    // menubar's ARIA children contract failed the M6.1 audit (non-visual).
+    expect(menu!.getAttribute('role')).toBe('toolbar');
     expect(menu!.querySelector('[title="Full Screen"]')).not.toBeNull();
     expect(menu!.querySelector('[title="Edit Inputs"]')).not.toBeNull();
     expect(menu!.querySelector('[title="Toggle Images"]')).not.toBeNull();

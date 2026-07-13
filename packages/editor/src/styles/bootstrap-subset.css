@@ -188,7 +188,10 @@
 }
 
 .btn-outline-secondary {
-  color: #6c757d;
+  /* BS4 #6c757d rides at 4.39-4.49:1 on the parchment/list surfaces;
+     WCAG AA needs 4.5 (audit M6.1, LD-29). One step darker, like
+     .text-muted. */
+  color: #62696f;
   border-color: #6c757d;
 }
 
@@ -225,21 +228,23 @@
 
 .btn-success {
   color: #fff;
-  background-color: #28a745;
-  border-color: #28a745;
+  /* BS4 #28a745 is 3.13:1 with white text; WCAG AA needs 4.5 (audit
+     M6.1, LD-29). BS4's own active shade, 5.1:1. */
+  background-color: #1e7e34;
+  border-color: #1e7e34;
 }
 
 .btn-success:hover {
   color: #fff;
-  background-color: #218838;
-  border-color: #1e7e34;
+  background-color: #19692c;
+  border-color: #19692c;
 }
 
 .btn-success:focus,
 .btn-success.focus {
   color: #fff;
-  background-color: #218838;
-  border-color: #1e7e34;
+  background-color: #19692c;
+  border-color: #19692c;
   box-shadow: 0 0 0 0.2rem rgba(72, 180, 97, 0.5);
 }
 
@@ -1003,7 +1008,9 @@ textarea.form-control {
 }
 
 .text-muted {
-  color: #6c757d !important;
+  /* BS4 #6c757d is 4.39:1 on the parchment frame; WCAG AA needs 4.5
+     (audit M6.1, LD-29). Darkened one step, 5.2:1 on parchment. */
+  color: #62696f !important;
 }
 
 /* --------------------------------------------------------------------------
