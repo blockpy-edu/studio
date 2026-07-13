@@ -36,6 +36,14 @@ function workerPort(worker: Worker): EnginePort {
 export interface EngineAdapterOptions {
   /** BootConfig.paths.pyodideIndexURL. */
   indexURL?: string;
+  /**
+   * BootConfig.paths.assets: where the deployed server hosts the build's
+   * `assets/` directory. The bundler bakes a base-absolute worker URL into
+   * the main chunk at build time; integrating servers that mount the
+   * bundle under their own path override it here. Same-origin only —
+   * module workers cannot be instantiated cross-origin.
+   */
+  assetsBase?: string;
   /** Wall-clock limit per run (legacy student default 5000 ms). */
   wallMs?: number;
   /** Called when the engine starts/finishes booting (spinner hooks). */
@@ -52,6 +60,17 @@ export interface EngineAdapterOptions {
   onRunScript?: string;
 }
 
+/**
+ * Resolve the engine worker URL from a configured assets base. The build
+ * emits the worker as a STABLE `worker.entry.js` (vite.config worker
+ * naming) precisely so this URL is constructible from config alone.
+ */
+export function workerEntryUrl(assetsBase: string): URL {
+  const base = assetsBase.endsWith('/') ? assetsBase : `${assetsBase}/`;
+  // location is absent outside the browser (node-run tests).
+  return new URL(`${base}worker.entry.js`, globalThis.location?.href ?? 'http://localhost/');
+}
+
 export function createEngineRunController(options: EngineAdapterOptions = {}): RunController {
   let client: EngineClient | null = null;
   let booted = false;
@@ -63,9 +82,13 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
       client = new EngineClient({
         workerFactory: () =>
           workerPort(
-            new Worker(new URL('../../engine/src/worker.entry.ts', import.meta.url), {
-              type: 'module',
-            }),
+            options.assetsBase
+              ? new Worker(workerEntryUrl(options.assetsBase), { type: 'module' })
+              : // Literal pattern kept intact so vite detects and bundles
+                // the worker for the no-override path.
+                new Worker(new URL('../../engine/src/worker.entry.ts', import.meta.url), {
+                  type: 'module',
+                }),
           ),
         indexURL: options.indexURL,
       });

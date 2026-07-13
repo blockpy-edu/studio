@@ -186,3 +186,26 @@ describe('GroupNav (assignment_group_header macro, §9.1/§9.6)', () => {
     }
   });
 });
+
+describe('GroupNav extras slot (LD-34)', () => {
+  it('renders host extras at the far right (first float-right) of the bar', () => {
+    const store = new GroupNavStore(BOOT, {});
+    const view = render(<GroupNav store={store} extras={<button type="button">Tool</button>} />);
+    const extras = view.container.querySelector('.assignment-selector-extras');
+    expect(extras).not.toBeNull();
+    expect(extras!.className).toContain('float-right');
+    expect(extras!.textContent).toBe('Tool');
+    // First float-right in DOM = rightmost on screen: extras precede the
+    // countdown span.
+    const countdown = view.container.querySelector('.assignment-selector-countdown');
+    expect(
+      extras!.compareDocumentPosition(countdown!) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('renders no extras span when the host passes none (legacy layout)', () => {
+    const store = new GroupNavStore(BOOT, {});
+    const view = render(<GroupNav store={store} />);
+    expect(view.container.querySelector('.assignment-selector-extras')).toBeNull();
+  });
+});

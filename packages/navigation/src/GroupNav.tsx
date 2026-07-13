@@ -10,7 +10,7 @@
  * identical glyph shapes, same modernization the editor chrome applied to
  * its trace/history steppers (editor icons.tsx, A8 §3.2).
  */
-import { useEffect, useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import { ChevronLeft, ChevronRight, SkipBack, SkipForward, type LucideProps } from 'lucide-react';
 import type { GroupNavStore } from './store';
 
@@ -23,9 +23,16 @@ const ICON_PROPS: LucideProps = {
 
 export interface GroupNavProps {
   store: GroupNavStore;
+  /**
+   * Studio extension (LD-34): host-provided controls rendered at the FAR
+   * right of the bar (right of the clock/countdown). The app passes its
+   * instructor tools to the TOP instance only; students get none, so the
+   * student-facing bar keeps exact legacy layout.
+   */
+  extras?: ReactNode;
 }
 
-export function GroupNav({ store }: GroupNavProps) {
+export function GroupNav({ store, extras }: GroupNavProps) {
   const state = useSyncExternalStore(store.subscribe, store.getSnapshot);
   // Clock/countdown timers are ref-counted across the two instances.
   useEffect(() => store.attach(), [store]);
@@ -108,6 +115,10 @@ export function GroupNav({ store }: GroupNavProps) {
             >
               Last <SkipForward {...ICON_PROPS} />
             </button>
+            {/* First float-right in DOM = rightmost on screen. */}
+            {extras !== undefined && (
+              <span className="float-right assignment-selector-extras">{extras}</span>
+            )}
             <span
               className="float-right text-muted assignment-selector-countdown"
               title="Time remaining (if a time limit is set)"

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { GraduationCap, ListOrdered } from 'lucide-react';
 import {
   CodingEditor,
   MinifiedEditor,
@@ -47,6 +48,17 @@ import '@blockpy/quizzer/styles/quizzer.css';
 import '@blockpy/textbook/styles/textbook.css';
 import type { BootConfig, LegacyAssignmentPayload } from './boot-config';
 import type { MountExtras, StudioActions } from './studio-handle';
+
+/**
+ * LD-33: legacy appends "?placement=…" blindly (plugins.ts:272), which
+ * produces a double question mark when the configured downloadFile url
+ * already carries a query string. Join with "&" instead (the transport's
+ * getJson separator rule); the filename stays unencoded, as legacy.
+ */
+export function buildDownloadUrl(base: string, assignmentId: number, filename: string): string {
+  const separator = base.includes('?') ? '&' : '?';
+  return `${base}${separator}placement=assignment&directory=${assignmentId}&filename=${filename}`;
+}
 
 interface LoadedAssignment {
   assignment: DecodedAssignment;
@@ -104,6 +116,33 @@ export function App({ config, extras, registerActions }: AppProps) {
   const [loaded, setLoaded] = useState<LoadedAssignment | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Assignment-switch loading overlay (LD-32): the label of whatever is
+  // currently loading, or null when nothing is. Counter-guarded so
+  // overlapping loads keep the overlay up until the LAST one settles.
+  const [overlayLabel, setOverlayLabel] = useState<string | null>(null);
+  const overlayCountRef = useRef(0);
+  const withLoadingOverlay = useCallback(
+    async <T,>(label: string, task: () => Promise<T>): Promise<T> => {
+      overlayCountRef.current += 1;
+      setOverlayLabel(label);
+      try {
+        return await task();
+      } finally {
+        overlayCountRef.current -= 1;
+        if (overlayCountRef.current <= 0) setOverlayLabel(null);
+      }
+    },
+    [],
+  );
+  // "What is loading": the group-nav name when the id is in the group,
+  // otherwise the surface kind + id.
+  const groupAssignments = config.group?.assignments;
+  const assignmentLabel = useCallback(
+    (assignmentId: number, kind: string) =>
+      groupAssignments?.find((entry) => entry.id === assignmentId)?.name ??
+      `${kind} ${assignmentId}`,
+    [groupAssignments],
+  );
   // Legacy submission.submissionStatus/.correct/.score display state.
   const [submissionStatus, setSubmissionStatus] = useState('unknown');
   const [correct, setCorrect] = useState(false);
@@ -227,7 +266,9 @@ export function App({ config, extras, registerActions }: AppProps) {
       store.getState().setServerStatus('loadAssignment', 'active');
       setLoading(true);
       try {
-        const response = await api.loadAssignment(assignmentId);
+        const response = await withLoadingOverlay(assignmentLabel(assignmentId, 'assignment'), () =>
+          api.loadAssignment(assignmentId),
+        );
         if (!response.success || !response.assignment) {
           store.getState().setServerStatus('loadAssignment', 'failed');
           setLoadError(`The assignment (${assignmentId}) failed to load.`);
@@ -243,7 +284,7 @@ export function App({ config, extras, registerActions }: AppProps) {
         setLoading(false);
       }
     },
-    [api, adoptAssignmentData, store],
+    [api, adoptAssignmentData, store, withLoadingOverlay, assignmentLabel],
   );
 
   // AssignmentHost dispatch (spec §5.3) — the modern loadAssignmentWrapper.
@@ -584,8 +625,11 @@ export function App({ config, extras, registerActions }: AppProps) {
     () =>
       createEngineRunController({
         indexURL: paths.pyodideIndexURL,
+        // paths.assets: deployed location of the build's assets/ dir —
+        // overrides the build-time worker URL (engine-adapter).
+        ...(paths.assets ? { assetsBase: paths.assets } : {}),
       }),
-    [paths.pyodideIndexURL],
+    [paths.pyodideIndexURL, paths.assets],
   );
 
   // -- reading + quiz slots (spec §11.2/§11.3, M2.3/M2.4) -----------------------
@@ -628,8 +672,7 @@ export function App({ config, extras, registerActions }: AppProps) {
         }
       };
     const downloadUrl = (assignmentId: number, filename: string) =>
-      // Legacy leaves the filename unencoded (plugins.ts:272).
-      `${config.urls.downloadFile}?placement=assignment&directory=${assignmentId}&filename=${filename}`;
+      buildDownloadUrl(config.urls.downloadFile ?? '', assignmentId, filename);
     const extractMessage = (message: unknown): string | undefined =>
       typeof message === 'object' && message !== null
         ? String((message as Record<string, unknown>)['message'] ?? '')
@@ -671,7 +714,13 @@ export function App({ config, extras, registerActions }: AppProps) {
       <Reader
         assignmentId={readingId}
         asPreamble={preamble}
-        loadAssignment={loadReading}
+        // Overlay only for top-level readings: a preamble loads inside an
+        // already-visible surface whose own load was overlaid (LD-32).
+        loadAssignment={
+          preamble
+            ? loadReading
+            : (id) => withLoadingOverlay(assignmentLabel(id, 'reading'), () => loadReading(id))
+        }
         markRead={async (assignmentId, submissionId) => {
           // reader.ts:384-398 — updateSubmission {status: 1, correct: true}
           // with the READING's ids overriding the base payload.
@@ -716,31 +765,34 @@ export function App({ config, extras, registerActions }: AppProps) {
     const quiz = (quizId: number) => (
       <Quizzer
         assignmentId={quizId}
-        loadAssignment={async (id) => {
-          const response = await loadPair(id);
-          if (!response) return null;
-          return {
-            assignment: {
-              id: response.assignment!.id ?? id,
-              name: response.assignment!.name,
-              url: response.assignment!.url,
-              instructions: response.assignment!.instructions,
-              settings: response.assignment!.settings,
-              // The checks document — the server blanks it for students
-              // (encode_quiz_json); instructors get it for the editor.
-              onRun: response.assignment!.onRun,
-            },
-            submission: response.submission
-              ? {
-                  id: response.submission.id,
-                  code: response.submission.code,
-                  correct: response.submission.correct,
-                  dateStarted: (response.submission.raw['date_started'] as string | null) ?? null,
-                  timeLimit: (response.submission.raw['time_limit'] as string | null) ?? null,
-                }
-              : null,
-          };
-        }}
+        loadAssignment={(requestedId) =>
+          withLoadingOverlay(assignmentLabel(requestedId, 'quiz'), async () => {
+            const id = requestedId;
+            const response = await loadPair(id);
+            if (!response) return null;
+            return {
+              assignment: {
+                id: response.assignment!.id ?? id,
+                name: response.assignment!.name,
+                url: response.assignment!.url,
+                instructions: response.assignment!.instructions,
+                settings: response.assignment!.settings,
+                // The checks document — the server blanks it for students
+                // (encode_quiz_json); instructors get it for the editor.
+                onRun: response.assignment!.onRun,
+              },
+              submission: response.submission
+                ? {
+                    id: response.submission.id,
+                    code: response.submission.code,
+                    correct: response.submission.correct,
+                    dateStarted: (response.submission.raw['date_started'] as string | null) ?? null,
+                    timeLimit: (response.submission.raw['time_limit'] as string | null) ?? null,
+                  }
+                : null,
+            };
+          })
+        }
         saveAnswer={async (assignmentId, submissionId, code) => {
           // quizzer.ts:143-153 — the whole submission JSON as answer.py,
           // with the QUIZ's ids riding over the base payload.
@@ -814,20 +866,22 @@ export function App({ config, extras, registerActions }: AppProps) {
     const textbook = (textbookId: number) => (
       <Textbook
         assignmentId={textbookId}
-        loadAssignment={async (id) => {
-          const response = await loadPair(id);
-          if (!response) return null;
-          return {
-            assignment: {
-              id: response.assignment!.id ?? id,
-              name: response.assignment!.name,
-              url: response.assignment!.url,
-              instructions: response.assignment!.instructions,
-              settings: response.assignment!.settings,
-            },
-            submission: response.submission ? { id: response.submission.id } : null,
-          };
-        }}
+        loadAssignment={(id) =>
+          withLoadingOverlay(assignmentLabel(id, 'textbook'), async () => {
+            const response = await loadPair(id);
+            if (!response) return null;
+            return {
+              assignment: {
+                id: response.assignment!.id ?? id,
+                name: response.assignment!.name,
+                url: response.assignment!.url,
+                instructions: response.assignment!.instructions,
+                settings: response.assignment!.settings,
+              },
+              submission: response.submission ? { id: response.submission.id } : null,
+            };
+          })
+        }
         renderReading={(readingId) => reading(readingId, true)}
         // LD-16 closure (M4.7): url-string sidebar refs rehydrate through
         // the GET-only /assignments/by_url route when the template
@@ -887,6 +941,8 @@ export function App({ config, extras, registerActions }: AppProps) {
     api,
     apiBundle,
     markCorrectEverywhere,
+    withLoadingOverlay,
+    assignmentLabel,
     config.urls,
     config.display.instructor,
     runController,
@@ -896,6 +952,54 @@ export function App({ config, extras, registerActions }: AppProps) {
     user.name,
     assignment.assignmentGroupId,
   ]);
+
+  // Instructor tools (LD-34): icon-only buttons living at the far right of
+  // the TOP group-nav bar (right of the clock). Never rendered for
+  // students — gated on the page's instructor flag (with the dev shell's
+  // devHarness flag standing in until real role gating lands, the M2.1
+  // TODO). The persistent toggle survives assignment-type switches so the
+  // quiz editor and instructor views are reachable from ANY surface.
+  const instructorTools = (display.instructor || (display.devHarness ?? false)) && (
+    <>
+      {instructorView && api && config.group && (
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-secondary blockpy-organize-group mr-1"
+          aria-label="Organize Group"
+          title="Organize Group"
+          onClick={() => setOrganizerOpen(true)}
+        >
+          <ListOrdered
+            size={14}
+            strokeWidth={1.75}
+            aria-hidden
+            style={{ verticalAlign: 'text-bottom' }}
+          />
+        </button>
+      )}
+      <button
+        type="button"
+        id="blockpy-instructor-mode"
+        className={`btn btn-sm ${instructorView ? 'btn-success' : 'btn-outline-secondary'} blockpy-instructor-mode`}
+        aria-pressed={instructorView}
+        aria-label="Instructor mode"
+        title={
+          instructorView
+            ? 'Instructor mode is ON — click to view as a student'
+            : 'Instructor mode is OFF — click to enable'
+        }
+        onClick={() => setInstructorView(!instructorView)}
+      >
+        <GraduationCap
+          size={14}
+          strokeWidth={1.75}
+          aria-hidden
+          style={{ verticalAlign: 'text-bottom' }}
+        />
+      </button>
+    </>
+  );
+  const topNavVisible = Boolean(navStore && !focusedMode);
 
   return (
     <main>
@@ -915,39 +1019,6 @@ export function App({ config, extras, registerActions }: AppProps) {
         </p>
       )}
       <h1 className="sr-only">BlockPy Studio</h1>
-      {/* Persistent instructor-mode toggle: unlike the editor chrome's
-          "View as instructor" (QuickMenu, legacy parity), this one survives
-          assignment-type switches so the quiz editor and instructor views
-          are reachable from ANY surface. Same gating story as
-          quickMenu.grader: the dev shell always exposes it; real role
-          gating (ui.role.isGrader) is a pending TODO shared with M2.1. */}
-      <div
-        className="blockpy-instructor-bar"
-        style={{ position: 'sticky', top: 0, zIndex: 100, textAlign: 'right', padding: '2px 8px' }}
-      >
-        {/* Group organizer (M4.6 slice 1, LD-28): instructor tooling over
-            the current group; renders only with an API + group context. */}
-        {instructorView && api && config.group && (
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-secondary blockpy-organize-group"
-            style={{ marginRight: '8px' }}
-            onClick={() => setOrganizerOpen(true)}
-          >
-            Organize Group
-          </button>
-        )}
-        <label className="form-check-label" htmlFor="blockpy-instructor-mode">
-          <input
-            className="form-check-input"
-            type="checkbox"
-            id="blockpy-instructor-mode"
-            checked={instructorView}
-            onChange={(event) => setInstructorView(event.target.checked)}
-          />{' '}
-          Instructor mode
-        </label>
-      </div>
       {instructorView && api && config.group && organizerOpen && (
         <GroupOrganizer
           api={api}
@@ -957,6 +1028,17 @@ export function App({ config, extras, registerActions }: AppProps) {
           visible={organizerOpen}
           onClose={() => setOrganizerOpen(false)}
         />
+      )}
+      {/* Assignment-switch overlay (LD-32): legacy's .blockpy-overlay was a
+          bare darkening layer on blocking POSTs; this one says WHAT is
+          loading, with a spinner. */}
+      {overlayLabel !== null && (
+        <div className="blockpy-loading-overlay" role="status">
+          <div className="blockpy-loading-overlay-card">
+            <span className="blockpy-loading-spinner" aria-hidden="true" />
+            Loading {overlayLabel}…
+          </div>
+        </div>
       )}
       {loadError !== null && <div className="alert alert-warning">{loadError}</div>}
       {versionOutdated && (
@@ -974,8 +1056,19 @@ export function App({ config, extras, registerActions }: AppProps) {
       )}
       {/* Dual-rendered group header/footer (spec §9): the legacy template
           includes the macro at the top AND bottom of the page body
-          (editor.html:102-103, 188-190), synced through one store. */}
-      {navStore && !focusedMode && <GroupNav store={navStore} />}
+          (editor.html:102-103, 188-190), synced through one store. The TOP
+          instance carries the instructor tools (LD-34); the bottom stays
+          pure legacy. */}
+      {topNavVisible && navStore && (
+        <GroupNav store={navStore} {...(instructorTools ? { extras: instructorTools } : {})} />
+      )}
+      {/* Group-less pages have no nav bar to host the tools — a plain
+          (non-sticky) right-aligned strip keeps instructor mode reachable. */}
+      {!topNavVisible && instructorTools && (
+        <div className="blockpy-instructor-bar" style={{ textAlign: 'right', padding: '2px 8px' }}>
+          {instructorTools}
+        </div>
+      )}
       <AssignmentHost
         typeIndex={assignment.typeIndex}
         embed={display.embed}

@@ -54,6 +54,57 @@
   z-index: 10000;
 }
 
+/* Studio addition (LD-32): assignment-switch loading overlay. Same
+   fixed-cover geometry as .blockpy-overlay, but rgba instead of `opacity`
+   so the status card stays fully opaque. */
+.blockpy-loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.blockpy-loading-overlay-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  font-size: 1.1em;
+  background-color: var(--blockpy-bg-parchment);
+  color: var(--blockpy-neutral-800);
+  border: 1px solid var(--blockpy-neutral-450);
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.blockpy-loading-spinner {
+  flex: none;
+  width: 1.2em;
+  height: 1.2em;
+  border: 3px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: blockpy-loading-spin 0.75s linear infinite;
+}
+
+@keyframes blockpy-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blockpy-loading-spinner {
+    animation-duration: 2s;
+  }
+}
+
 .green-check-mark {
   font-weight: bold;
   color: var(--blockpy-positive-green);

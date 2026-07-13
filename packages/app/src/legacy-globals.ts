@@ -123,6 +123,12 @@ export function bootConfigFromLegacyGlobals(source: LegacyGlobalsSource): BootCo
       // media dir; derive it from the same static root.
       emojiProxy: blocklyMedia ? blocklyMedia.replace(/blockly\/media\/?$/, 'images/emoji/') : '',
       pyodideIndexURL: '',
+      // Studio-only global for shim pages: where the server hosts the
+      // build's assets/ directory (the engine worker), mirroring
+      // $blocklyMediaPath's role for media.
+      ...(typeof globals['$blockPyAssetsPath'] === 'string'
+        ? { assets: globals['$blockPyAssetsPath'] as string }
+        : {}),
     },
     settings: settingsFromSearch(search),
     corgisUrl: typeof urls.importDatasets === 'string' ? urls.importDatasets : '',

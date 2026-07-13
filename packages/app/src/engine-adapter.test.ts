@@ -113,3 +113,19 @@ describe('engine adapter grading resilience (M3.2)', () => {
     expect(outcome.feedback?.category).toBe('no errors');
   });
 });
+
+describe('workerEntryUrl (BootConfig paths.assets)', () => {
+  it('appends worker.entry.js with slash normalization, resolved against the page', async () => {
+    const { workerEntryUrl } = await import('./engine-adapter');
+    expect(workerEntryUrl('/static/studio/assets').pathname).toBe(
+      '/static/studio/assets/worker.entry.js',
+    );
+    expect(workerEntryUrl('/static/studio/assets/').pathname).toBe(
+      '/static/studio/assets/worker.entry.js',
+    );
+    // Absolute (same-origin) URLs pass through untouched.
+    expect(workerEntryUrl('https://example.edu/blockpy/assets').href).toBe(
+      'https://example.edu/blockpy/assets/worker.entry.js',
+    );
+  });
+});

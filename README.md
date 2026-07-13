@@ -158,6 +158,12 @@ interface BootConfig {
     blocklyMedia: string;
     emojiProxy: string;
     pyodideIndexURL: string;
+    // assets (optional): where the deployed server hosts the build's
+    // assets/ directory — the engine's module worker lives there as a
+    // STABLE worker.entry.js. Unset keeps the build-time URL baked into
+    // the bundle. Same-origin only (module workers can't be cross-origin).
+    // Shim pages can set window.$blockPyAssetsPath instead.
+    assets?: string;
   };
   settings: Record<string, unknown>; // parsed `settings-*` query params, prefix stripped (§15.2)
   corgisUrl: string; // urls.importDatasets

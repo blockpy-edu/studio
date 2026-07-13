@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import { App } from './App';
+import { App, buildDownloadUrl } from './App';
 import type { BootConfig } from './boot-config';
 
 const minimalConfig: BootConfig = {
@@ -177,4 +177,48 @@ it('surfaces a load failure without crashing (legacy fallback renderer)', async 
   await waitFor(() => {
     expect(screen.getByText(/failed to load/)).toBeDefined();
   });
+});
+
+it('shows the loading overlay (spinner + label) while an assignment fetches (LD-32)', async () => {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const fetchStub = vi.fn(async (url: string) => {
+    if (url.includes('load_assignment')) await gate;
+    return {
+      ok: true,
+      json: async () =>
+        url.includes('load_assignment') ? { success: true, ...RAW_PAYLOAD } : { success: true },
+    };
+  }) as unknown as typeof fetch;
+  const view = render(
+    <App
+      config={{
+        ...minimalConfig,
+        urls: { loadAssignment: '/api/load_assignment' },
+        assignment: { ...minimalConfig.assignment, currentAssignmentId: 101 },
+      }}
+      extras={{ fetch: fetchStub }}
+    />,
+  );
+  await waitFor(() => {
+    expect(view.container.querySelector('.blockpy-loading-overlay')).not.toBeNull();
+  });
+  // No group context here, so the label falls back to kind + id.
+  expect(screen.getByText(/Loading assignment 101…/)).toBeDefined();
+  expect(view.container.querySelector('.blockpy-loading-spinner')).not.toBeNull();
+  release();
+  await waitFor(() => {
+    expect(view.container.querySelector('.blockpy-loading-overlay')).toBeNull();
+  });
+});
+
+it('buildDownloadUrl joins with & when the base already has a query string (LD-33)', () => {
+  expect(buildDownloadUrl('/api/download_file', 7, 'a.txt')).toBe(
+    '/api/download_file?placement=assignment&directory=7&filename=a.txt',
+  );
+  expect(buildDownloadUrl('/api/download_file?token=x', 7, 'a.txt')).toBe(
+    '/api/download_file?token=x&placement=assignment&directory=7&filename=a.txt',
+  );
 });

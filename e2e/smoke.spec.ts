@@ -396,10 +396,11 @@ test('quiz assignment: attempt lifecycle, autosave, server grading (§11.3)', as
 test('persistent instructor mode reaches the quiz editor from any surface', async ({ page }) => {
   await page.goto('/');
   await page.locator('.blocklySvg').first().waitFor();
-  // The toggle lives in the app shell (top right), not the editor chrome —
-  // it survives switching to a quiz surface.
+  // The icon toggle lives at the far right of the TOP group-nav bar
+  // (LD-34) — it survives switching to a quiz surface.
   const toggle = page.locator('#blockpy-instructor-mode');
   await expect(toggle).toBeVisible();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
   await page.evaluate(() =>
     (
       window as never as { altAssignmentChangingFunction(id: number): Promise<void> }
@@ -407,7 +408,8 @@ test('persistent instructor mode reaches the quiz editor from any surface', asyn
   );
   await expect(page.locator('.blockpy-host-quiz')).toBeVisible();
   await expect(toggle).toBeVisible(); // still there on the quiz surface
-  await toggle.check();
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
   // Instructors land in the visual quiz editor (the new normal workflow).
   const editor = page.locator('.quizzer-quiz-editor');
   await expect(editor).toBeVisible();
@@ -429,7 +431,8 @@ test('persistent instructor mode reaches the quiz editor from any surface', asyn
   await page.getByRole('button', { name: 'Actual Quiz' }).click();
   await expect(page.locator('.blockpy-host-quiz').getByText('View As Student')).toBeVisible();
   // Untoggling returns the student view everywhere.
-  await toggle.uncheck();
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
   await expect(page.locator('.quizzer-quiz-editor')).toHaveCount(0);
 });
 
@@ -475,13 +478,15 @@ test('textbook: sidebar composition opens readings through the reader (§11.4)',
   expect(new URL(page.url()).searchParams.get('page')).toBe('reading_variables');
   expect(await page.title()).toBe('Reading: Variables - Textbook: Chapter 1 - BlockPy Textbook');
   // Instructor mode exposes the RAW editor (legacy EDITOR_HTML RAW mode).
-  await page.locator('#blockpy-instructor-mode').check();
+  await page.locator('#blockpy-instructor-mode').click();
+  await expect(page.locator('#blockpy-instructor-mode')).toHaveAttribute('aria-pressed', 'true');
   await textbook.getByLabel(/Raw Editor/).check();
   await expect(textbook.locator('.textbook-editor-instructions')).toBeVisible();
   await expect(textbook.getByRole('button', { name: 'Save Assignment' })).toBeVisible();
   await textbook.getByLabel(/Actual Textbook/).check();
   await expect(textbook.locator('.blockpy-reader')).toBeVisible();
-  await page.locator('#blockpy-instructor-mode').uncheck();
+  await page.locator('#blockpy-instructor-mode').click();
+  await expect(page.locator('#blockpy-instructor-mode')).toHaveAttribute('aria-pressed', 'false');
 });
 
 test('kettle island degrades gracefully without the legacy bundle (§17)', async ({ page }) => {

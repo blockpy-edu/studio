@@ -63,6 +63,11 @@ function devApi(): Plugin {
 export default defineConfig({
   plugins: [react(), devApi()],
   // The engine worker is a module worker created via `new Worker(new URL)`;
-  // rollup code-splitting only supports ES-format worker output.
-  worker: { format: 'es' },
+  // rollup code-splitting only supports ES-format worker output. The entry
+  // keeps a STABLE name (no hash) so integrating servers can point
+  // BootConfig paths.assets at it (engine-adapter workerEntryUrl).
+  worker: {
+    format: 'es',
+    rollupOptions: { output: { entryFileNames: 'assets/[name].js' } },
+  },
 });

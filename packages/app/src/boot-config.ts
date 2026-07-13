@@ -95,6 +95,14 @@ export interface BootConfig {
     blocklyMedia: string;
     emojiProxy: string;
     pyodideIndexURL: string;
+    /**
+     * Where the deployed server hosts the build's `assets/` directory
+     * (the engine's module worker, `worker.entry.js`, lives there under a
+     * stable name). Optional: unset keeps the build-time URL baked into
+     * the bundle. Same-origin only — module workers cannot be
+     * instantiated cross-origin.
+     */
+    assets?: string;
   };
   /**
    * `settings-*` query params, prefix stripped (spec §15.2). Values are RAW

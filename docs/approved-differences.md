@@ -543,3 +543,50 @@ blockKeyboardNav`). §16.3 frames this as best-effort: the plugin's
   remains only as the fallback when no reading renderer is composed.
 - **Wire impact:** none new — the preamble uses the same loadAssignment /
   by_url endpoints the reader and textbook already call.
+
+## LD-32 — Assignment-switch loading overlay with status text (user request, 2026-07-13)
+
+- **Legacy:** `.blockpy-overlay` is a bare full-screen darkening layer with
+  no message or spinner, shown only around blocking POSTs and darkening
+  per retry (server.js:216-249, blockpy.css:20-32). Assignment switches on
+  the group page swap surfaces with at most an inline "Loading!" text.
+- **Studio:** every top-level assignment load (editor path, quiz, reading,
+  textbook) runs under a semi-opaque overlay carrying a spinner and
+  "Loading <name>…" (the group-nav assignment name when known, else the
+  surface kind + id). Counter-guarded so overlapping loads keep the
+  overlay up until the last settles; preamble readings and textbook pages
+  are excluded (they load inside an already-overlaid surface). The legacy
+  `.blockpy-overlay` retry layer is untouched. `role="status"` announces
+  the label; reduced-motion slows the spinner.
+- **Wire impact:** none — presentation only.
+
+## LD-33 — downloadFile url builder honors existing query strings (user request, 2026-07-13)
+
+- **Legacy:** `plugins.ts:272` appends `?placement=…` blindly, producing
+  `…?a=b?placement=…` when the configured downloadFile url already has a
+  query string.
+- **Studio:** the builder joins with `&` when the base url contains `?`
+  (matching the transport's getJson separator rule). Filename stays
+  unencoded, as legacy.
+- **Wire impact:** requests against query-string'd downloadFile urls are
+  now well-formed; identical bytes otherwise.
+
+## LD-34 — Instructor tools moved into the group-nav bar as icon buttons (user request, 2026-07-13)
+
+- **Legacy:** no in-page instructor-mode toggle or group organizer at all —
+  both are Studio inventions (the organizer is LD-28; the persistent
+  toggle was previously a Studio-only STICKY bar above the page).
+- **Studio:** the sticky bar is gone. The tools are icon-only buttons at
+  the FAR right of the TOP `assignment_group_header` bar (right of the
+  clock/countdown floats), via a host `extras` slot on GroupNav:
+  - Organize Group — ordered-list icon (Lucide `ListOrdered`), shown only
+    while instructor mode is on (plus API + group context, as before);
+  - Instructor mode — graduation-cap icon (Lucide `GraduationCap`),
+    `aria-pressed` + `btn-success`/`btn-outline-secondary` swap for a
+    clear on/off state (the same pair the Next button already uses).
+    Both are gated on `display.instructor` (or the dev shell's
+    `display.devHarness`), so STUDENTS never see them and the student-facing
+    bar keeps exact legacy layout. The bottom bar instance stays pure
+    legacy. Group-less pages fall back to a plain, non-sticky right-aligned
+    strip so instructor mode stays reachable.
+- **Wire impact:** none — client-side chrome only.
