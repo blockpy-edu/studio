@@ -8,16 +8,16 @@ observable difference precisely so tests can encode it.
 
 Replicate decisions (D4, D6) produce no entries — they are legacy parity.
 
-| ID    | Decision | Area          | Status                 |
-| ----- | -------- | ------------- | ---------------------- |
-| LD-1  | D1-B     | Quizzer       | pending implementation |
-| LD-2a | D2-B     | Event logging | pending implementation |
-| LD-2b | D2-B     | Event logging | pending implementation |
-| LD-2c | D2-B     | Event logging | pending implementation |
-| LD-3  | D3-A     | VFS/editors   | pending implementation |
-| LD-3x | D3 note  | VFS/engine    | pending implementation |
-| LD-5  | D5-B     | Settings save | pending implementation |
-| LD-7  | D7-B     | Quizzer       | conditional            |
+| ID    | Decision  | Area          | Status                 |
+| ----- | --------- | ------------- | ---------------------- |
+| LD-1  | D1-B      | Quizzer       | pending implementation |
+| LD-2a | D2-B      | Event logging | pending implementation |
+| LD-2b | D2-B      | Event logging | pending implementation |
+| LD-2c | D2-B      | Event logging | pending implementation |
+| LD-3  | D3-A      | VFS/editors   | pending implementation |
+| LD-3x | D3 note   | VFS/engine    | pending implementation |
+| LD-5  | D5-B      | Settings save | pending implementation |
+| LD-7  | D7-B      | Quizzer       | conditional            |
 | LD-10 | dead code | Editor chrome | implemented (M1.4)     |
 
 ---
@@ -124,8 +124,8 @@ Replicate decisions (D4, D6) produce no entries — they are legacy parity.
 
 - **Not a difference — recorded to explain a corpus deviation.** `plt` is in
   `hiddenImports`: text→blocks suppresses the `import matplotlib.pyplot as
-  plt` block (legacy UX hides plotting boilerplate; the generator re-emits
-  the import whenever a `plt.*` call block exists). A bare, *unused* plt
+plt` block (legacy UX hides plotting boilerplate; the generator re-emits
+  the import whenever a `plt.*` call block exists). A bare, _unused_ plt
   import therefore does not survive the round trip — in legacy or Studio.
   Corpus #73 asserts otherwise and cannot pass in legacy either (same silent
   console.assert masking); Studio pins the legacy behavior as a documented
@@ -166,7 +166,7 @@ Replicate decisions (D4, D6) produce no entries — they are legacy parity.
 
 - **Legacy:** the countdown/expiry checker lives in the server frontend's
   `AssignmentInterface` (assignment_interface.ts:88-115, 160-256), so it only
-  runs while a reader/quiz/kettle/explain component is mounted. A *blockpy*
+  runs while a reader/quiz/kettle/explain component is mounted. A _blockpy_
   assignment whose settings carry `time_limit` never shows a countdown or
   the "Time is up!" overlay — the editor page has no checker of its own
   (editor.html only runs the 10 s time-spent clock).
@@ -176,7 +176,7 @@ Replicate decisions (D4, D6) produce no entries — they are legacy parity.
   assignment type. Format, tick rate (5 s), per-student overrides, overlay
   text, freeze-after-expiry, instructor exemption, and the
   `timer_expired`/`timer_cleared`/`timer_error` events are ports of the
-  legacy checker; the only delta is that time-limited *coding* assignments
+  legacy checker; the only delta is that time-limited _coding_ assignments
   are now covered instead of silently untimed.
 - **Wire impact:** timed blockpy assignments now emit the `timer_*` events
   the reader/quiz paths already emitted; no new payload shapes.
@@ -265,7 +265,7 @@ Replicate decisions (D4, D6) produce no entries — they are legacy parity.
 - **CLOSED (M4.7, 2026-07-12):** the by-url JSON endpoint DOES exist —
   `/assignments/by_url` (assignments.py:341-355, GET-only,
   login_required); the original survey missed it. `ApiClient.
-  loadAssignmentByUrl` (Transport.getJson — our one GET call) now feeds
+loadAssignmentByUrl` (Transport.getJson — our one GET call) now feeds
   the Textbook's `resolveAssignment`. Remaining server-team ask shrinks
   to: publish the `loadAssignmentByUrl` URL key on the editor template
   ($blockPyUrls). Unresolved refs still render Missing Reading. The
@@ -316,7 +316,7 @@ Replicate decisions (D4, D6) produce no entries — they are legacy parity.
 - **Legacy:** `.blockpy-console-image-output img { max-height: 100px }`
   (blockpy.css) — every plot rendered as a ~100px-tall thumbnail.
 - **Studio:** `width: 100%; height: auto; max-height: 480px;
-  object-fit: contain` — plots fill the console column with a sane cap
+object-fit: contain` — plots fill the console column with a sane cap
   (maintainer request, 2026-07-11). Applies to the minified editor too.
 - **Wire impact:** none (presentation only; the `image` submission payload
   is unchanged).
@@ -518,7 +518,7 @@ Replicate decisions (D4, D6) produce no entries — they are legacy parity.
 - **Studio:** @blockly/keyboard-navigation 0.6.14 (the Blockly-11 line),
   wired as a page-global NavigationController that workspaces join on a
   persisted, default-off toolbar toggle (`BLOCKPY_display.
-  blockKeyboardNav`). §16.3 frames this as best-effort: the plugin's
+blockKeyboardNav`). §16.3 frames this as best-effort: the plugin's
   0.6.x cursor/shortcut set ships as-is, and gaps (mutator dialogs,
   field editing depth) are the plugin's documented limits, not ours to
   paper over. Disposed editors leave the controller (and we manually
@@ -538,7 +538,7 @@ Replicate decisions (D4, D6) produce no entries — they are legacy parity.
   `/assignments/by_url` route, quizzer.ts:108-110 → assignment.ts:119-127).
   Instructor views — the Quiz Editor (their default) and Actual Quiz with
   "View As Student" off — replace the static line with a
-  "Show/Hide Subordinate Reading" toggle, initially collapsed, so the
+  "Show/Hide Subordinate Reading" toggle, expanded by default, so the
   pairing is visible without leaving instructor mode. The legacy line
   remains only as the fallback when no reading renderer is composed.
 - **Wire impact:** none new — the preamble uses the same loadAssignment /

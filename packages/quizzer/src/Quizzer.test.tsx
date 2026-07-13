@@ -289,10 +289,13 @@ describe('Quizzer (quizzer.ts port, §11.3)', () => {
       },
       loadResult('', withReading),
     );
-    // Quiz Editor view (the instructor default): toggle present, collapsed.
+    // Quiz Editor view (the instructor default): toggle present, expanded
+    // by default so the pairing is immediately visible.
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Show Subordinate Reading' })).toBeDefined(),
+      expect(screen.getByRole('button', { name: 'Hide Subordinate Reading' })).toBeDefined(),
     );
+    expect(screen.getByText('Reading preamble 7')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Subordinate Reading' }));
     expect(screen.queryByText('Reading preamble 7')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Show Subordinate Reading' }));
     expect(screen.getByText('Reading preamble 7')).toBeDefined();

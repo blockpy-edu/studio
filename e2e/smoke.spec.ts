@@ -845,6 +845,17 @@ test('layout regressions: no horizontal overflow, panels side by side, white edi
   );
 });
 
+test('harness chrome hides behind display.devHarness (?devharness=false)', async ({ page }) => {
+  // What a real application mount looks like: no dev-shell chrome at all.
+  await page.goto('/?devharness=false');
+  await page.locator('.blocklySvg').first().waitFor();
+  await expect(page.locator('#blockpy-dev-group')).toHaveCount(0);
+  await expect(page.getByText(/Dev harness —/)).toHaveCount(0);
+  await expect(page.locator('.blockpy-view-swap')).toHaveCount(0);
+  // The editor itself is untouched.
+  await expect(page.getByRole('button', { name: 'Run' }).first()).toBeVisible();
+});
+
 test('harness group picker swaps to the real bakery curriculum (demo)', async ({ page }) => {
   await page.goto('/');
   await page.locator('.blocklySvg').first().waitFor();

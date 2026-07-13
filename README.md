@@ -5,7 +5,7 @@
 **Status:** Draft for review
 **Audience:** BlockPy maintainers and contributors implementing the rewrite
 **Contributing:** code style, lint policy, and the PR checklist live in [docs/CODE_STANDARDS.md](docs/CODE_STANDARDS.md); behavior deltas need a [ledger entry](docs/approved-differences.md) first.
-**Live demo:** the dev harness deploys to GitHub Pages on every push to main (`.github/workflows/pages.yml`) — the dropdown at the top switches between the showcase fixtures and real bakery-curriculum groups (1A, 6B); execution and grading run entirely in your browser. Regenerate the demo content with `node tools/extract-demo-groups.mjs` (needs the untracked `courses/bakery_course.json`).
+**Live demo:** the dev harness deploys to GitHub Pages on every push to main (`.github/workflows/pages.yml`) — the dropdown at the top switches between the showcase fixtures and real bakery-curriculum groups (1A, 6B); execution and grading run entirely in your browser. Regenerate the demo content with `node tools/extract-demo-groups.mjs` (needs the untracked `courses/bakery_course.json`). All harness chrome (the "Dev harness — …" header line and the group-picker bar) is gated on `display.devHarness` in the BootConfig (§5.2), which defaults to **off** — real applications mounting the app never see it; the harness page turns it on, and on the deployed demo `?devharness=false` hides it (e.g. for iframing).
 
 ---
 
@@ -147,7 +147,11 @@ interface BootConfig {
     };
   };
   group?: GroupBootData; // §9.2 — replaces the Jinja-rendered header
-  display: { instructor: boolean; readOnly: boolean; embed: boolean };
+  // devHarness (Studio-only, default false): shows the dev-shell chrome —
+  // the "Dev harness — …" header line and the demo's assignment-group
+  // picker bar. Real applications omit it; only the harness page
+  // (packages/app/index.html) turns it on.
+  display: { instructor: boolean; readOnly: boolean; embed: boolean; devHarness?: boolean };
   passcodeProtected: boolean;
   sessionStartTime: number | null; // epoch ms; drives the "time spent" clock
   paths: {

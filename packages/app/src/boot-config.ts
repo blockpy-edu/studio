@@ -79,6 +79,14 @@ export interface BootConfig {
     instructor: boolean;
     readOnly: boolean;
     embed: boolean;
+    /**
+     * Studio-only, default false: show the dev-shell chrome — the
+     * "Dev harness — …" header line (with the minified-editor swap button)
+     * and, in the dev/demo entry, the assignment-group picker bar. Real
+     * applications mounting the app omit this and get no harness chrome;
+     * only the harness page (packages/app/index.html) turns it on.
+     */
+    devHarness?: boolean;
   };
   passcodeProtected: boolean;
   /** Epoch ms; drives the "time spent" clock (spec §9.4). */

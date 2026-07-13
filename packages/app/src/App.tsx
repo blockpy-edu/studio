@@ -899,19 +899,21 @@ export function App({ config, extras, registerActions }: AppProps) {
 
   return (
     <main>
-      <p style={{ fontSize: 'smaller' }}>
-        Dev harness — {user.name ?? 'anonymous'} ({user.role});{' '}
-        {active?.assignment.name ?? assignment.currentAssignmentId ?? 'no assignment'};{' '}
-        {display.instructor ? 'instructor' : 'student'} view. AssignmentHost replaces this shell in
-        Milestone 2.1.{' '}
-        <button
-          type="button"
-          className="btn btn-sm btn-outline-secondary blockpy-view-swap"
-          onClick={() => setMinified(!minified)}
-        >
-          {minified ? 'Switch to full editor' : 'Switch to minified editor'}
-        </button>
-      </p>
+      {(display.devHarness ?? false) && (
+        <p style={{ fontSize: 'smaller' }}>
+          Dev harness — {user.name ?? 'anonymous'} ({user.role});{' '}
+          {active?.assignment.name ?? assignment.currentAssignmentId ?? 'no assignment'};{' '}
+          {display.instructor ? 'instructor' : 'student'} view. AssignmentHost replaces this shell
+          in Milestone 2.1.{' '}
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-secondary blockpy-view-swap"
+            onClick={() => setMinified(!minified)}
+          >
+            {minified ? 'Switch to full editor' : 'Switch to minified editor'}
+          </button>
+        </p>
+      )}
       <h1 className="sr-only">BlockPy Studio</h1>
       {/* Persistent instructor-mode toggle: unlike the editor chrome's
           "View as instructor" (QuickMenu, legacy parity), this one survives

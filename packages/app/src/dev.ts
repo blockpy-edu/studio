@@ -127,6 +127,13 @@ function renderGroupPicker(onChange: (key: string) => void): void {
 }
 
 const baseConfig = readBaseConfig();
+// URL override for the published demo (where the config block can't be
+// edited): ?devharness=false hides all harness chrome, ?devharness=true
+// restores it.
+const devHarnessParam = new URLSearchParams(location.search).get('devharness');
+if (devHarnessParam !== null) {
+  baseConfig.display.devHarness = devHarnessParam !== 'false' && devHarnessParam !== '0';
+}
 const extras = import.meta.env.PROD ? { fetch: stubbedFetch() } : {};
 const rootQuery = document.querySelector('#blockpy-root');
 if (!(rootQuery instanceof HTMLElement)) {
@@ -147,14 +154,19 @@ function mountGroup(key: string): void {
   handle = mountConfig(freshRoot, configForGroup(baseConfig, group), extras);
 }
 
-renderGroupPicker((key) => {
-  const url = new URL(location.href);
-  if (key === SHOWCASE_KEY) url.searchParams.delete('group');
-  else url.searchParams.set('group', key);
-  // The nav writes assignment_id on dispatch; a group swap starts fresh.
-  url.searchParams.delete('assignment_id');
-  history.replaceState(null, '', url);
-  mountGroup(key);
-});
+// The picker bar is part of the dev-shell chrome: one flag
+// (display.devHarness in #blockpy-config) hides it together with the
+// App's "Dev harness — …" header line. ?group= deep links still work.
+if (baseConfig.display.devHarness ?? false) {
+  renderGroupPicker((key) => {
+    const url = new URL(location.href);
+    if (key === SHOWCASE_KEY) url.searchParams.delete('group');
+    else url.searchParams.set('group', key);
+    // The nav writes assignment_id on dispatch; a group swap starts fresh.
+    url.searchParams.delete('assignment_id');
+    history.replaceState(null, '', url);
+    mountGroup(key);
+  });
+}
 
 mountGroup(currentGroupKey());

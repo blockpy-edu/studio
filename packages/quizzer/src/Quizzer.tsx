@@ -159,7 +159,7 @@ export function Quizzer(props: QuizzerProps) {
   const [errorMessage, setErrorMessage] = useState('');
   const [readingId, setReadingId] = useState<number | null>(null);
   // Instructor-only: whether the collapsed subordinate reading is expanded.
-  const [showReading, setShowReading] = useState(false);
+  const [showReading, setShowReading] = useState(true);
   // Instructor view: the visual quiz editor is the normal authoring
   // workflow; "Actual Quiz" shows the student surface.
   const [editorView, setEditorView] = useState<'quiz' | 'editor' | null>(null);
@@ -435,7 +435,7 @@ export function Quizzer(props: QuizzerProps) {
   );
   // Subordinate-reading preamble (settings.readingId, quiz_ui.ts:194-208).
   // Students get the reading rendered in full above the quiz; instructor
-  // views get a collapse toggle (initially collapsed) instead of legacy's
+  // views get a collapse toggle (expanded by default) instead of legacy's
   // static "Reading is hidden" note (LD-31).
   const collapsedReading = readingId !== null && props.renderReading && (
     <div className="quizzer-reading-preamble quizzer-reading-collapsed">
