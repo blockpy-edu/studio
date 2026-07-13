@@ -29,9 +29,7 @@ generator.forBlock['ast_Yield'] = function () {
 };
 
 generator.forBlock['ast_YieldFull'] = function (block) {
-  const value =
-    generator.valueToCode(block, 'VALUE', generator.ORDER_LAMBDA) ||
-    generator.blank;
+  const value = generator.valueToCode(block, 'VALUE', generator.ORDER_LAMBDA) || generator.blank;
   return ['yield ' + value, generator.ORDER_LAMBDA];
 };
 
@@ -43,9 +41,14 @@ registerConverter(
     if (value == null) {
       return createBlock('ast_Yield', node.lineno);
     } else {
-      return createBlock('ast_YieldFull', node.lineno, {}, {
-        VALUE: this.convert(value, node) as Element,
-      });
+      return createBlock(
+        'ast_YieldFull',
+        node.lineno,
+        {},
+        {
+          VALUE: this.convert(value, node) as Element,
+        },
+      );
     }
   },
 );

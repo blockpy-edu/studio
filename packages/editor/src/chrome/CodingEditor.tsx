@@ -26,11 +26,7 @@ import { FileTree } from './FileTree';
 import { Icon } from './icons';
 import { ImageEditor } from './ImageEditor';
 import { Footer, type FooterProps } from './Footer';
-import {
-  editEvents,
-  HistoryToolbar,
-  type HistoryEntry,
-} from './History';
+import { editEvents, HistoryToolbar, type HistoryEntry } from './History';
 import { HistoryDiffView } from '../components/HistoryDiffView';
 import { ImagesManager, type UploadsController } from './ImagesManager';
 import { Instructions, renderInstructions } from './Instructions';
@@ -38,11 +34,7 @@ import { PythonToolbar } from './PythonToolbar';
 import { QuickMenu, type QuickMenuProps } from './QuickMenu';
 import { SettingsEditor, type AssignmentFields } from './SettingsEditor';
 import { TraceExplorer } from './TraceExplorer';
-import {
-  useEditorChromeStore,
-  type FeedbackState,
-  type TraceStepView,
-} from './store';
+import { useEditorChromeStore, type FeedbackState, type TraceStepView } from './store';
 
 /**
  * Resolve the legacy `toolbox` settings key (A4: enum normal/ct/ct2/minimal/
@@ -50,10 +42,7 @@ import {
  * `?toolbox.blockpy` as JSON; parse failure falls back to `empty` exactly
  * like legacy `reloadToolbox`.
  */
-export function resolveToolboxSetting(
-  setting: string | undefined,
-  vfs?: Vfs,
-): ToolboxSpec {
+export function resolveToolboxSetting(setting: string | undefined, vfs?: Vfs): ToolboxSpec {
   if (!setting) return 'normal';
   if (setting === 'custom') {
     try {
@@ -197,17 +186,9 @@ export interface EvalOutcome {
 }
 
 export interface RunController {
-  run(
-    code: string,
-    handlers: RunHandlers,
-    options?: RunOptions,
-  ): Promise<RunOutcome>;
+  run(code: string, handlers: RunHandlers, options?: RunOptions): Promise<RunOutcome>;
   /** REPL evaluation against the persistent run namespace (§6.4). */
-  evaluate?(
-    expression: string,
-    handlers: RunHandlers,
-    options?: EvalOptions,
-  ): Promise<EvalOutcome>;
+  evaluate?(expression: string, handlers: RunHandlers, options?: EvalOptions): Promise<EvalOutcome>;
   stop?(): void;
 }
 
@@ -316,18 +297,34 @@ export interface CodingEditorProps {
 }
 
 export function CodingEditor(props: CodingEditorProps) {
-  const { vfs } = props;
+  // Destructured props (M5.1): the hooks below close over these
+  // individually, so their dep arrays satisfy exhaustive-deps without
+  // depending on the whole `props` object.
+  const {
+    vfs,
+    onCodeChange,
+    onFileEdit,
+    onGraded,
+    onRunStart,
+    onLogEvent,
+    runController,
+    hideEvaluate,
+    disableFeedback,
+    allowRealRequests,
+    disableTifa,
+    disableInstructorRun,
+    seed,
+    loadHistory,
+    startingCode,
+    assignmentHidden,
+  } = props;
   const role: Role = props.role ?? 'student';
   const [activeFile, setActiveFile] = useState('answer.py');
-  const [code, setCode] = useState(
-    () => vfs?.read('answer.py') ?? props.startingCode ?? '',
-  );
+  const [code, setCode] = useState(() => vfs?.read('answer.py') ?? startingCode ?? '');
   const editorRef = useRef<DualEditor | null>(null);
   const store = useEditorChromeStore;
   const pythonMode = useEditorChromeStore((state) => state.pythonMode);
-  const instructionsOverride = useEditorChromeStore(
-    (state) => state.instructionsOverride,
-  );
+  const instructionsOverride = useEditorChromeStore((state) => state.instructionsOverride);
   const fileTreeOn = useEditorChromeStore((state) => state.fileTree);
   // Keyed remount = new assignment: grader-set instructions reset (legacy
   // set_instructions persisted only until the next load).
@@ -337,9 +334,7 @@ export function CodingEditor(props: CodingEditorProps) {
   // Tree rail gating (M3.7): user toggle AND the legacy files-UI gate
   // (instructor || !hideFiles), and only with a VFS to list.
   const showFileTree =
-    fileTreeOn &&
-    Boolean(props.vfs) &&
-    ((props.instructor ?? false) || !(props.hideFiles ?? true));
+    fileTreeOn && Boolean(props.vfs) && ((props.instructor ?? false) || !(props.hideFiles ?? true));
   // Docs panel gating (M4.3): assignment provides docs_url AND the
   // persisted user toggle is on.
   const docsPanelOn = useEditorChromeStore((state) => state.docsPanel);
@@ -364,7 +359,6 @@ export function CodingEditor(props: CodingEditorProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [instructionsOverlay, setInstructionsOverlay] = useState(false);
   const feedback = useEditorChromeStore((state) => state.feedback);
-  const onLogEvent = props.onLogEvent;
   const activeFileRef = useRef(activeFile);
   activeFileRef.current = activeFile;
   const setFocused = useCallback(
@@ -388,11 +382,7 @@ export function CodingEditor(props: CodingEditorProps) {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && store.getState().focusedMode) {
         setFocused(false);
-      } else if (
-        event.ctrlKey &&
-        event.altKey &&
-        event.key.toLowerCase() === 'f'
-      ) {
+      } else if (event.ctrlKey && event.altKey && event.key.toLowerCase() === 'f') {
         event.preventDefault();
         setFocused(!store.getState().focusedMode);
       }
@@ -414,8 +404,7 @@ export function CodingEditor(props: CodingEditorProps) {
   // Only answer.py gets the block/split modes; every other file is a plain
   // text file (legacy python.js forces TEXT for non-answer files).
   const isAnswerFile = activeFile === 'answer.py';
-  const fileReadOnly =
-    (props.readOnly ?? false) || (vfs ? !vfs.canEdit(activeFile, role) : false);
+  const fileReadOnly = (props.readOnly ?? false) || (vfs ? !vfs.canEdit(activeFile, role) : false);
 
   const handleSelectFile = useCallback(
     (legacyName: string) => {
@@ -460,9 +449,7 @@ export function CodingEditor(props: CodingEditorProps) {
         onLogEvent?.('X-File.Rename', '', '', next, legacyName);
         if (legacyName === activeFile) handleSelectFile(format(space, next));
       } else {
-        window.alert(
-          'Could not rename the file (protected name, or the target already exists).',
-        );
+        window.alert('Could not rename the file (protected name, or the target already exists).');
       }
     },
     [vfs, activeFile, handleSelectFile, onLogEvent],
@@ -497,9 +484,7 @@ export function CodingEditor(props: CodingEditorProps) {
           handleSelectFile(format(target, basename));
         }
       } else {
-        window.alert(
-          'Could not move the file (protected name, or the target already exists).',
-        );
+        window.alert('Could not move the file (protected name, or the target already exists).');
       }
     },
     [vfs, activeFile, handleSelectFile, onLogEvent],
@@ -511,15 +496,15 @@ export function CodingEditor(props: CodingEditorProps) {
       if (vfs && !fileReadOnly) {
         vfs.write(activeFile, newCode);
         // Autosave hook (legacy file subscriptions, server.js:114-134).
-        props.onFileEdit?.(activeFile, newCode);
+        onFileEdit?.(activeFile, newCode);
       }
       if (activeFile === 'answer.py') {
         // Any answer edit stales the last run's feedback (feedback.js:110).
         store.getState().setDirtySubmission(true);
-        props.onCodeChange?.(newCode);
+        onCodeChange?.(newCode);
       }
     },
-    [props.onCodeChange, props.onFileEdit, vfs, activeFile, fileReadOnly, store],
+    [onCodeChange, onFileEdit, vfs, activeFile, fileReadOnly, store],
   );
 
   // Live toolbox reload on settings change (legacy `reloadToolbox`).
@@ -554,10 +539,8 @@ export function CodingEditor(props: CodingEditorProps) {
   );
 
   const handleRun = useCallback(async () => {
-    const controller = props.runController;
-    const hideEvaluate = props.hideEvaluate ?? false;
-    const { setRunState, appendConsole, clearConsole, setFeedback } =
-      store.getState();
+    const controller = runController;
+    const { setRunState, appendConsole, clearConsole, setFeedback } = store.getState();
     clearConsole();
     if (!controller) {
       appendConsole({
@@ -581,8 +564,8 @@ export function CodingEditor(props: CodingEditorProps) {
     const studentCode = vfs ? (vfs.read('answer.py') ?? '') : code;
     // Legacy saves answer.py immediately at run start (run.js:13) and logs
     // the Compile event (run.js:14).
-    props.onRunStart?.(studentCode);
-    props.onLogEvent?.('Compile', '', '', '', 'answer.py');
+    onRunStart?.(studentCode);
+    onLogEvent?.('Compile', '', '', '', 'answer.py');
     try {
       const outcome = await controller.run(
         studentCode,
@@ -594,11 +577,11 @@ export function CodingEditor(props: CodingEditorProps) {
         {
           trace: true,
           inputs: runInputs,
-          disableFeedback: props.disableFeedback,
-          allowRealRequests: props.allowRealRequests,
-          disableTifa: props.disableTifa,
-          disableInstructorRun: props.disableInstructorRun,
-          seed: props.seed,
+          disableFeedback: disableFeedback,
+          allowRealRequests: allowRealRequests,
+          disableTifa: disableTifa,
+          disableInstructorRun: disableInstructorRun,
+          seed: seed,
           // Grade with the CURRENT !on_run.py — instructor edits to the On
           // Run tab apply on the very next run (§7: the VFS is the source
           // of truth) — and stage the live VFS into both jobs: the student
@@ -615,9 +598,7 @@ export function CodingEditor(props: CodingEditorProps) {
       );
       const succeeded = outcome.error === null;
       setRunState(succeeded ? 'idle' : 'error');
-      store
-        .getState()
-        .setServerStatus('onExecution', succeeded ? 'ready' : 'failed', '');
+      store.getState().setServerStatus('onExecution', succeeded ? 'ready' : 'failed', '');
       if (outcome.error !== null) {
         appendConsole({ kind: 'stderr', text: outcome.error });
       }
@@ -631,7 +612,7 @@ export function CodingEditor(props: CodingEditorProps) {
           .map((entry) => entry.text)
           .join('')
           .replace(/\n$/, '');
-        props.onLogEvent?.(
+        onLogEvent?.(
           'Run.Program',
           '',
           '',
@@ -639,15 +620,9 @@ export function CodingEditor(props: CodingEditorProps) {
           'answer.py',
         );
       } else if (outcome.feedback?.category === 'syntax') {
-        props.onLogEvent?.('Compile.Error', '', '', outcome.error ?? '', 'answer.py');
+        onLogEvent?.('Compile.Error', '', '', outcome.error ?? '', 'answer.py');
       } else {
-        props.onLogEvent?.(
-          'Run.Program',
-          'ProgramErrorOutput',
-          '',
-          outcome.error ?? '',
-          'answer.py',
-        );
+        onLogEvent?.('Run.Program', 'ProgramErrorOutput', '', outcome.error ?? '', 'answer.py');
       }
       // Plots print into the console flow as image lines (§10.2).
       for (const image of outcome.images ?? []) {
@@ -659,7 +634,7 @@ export function CodingEditor(props: CodingEditorProps) {
         // the unitTests block comes from the resolver tallies when a
         // grader actually ran.
         const category = outcome.feedback.category ?? '';
-        props.onLogEvent?.(
+        onLogEvent?.(
           'Intervention',
           category,
           outcome.feedback.label,
@@ -688,15 +663,12 @@ export function CodingEditor(props: CodingEditorProps) {
       // grader pinned a line.
       editorRef.current?.clearHighlightedLines('editor-error-line');
       if (outcome.errorLine != null) {
-        editorRef.current?.setHighlightedLines(
-          [outcome.errorLine],
-          'editor-error-line',
-        );
+        editorRef.current?.setHighlightedLines([outcome.errorLine], 'editor-error-line');
       }
       // §14.3 ordering: the verdict reaches the submission lifecycle only
       // AFTER the feedback is presented (on_run.js:162-175).
       if (outcome.grade) {
-        props.onGraded?.(outcome.grade);
+        onGraded?.(outcome.grade);
       }
       const after = store.getState();
       after.setTrace(outcome.trace ?? []);
@@ -704,7 +676,7 @@ export function CodingEditor(props: CodingEditorProps) {
       after.setDirtySubmission(false);
       // Successful run offers the console Evaluate button (run.js:57-59),
       // unless the hide_evaluate setting is on.
-      if (succeeded && !hideEvaluate) {
+      if (succeeded && !(hideEvaluate ?? false)) {
         after.setEvalState('button');
       }
     } catch (error) {
@@ -715,13 +687,18 @@ export function CodingEditor(props: CodingEditorProps) {
   }, [
     code,
     vfs,
-    props.runController,
-    props.hideEvaluate,
-    props.disableFeedback,
-    props.allowRealRequests,
-    props.onRunStart,
-    props.onGraded,
-    props.onLogEvent,
+    runController,
+    hideEvaluate,
+    disableFeedback,
+    allowRealRequests,
+    // Latent staleness bug surfaced by the M5.1 destructure: these three
+    // were missing, so mid-session settings changes didn't reach the run.
+    disableTifa,
+    disableInstructorRun,
+    seed,
+    onRunStart,
+    onGraded,
+    onLogEvent,
     store,
     handleSystem,
   ]);
@@ -730,7 +707,7 @@ export function CodingEditor(props: CodingEditorProps) {
     (expression: string) => {
       // The submitted expression is already frozen into the printer by the
       // Console (legacy keeps the disabled input line as the echo).
-      const controller = props.runController;
+      const controller = runController;
       const { appendConsole, setServerStatus } = store.getState();
       if (!controller?.evaluate) {
         appendConsole({
@@ -742,8 +719,8 @@ export function CodingEditor(props: CodingEditorProps) {
       setServerStatus('onExecution', 'active', '');
       // Eval lifecycle events (eval.js:19-27): the expression joins the
       // virtual `evaluations` file, then compiles.
-      props.onLogEvent?.('X-File.Add', '', '', expression, 'evaluations');
-      props.onLogEvent?.('Compile', '', '', expression, 'evaluations');
+      onLogEvent?.('X-File.Add', '', '', expression, 'evaluations');
+      onLogEvent?.('Compile', '', '', expression, 'evaluations');
       void controller
         .evaluate(
           expression,
@@ -757,7 +734,7 @@ export function CodingEditor(props: CodingEditorProps) {
           // the controller enforces both; we supply the live VFS script.
           {
             onEval: vfs ? (vfs.read('!on_eval.py') ?? '') : '',
-            disableFeedback: props.disableFeedback,
+            disableFeedback: disableFeedback,
             ...(vfs ? { graderFiles: vfs.stageFiles('instructor') } : {}),
           },
         )
@@ -766,9 +743,9 @@ export function CodingEditor(props: CodingEditorProps) {
           if (outcome.error !== null) {
             appendConsole({ kind: 'stderr', text: outcome.error });
             // eval.js:57 — eval errors log as Compile.Error.
-            props.onLogEvent?.('Compile.Error', '', '', outcome.error, 'evaluations');
+            onLogEvent?.('Compile.Error', '', '', outcome.error, 'evaluations');
           } else {
-            props.onLogEvent?.('X-Evaluate.Program', '', '', '', 'evaluations');
+            onLogEvent?.('X-Evaluate.Program', '', '', '', 'evaluations');
             if (outcome.value !== null) {
               appendConsole({ kind: 'value', text: outcome.value });
             }
@@ -777,7 +754,7 @@ export function CodingEditor(props: CodingEditorProps) {
           // (on_eval.js success: presentFeedback → updateSubmission).
           if (outcome.feedback) {
             store.getState().setFeedback(outcome.feedback);
-            props.onLogEvent?.(
+            onLogEvent?.(
               'Intervention',
               outcome.feedback.category ?? '',
               outcome.feedback.label,
@@ -800,19 +777,11 @@ export function CodingEditor(props: CodingEditorProps) {
             store.getState().setInstructionsOverride(outcome.instructions);
           }
           if (outcome.grade) {
-            props.onGraded?.(outcome.grade);
+            onGraded?.(outcome.grade);
           }
         });
     },
-    [
-      props.runController,
-      props.onLogEvent,
-      props.onGraded,
-      props.disableFeedback,
-      vfs,
-      store,
-      handleSystem,
-    ],
+    [runController, onLogEvent, onGraded, disableFeedback, vfs, store, handleSystem],
   );
 
   const handleTraceLine = useCallback((studentLine: number | null) => {
@@ -825,14 +794,13 @@ export function CodingEditor(props: CodingEditorProps) {
   }, []);
 
   const handleStop = useCallback(() => {
-    props.runController?.stop?.();
+    runController?.stop?.();
     store.getState().setRunState('idle');
-  }, [props.runController, store]);
+  }, [runController, store]);
 
   // Legacy toggleHistoryMode (blockpy.js:1098-1104): off is immediate; on
   // fetches the log first and only then flips the mode (failure = dialog).
   const handleToggleHistory = useCallback(() => {
-    const loadHistory = props.loadHistory;
     if (!loadHistory) return;
     if (store.getState().historyMode) {
       store.getState().setHistoryMode(false);
@@ -842,17 +810,17 @@ export function CodingEditor(props: CodingEditorProps) {
       .then((entries) => {
         setHistoryEntries(entries);
         // Default selection: the most recent edit event (history.js:74).
-        const edits = editEvents(entries, activeFile, props.assignmentHidden);
+        const edits = editEvents(entries, activeFile, assignmentHidden);
         setHistoryIndex(Math.max(0, edits.length - 1));
         store.getState().setHistoryMode(true);
       })
       .catch(() => setHistoryError(true));
-  }, [props.loadHistory, props.assignmentHidden, activeFile, store]);
+  }, [loadHistory, assignmentHidden, activeFile, store]);
 
   // Legacy `use` (history.js:107-114): adopt the selected version, leave
   // history mode.
   const handleUseHistory = useCallback(() => {
-    const edits = editEvents(historyEntries, activeFile, props.assignmentHidden);
+    const edits = editEvents(historyEntries, activeFile, assignmentHidden);
     const selected = edits[historyIndex];
     if (!selected) return;
     store.getState().setHistoryMode(false);
@@ -862,24 +830,16 @@ export function CodingEditor(props: CodingEditorProps) {
     }
     if (activeFile === 'answer.py') {
       store.getState().setDirtySubmission(true);
-      props.onCodeChange?.(selected.message);
+      onCodeChange?.(selected.message);
     }
-  }, [
-    historyEntries,
-    historyIndex,
-    activeFile,
-    props.assignmentHidden,
-    props.onCodeChange,
-    vfs,
-    store,
-  ]);
+  }, [historyEntries, historyIndex, activeFile, assignmentHidden, onCodeChange, vfs, store]);
 
   const handleReset = useCallback(() => {
     // Reset restores answer.py to the starting code (`^starting_code.py`
     // when a VFS is attached — reset-to-`^` semantics, §7.4).
     const starting = vfs
-      ? (vfs.read('^starting_code.py') ?? props.startingCode ?? '')
-      : (props.startingCode ?? '');
+      ? (vfs.read('^starting_code.py') ?? startingCode ?? '')
+      : (startingCode ?? '');
     if (vfs) {
       vfs.write('answer.py', starting);
     }
@@ -887,8 +847,8 @@ export function CodingEditor(props: CodingEditorProps) {
       setCode(starting);
       editorRef.current?.setCode(starting);
     }
-    props.onLogEvent?.('X-File.Reset', '', '', '', 'answer.py');
-  }, [props.startingCode, props.onLogEvent, vfs, isAnswerFile]);
+    onLogEvent?.('X-File.Reset', '', '', '', 'answer.py');
+  }, [startingCode, onLogEvent, vfs, isAnswerFile]);
 
   // X-View.Change on Blocks/Split/Text toggles (blockpy.js:1071-1075) —
   // logged on changes only, not the initial mode.
@@ -896,26 +856,20 @@ export function CodingEditor(props: CodingEditorProps) {
   useEffect(() => {
     if (loggedMode.current !== pythonMode) {
       loggedMode.current = pythonMode;
-      props.onLogEvent?.('X-View.Change', '', '', pythonMode, activeFile);
+      onLogEvent?.('X-View.Change', '', '', pythonMode, activeFile);
     }
-  }, [pythonMode, activeFile, props.onLogEvent]);
+  }, [pythonMode, activeFile, onLogEvent]);
 
   // Console + feedback pair (Row 2). In focused mode (M4.2) the same pair
   // renders inside the bottom drawer instead of the fixed second row.
   const consoleAndFeedback = (
     <div className="row">
       {props.instructor && activeConsole === 'dev' ? (
-        <DevConsole
-          onShowStudent={() => store.getState().setActiveConsole('student')}
-        />
+        <DevConsole onShowStudent={() => store.getState().setActiveConsole('student')} />
       ) : (
         <Console
           onEvaluate={handleEvaluate}
-          onShowDev={
-            props.instructor
-              ? () => store.getState().setActiveConsole('dev')
-              : undefined
-          }
+          onShowDev={props.instructor ? () => store.getState().setActiveConsole('dev') : undefined}
         />
       )}
       {traceVisible ? (
@@ -931,13 +885,7 @@ export function CodingEditor(props: CodingEditorProps) {
                   // X-Rating carries the presented feedback's
                   // category/label (blockpy.js:797-800).
                   const current = store.getState().feedback;
-                  props.onLogEvent?.(
-                    'X-Rating',
-                    current.category ?? '',
-                    current.label,
-                    rating,
-                    '',
-                  );
+                  onLogEvent?.('X-Rating', current.category ?? '', current.label, rating, '');
                 }
               : undefined
           }
@@ -1009,11 +957,7 @@ export function CodingEditor(props: CodingEditorProps) {
           // Grid negotiation (M3.7 rails + M4.3 docs): 12 minus 3 per open
           // side panel; focused mode always takes the full width.
           className={`blockpy-panel blockpy-editor col-md-${
-            focusedMode
-              ? 12
-              : 12 -
-                (showFileTree && vfs ? 3 : 0) -
-                (showDocs ? 3 : 0)
+            focusedMode ? 12 : 12 - (showFileTree && vfs ? 3 : 0) - (showDocs ? 3 : 0)
           }`}
         >
           <PythonToolbar
@@ -1029,19 +973,15 @@ export function CodingEditor(props: CodingEditorProps) {
                   docsOpen: showDocs,
                 }
               : {})}
-            onHistory={props.loadHistory ? handleToggleHistory : undefined}
+            onHistory={loadHistory ? handleToggleHistory : undefined}
             // File actions for the ACTIVE file (M3.7 / LD-21), gated by the
             // VFS capability guards + role editability.
             {...(vfs
               ? {
                   onDeleteFile: () => handleDeleteFile(activeFile),
                   onRenameFile: () => handleRenameFile(activeFile),
-                  canDeleteFile:
-                    vfs.canDeleteName(activeFile) &&
-                    vfs.canEdit(activeFile, role),
-                  canRenameFile:
-                    vfs.canRenameName(activeFile) &&
-                    vfs.canEdit(activeFile, role),
+                  canDeleteFile: vfs.canDeleteName(activeFile) && vfs.canEdit(activeFile, role),
+                  canRenameFile: vfs.canRenameName(activeFile) && vfs.canEdit(activeFile, role),
                 }
               : {})}
           />
@@ -1052,15 +992,14 @@ export function CodingEditor(props: CodingEditorProps) {
               index={historyIndex}
               onSelect={setHistoryIndex}
               onUse={handleUseHistory}
-              assignmentHidden={props.assignmentHidden}
+              assignmentHidden={assignmentHidden}
             />
           )}
           {historyMode ? (
             <HistoryDiffView
               original={
-                editEvents(historyEntries, activeFile, props.assignmentHidden)[
-                  historyIndex
-                ]?.message ?? ''
+                editEvents(historyEntries, activeFile, assignmentHidden)[historyIndex]?.message ??
+                ''
               }
               current={code}
               height={400}
@@ -1080,7 +1019,7 @@ export function CodingEditor(props: CodingEditorProps) {
               onSave={(blob, fields) => {
                 if (vfs) {
                   vfs.write(activeFile, blob);
-                  props.onFileEdit?.(activeFile, blob);
+                  onFileEdit?.(activeFile, blob);
                 }
                 setCode(blob);
                 props.onSaveSettings?.(blob, fields);
@@ -1132,13 +1071,7 @@ export function CodingEditor(props: CodingEditorProps) {
                 } catch {
                   // Clipboard unreadable — log the 0 like legacy's catch.
                 }
-                props.onLogEvent?.(
-                  'X-Editor.Paste',
-                  '',
-                  '',
-                  JSON.stringify({ characters }),
-                  activeFile,
-                );
+                onLogEvent?.('X-Editor.Paste', '', '', JSON.stringify({ characters }), activeFile);
               }}
             >
               {rawStructured &&
@@ -1169,11 +1102,7 @@ export function CodingEditor(props: CodingEditorProps) {
                 readOnly={fileReadOnly}
                 blocklyMediaPath={props.blocklyMediaPath}
                 toolbox={toolboxSpec}
-                height={
-                  focusedMode
-                    ? Math.max(500, window.innerHeight - 220)
-                    : 400
-                }
+                height={focusedMode ? Math.max(500, window.innerHeight - 220) : 400}
                 editorRef={(editor) => {
                   editorRef.current = editor;
                   // Apply the persisted autocomplete preference to the
@@ -1191,10 +1120,7 @@ export function CodingEditor(props: CodingEditorProps) {
             the persisted toggle is on). */}
         {!focusedMode && showDocs && props.docsUrl && (
           <div className="col-md-3 blockpy-panel blockpy-docs-rail">
-            <DocsPanel
-              url={props.docsUrl}
-              onCollapse={() => store.getState().toggleDocsPanel()}
-            />
+            <DocsPanel url={props.docsUrl} onCollapse={() => store.getState().toggleDocsPanel()} />
           </div>
         )}
       </div>
@@ -1254,9 +1180,7 @@ export function CodingEditor(props: CodingEditorProps) {
             className="blockpy-instructions"
             // D4-A: legacy renders instructor HTML unsanitized.
             dangerouslySetInnerHTML={{
-              __html: renderInstructions(
-                instructionsOverride ?? props.instructions ?? '',
-              ),
+              __html: renderInstructions(instructionsOverride ?? props.instructions ?? ''),
             }}
           />
         </Dialog>

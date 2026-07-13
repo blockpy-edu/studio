@@ -43,27 +43,17 @@ describe('DocsPanel (M4.3, LD-25)', () => {
     expect(container.textContent).toContain('Loading documentation');
     await act(async () => {});
     // Rendered through the instructions pipeline.
-    expect(container.querySelector('.blockpy-docs-body h1')!.textContent).toBe(
-      'Guide',
-    );
+    expect(container.querySelector('.blockpy-docs-body h1')!.textContent).toBe('Guide');
     expect(container.querySelector('#docs-strings')).not.toBeNull();
     // TOC lists all three headings, indented by level.
     const tocLinks = container.querySelectorAll('.blockpy-docs-toc a');
-    expect([...tocLinks].map((a) => a.textContent)).toEqual([
-      'Guide',
-      'Strings',
-      'Numbers',
-    ]);
+    expect([...tocLinks].map((a) => a.textContent)).toEqual(['Guide', 'Strings', 'Numbers']);
     // TOC click scrolls the heading into view (no page navigation).
     fireEvent.click(tocLinks[1]!);
-    expect(
-      window.HTMLElement.prototype.scrollIntoView,
-    ).toHaveBeenCalled();
+    expect(window.HTMLElement.prototype.scrollIntoView).toHaveBeenCalled();
     // Session cache: a remount does not refetch.
     unmount();
-    render(
-      <DocsPanel url="https://example.com/guide.md" onCollapse={() => {}} />,
-    );
+    render(<DocsPanel url="https://example.com/guide.md" onCollapse={() => {}} />);
     await act(async () => {});
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -80,9 +70,7 @@ describe('DocsPanel (M4.3, LD-25)', () => {
     const tocLinks = container.querySelectorAll('.blockpy-docs-toc a');
     expect([...tocLinks].map((a) => a.textContent)).toEqual(['Numbers']);
     // Content stays complete — the filter is a TOC affordance only.
-    expect(container.querySelector('.blockpy-docs-body')!.textContent).toContain(
-      'About ints.',
-    );
+    expect(container.querySelector('.blockpy-docs-body')!.textContent).toContain('About ints.');
   });
 
   it('offers the raw download link and fails soft on fetch errors', async () => {
@@ -90,14 +78,10 @@ describe('DocsPanel (M4.3, LD-25)', () => {
     const { container } = render(
       <DocsPanel url="https://example.com/gone.md" onCollapse={() => {}} />,
     );
-    const download = container.querySelector<HTMLAnchorElement>(
-      '.blockpy-docs-download',
-    )!;
+    const download = container.querySelector<HTMLAnchorElement>('.blockpy-docs-download')!;
     expect(download.href).toBe('https://example.com/gone.md');
     await act(async () => {});
-    expect(container.querySelector('.blockpy-docs-error')!.textContent).toContain(
-      'HTTP 404',
-    );
+    expect(container.querySelector('.blockpy-docs-error')!.textContent).toContain('HTTP 404');
     // Failed fetches don't poison the session cache: a fresh mount retries.
     const retryMock = mockFetch(SAMPLE_DOC);
     cleanup();

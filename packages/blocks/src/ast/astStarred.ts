@@ -18,8 +18,7 @@ defineBlocks({
 generator.forBlock['ast_Starred'] = function (block) {
   // Basic arithmetic operators, and power.
   const order = generator.ORDER_NONE;
-  const argument1 =
-    generator.valueToCode(block, 'VALUE', order) || generator.blank;
+  const argument1 = generator.valueToCode(block, 'VALUE', order) || generator.blank;
   const code = '*' + argument1;
   return [code, order];
 };

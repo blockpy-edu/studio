@@ -77,10 +77,7 @@ export interface BlockEditorHost {
 }
 
 export class DualBlockEditor {
-  static readonly VIEW_CONFIGURATIONS: Record<
-    string,
-    BlockEditorViewConfiguration
-  > = {
+  static readonly VIEW_CONFIGURATIONS: Record<string, BlockEditorViewConfiguration> = {
     split: { width: '60%', visible: true },
     block: { width: '100%', visible: true },
     text: { width: '0%', visible: false },
@@ -135,9 +132,7 @@ export class DualBlockEditor {
 
   /** Live-swap the workspace theme (M4.1; only dark restyles). */
   setTheme(theme: 'light' | 'dark' | 'win2000'): void {
-    this.workspace.setTheme(
-      theme === 'dark' ? DARK_WORKSPACE_THEME : Blockly.Themes.Classic,
-    );
+    this.workspace.setTheme(theme === 'dark' ? DARK_WORKSPACE_THEME : Blockly.Themes.Classic);
   }
 
   /** Toolbox flyout width — used by the text editor's indent sidebar. */
@@ -183,10 +178,7 @@ export class DualBlockEditor {
           .filter((element) => element.id.startsWith('blockly'))
           .map((element) => element.textContent ?? '')
           .join('\n');
-        const styleElement = document.createElementNS(
-          'http://www.w3.org/1999/xhtml',
-          'style',
-        );
+        const styleElement = document.createElementNS('http://www.w3.org/1999/xhtml', 'style');
         styleElement.textContent = css + '\n\n';
         blocks.insertBefore(styleElement, blocks.firstChild);
         const bbox = liveCanvas.getBBox();
@@ -205,8 +197,7 @@ export class DualBlockEditor {
           '<rect width="100%" height="100%" fill="white"></rect>' +
           xml +
           '</svg>';
-        const url =
-          'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+        const url = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
         const img = document.createElement('img');
         img.style.display = 'block';
         img.onload = () => {
@@ -254,10 +245,7 @@ export class DualBlockEditor {
       // Vertical ordering: y = source line * 100 (legacy).
       for (let i = 0; i < xml.children.length; i += 1) {
         const child = xml.children[i]!;
-        const lineNumber = parseInt(
-          child.getAttribute('line_number') ?? '1',
-          10,
-        );
+        const lineNumber = parseInt(child.getAttribute('line_number') ?? '1', 10);
         child.setAttribute('y', String((lineNumber || 1) * 100));
         child.setAttribute('x', '0');
       }
@@ -304,8 +292,7 @@ export class DualBlockEditor {
   resized(): void {
     this.resizeResponsively();
     this.host.blockEditor.style.width = this.host.blockArea.offsetWidth + 'px';
-    this.host.blockEditor.style.height =
-      this.host.blockArea.offsetHeight + 'px';
+    this.host.blockEditor.style.height = this.host.blockArea.offsetHeight + 'px';
     Blockly.svgResize(this.workspace);
     this.resizeReadOnlyDiv();
   }
@@ -356,10 +343,7 @@ export class DualBlockEditor {
   }
 
   private changed(event: Blockly.Events.Abstract): void {
-    if (
-      BLOCKLY_CHANGE_EVENTS.indexOf(event.type) === -1 ||
-      this.workspace.isDragging()
-    ) {
+    if (BLOCKLY_CHANGE_EVENTS.indexOf(event.type) === -1 || this.workspace.isDragging()) {
       return;
     }
     this.host.onBlocksChanged(this.getCode());

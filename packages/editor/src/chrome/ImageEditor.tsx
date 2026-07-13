@@ -77,11 +77,7 @@ function decodeToGrid(dataUrl: string): Promise<PixelGrid | null> {
           return;
         }
         context.drawImage(image, 0, 0);
-        resolve(
-          gridFromImageData(
-            context.getImageData(0, 0, canvas.width, canvas.height),
-          ),
-        );
+        resolve(gridFromImageData(context.getImageData(0, 0, canvas.width, canvas.height)));
       } catch {
         resolve(null); // jsdom / tainted canvas — preview-only.
       }
@@ -178,10 +174,7 @@ export function ImageEditor({ value, readOnly, onChange, onRawView }: ImageEdito
             <button
               key={swatch}
               type="button"
-              className={
-                'blockpy-pixel-swatch' +
-                (!erasing && color === swatch ? ' active' : '')
-              }
+              className={'blockpy-pixel-swatch' + (!erasing && color === swatch ? ' active' : '')}
               style={{ backgroundColor: swatch }}
               title={swatch}
               onClick={() => {
@@ -202,8 +195,7 @@ export function ImageEditor({ value, readOnly, onChange, onRawView }: ImageEdito
           <button
             type="button"
             className={
-              'btn btn-sm btn-outline-secondary blockpy-pixel-eraser' +
-              (erasing ? ' active' : '')
+              'btn btn-sm btn-outline-secondary blockpy-pixel-eraser' + (erasing ? ' active' : '')
             }
             aria-pressed={erasing}
             onClick={() => setErasing((current) => !current)}
@@ -223,10 +215,7 @@ export function ImageEditor({ value, readOnly, onChange, onRawView }: ImageEdito
                   current
                     ? resizeGrid(
                         current,
-                        Math.max(
-                          1,
-                          Math.min(MAX_PIXEL_DIMENSION, Number(event.target.value) || 1),
-                        ),
+                        Math.max(1, Math.min(MAX_PIXEL_DIMENSION, Number(event.target.value) || 1)),
                         gridHeight(current),
                       )
                     : current,
@@ -248,10 +237,7 @@ export function ImageEditor({ value, readOnly, onChange, onRawView }: ImageEdito
                     ? resizeGrid(
                         current,
                         gridWidth(current),
-                        Math.max(
-                          1,
-                          Math.min(MAX_PIXEL_DIMENSION, Number(event.target.value) || 1),
-                        ),
+                        Math.max(1, Math.min(MAX_PIXEL_DIMENSION, Number(event.target.value) || 1)),
                       )
                     : current,
                 )
@@ -326,9 +312,7 @@ export function ImageEditor({ value, readOnly, onChange, onRawView }: ImageEdito
                 ))}
               </select>
             </label>
-            <span className="blockpy-image-dimensions">
-              {dimensions ?? '…'}
-            </span>
+            <span className="blockpy-image-dimensions">{dimensions ?? '…'}</span>
             {!readOnly && (
               <button
                 type="button"

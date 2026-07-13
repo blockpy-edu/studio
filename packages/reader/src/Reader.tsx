@@ -80,10 +80,7 @@ export interface ReaderProps {
   loadAssignment: (assignmentId: number) => Promise<ReaderLoadResult | null>;
   /** updateSubmission {status: 1, correct: true} with the READING's ids
    *  (reader.ts:384-419). Absent = anonymous/offline: never marks. */
-  markRead?: (
-    assignmentId: number,
-    submissionId: number | null,
-  ) => Promise<MarkReadResponse>;
+  markRead?: (assignmentId: number, submissionId: number | null) => Promise<MarkReadResponse>;
   /** Navigation store hook, called when the server echoes correct. */
   markCorrect?: (assignmentId: number) => void;
   logEvent?: (
@@ -102,10 +99,7 @@ export interface ReaderProps {
   blocklyMediaPath?: string;
   isInstructor?: () => boolean;
   /** POST blockpy/start_assignment (exam timer, reader.ts:109-135). */
-  startAssignment?: (
-    assignmentId: number,
-    dateStartedIso: string,
-  ) => Promise<{ success: boolean }>;
+  startAssignment?: (assignmentId: number, dateStartedIso: string) => Promise<{ success: boolean }>;
   /** Fired on load and after a successful exam start — the app routes this
    *  into the navigation store's time-limit checker (legacy: the reader IS
    *  the AssignmentInterface running handleTimeCheck on its own pair). */
@@ -328,8 +322,7 @@ export function Reader(props: ReaderProps) {
   const renderedHtml = useMemo(() => {
     if (!loaded) return '';
     return renderReadingMarkdown(loaded.assignment.instructions, {
-      downloadUrl: (link) =>
-        propsRef.current.downloadUrl?.(loaded.assignment.id, link) ?? link,
+      downloadUrl: (link) => propsRef.current.downloadUrl?.(loaded.assignment.id, link) ?? link,
     });
   }, [loaded]);
 
@@ -372,8 +365,7 @@ export function Reader(props: ReaderProps) {
   useEffect(() => {
     if (!loaded?.settings.youtube || loaded.settings.video) return;
     const YT = (window as unknown as Record<string, unknown>)['YT'] as
-      | { Player: new (id: string, options: unknown) => { destroy(): void } }
-      | undefined;
+      { Player: new (id: string, options: unknown) => { destroy(): void } } | undefined;
     if (!YT) return;
     let player: { destroy(): void } | null = null;
     try {
@@ -421,9 +413,7 @@ export function Reader(props: ReaderProps) {
             .querySelectorAll<HTMLElement>('.assignment-selector-div')
             .forEach((el) => (el.style.display = ''));
         } else {
-          alert(
-            'The exam could not be started. Please try reloading the page and starting again.',
-          );
+          alert('The exam could not be started. Please try reloading the page and starting again.');
           console.error('Failed to start timer', response);
         }
       })
@@ -485,129 +475,129 @@ export function Reader(props: ReaderProps) {
       {...(props.logEvent ? { logEvent: props.logEvent } : {})}
       {...(props.runController ? { runController: props.runController } : {})}
     >
-    <div className="blockpy-reader">
-      {errorMessage && <div className="alert alert-warning">{errorMessage}</div>}
-      {settings.allowPopout && popoutBase && (
-        <a
-          href={`${popoutBase}&embed=true`}
-          className="btn btn-sm btn-outline-secondary float-right m-3"
-          target="_blank"
-          rel="noreferrer"
-        >
-          <ExternalLink size={14} strokeWidth={1.75} aria-hidden /> Popout
-        </a>
-      )}
-      {settings.slides.length > 0 && (
-        <a
-          href={settings.slides}
-          className="btn btn-sm btn-outline-secondary float-right m-3"
-          target="_blank"
-          rel="noreferrer"
-        >
-          <Download size={14} strokeWidth={1.75} aria-hidden /> Download
-        </a>
-      )}
-      <div style={{ background: '#FBFAF7' }} className="pt-4">
-        {settings.header.length > 0 && <h3 className="p-1">{settings.header}</h3>}
-        {settings.summary.length > 0 && <div className="p-1">{settings.summary}</div>}
-        {(showYoutubeVoices || showVideoVoices) && (
-          <div style={{ float: 'right' }} className="btn-group" role="group">
-            <button
-              id="blockpy-reader-video-voice-choice"
-              type="button"
-              className="btn btn-outline-secondary dropdown-toggle"
-              aria-haspopup="true"
-              aria-expanded={voiceOpen}
-              onClick={() => setVoiceOpen(!voiceOpen)}
-            >
-              Voice
-            </button>
-            <div
-              className={`dropdown-menu${voiceOpen ? ' show' : ''}`}
-              aria-labelledby="blockpy-reader-video-voice-choice"
-            >
-              {Object.entries(voiceOptions).map(([voice, url]) => (
-                <a
-                  key={voice}
-                  href="#"
-                  className={`dropdown-item${url === currentVoiceUrl ? ' active' : ''}`}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    chooseVoice(voice, url);
-                  }}
-                >
-                  {voice}
-                </a>
-              ))}
-            </div>
-          </div>
-        )}
-        {settings.video.length > 0 && (
-          <video
-            controls
-            width={640}
-            height={480}
-            style={{ display: 'block', marginLeft: 'auto', marginRight: 'auto' }}
-            crossOrigin="anonymous"
-            preload="metadata"
-            className="reader-video-display"
-            ref={videoRef}
+      <div className="blockpy-reader">
+        {errorMessage && <div className="alert alert-warning">{errorMessage}</div>}
+        {settings.allowPopout && popoutBase && (
+          <a
+            href={`${popoutBase}&embed=true`}
+            className="btn btn-sm btn-outline-secondary float-right m-3"
+            target="_blank"
+            rel="noreferrer"
           >
-            <source src={`${settings.video}#t=1`} type="video/mp4" />
-            <track
-              src={`${settings.video.slice(0, -3)}vtt`}
-              default
-              kind="captions"
-              srcLang="en"
-              label="English"
+            <ExternalLink size={14} strokeWidth={1.75} aria-hidden /> Popout
+          </a>
+        )}
+        {settings.slides.length > 0 && (
+          <a
+            href={settings.slides}
+            className="btn btn-sm btn-outline-secondary float-right m-3"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <Download size={14} strokeWidth={1.75} aria-hidden /> Download
+          </a>
+        )}
+        <div style={{ background: '#FBFAF7' }} className="pt-4">
+          {settings.header.length > 0 && <h3 className="p-1">{settings.header}</h3>}
+          {settings.summary.length > 0 && <div className="p-1">{settings.summary}</div>}
+          {(showYoutubeVoices || showVideoVoices) && (
+            <div style={{ float: 'right' }} className="btn-group" role="group">
+              <button
+                id="blockpy-reader-video-voice-choice"
+                type="button"
+                className="btn btn-outline-secondary dropdown-toggle"
+                aria-haspopup="true"
+                aria-expanded={voiceOpen}
+                onClick={() => setVoiceOpen(!voiceOpen)}
+              >
+                Voice
+              </button>
+              <div
+                className={`dropdown-menu${voiceOpen ? ' show' : ''}`}
+                aria-labelledby="blockpy-reader-video-voice-choice"
+              >
+                {Object.entries(voiceOptions).map(([voice, url]) => (
+                  <a
+                    key={voice}
+                    href="#"
+                    className={`dropdown-item${url === currentVoiceUrl ? ' active' : ''}`}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      chooseVoice(voice, url);
+                    }}
+                  >
+                    {voice}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+          {settings.video.length > 0 && (
+            <video
+              controls
+              width={640}
+              height={480}
+              style={{ display: 'block', marginLeft: 'auto', marginRight: 'auto' }}
+              crossOrigin="anonymous"
+              preload="metadata"
+              className="reader-video-display"
+              ref={videoRef}
+            >
+              <source src={`${settings.video}#t=1`} type="video/mp4" />
+              <track
+                src={`${settings.video.slice(0, -3)}vtt`}
+                default
+                kind="captions"
+                srcLang="en"
+                label="English"
+              />
+            </video>
+          )}
+          {settings.youtube.length > 0 && !settings.video && (
+            <iframe
+              style={{ width: '640px', height: '480px', marginLeft: '10%' }}
+              width={300}
+              height={150}
+              allowFullScreen
+              id="reader-youtube-video"
+              title={assignment.name}
+              src={`https://www.youtube.com/embed/${settings.youtube}?feature=oembed&rel=0&enablejsapi=1`}
             />
-          </video>
-        )}
-        {settings.youtube.length > 0 && !settings.video && (
-          <iframe
-            style={{ width: '640px', height: '480px', marginLeft: '10%' }}
-            width={300}
-            height={150}
-            allowFullScreen
-            id="reader-youtube-video"
-            title={assignment.name}
-            src={`https://www.youtube.com/embed/${settings.youtube}?feature=oembed&rel=0&enablejsapi=1`}
+          )}
+          <div
+            className="p-4 blockpy-reader-content"
+            ref={bodyRef}
+            // D4-A: unsanitized instructor HTML, legacy parity.
+            dangerouslySetInnerHTML={{ __html: renderedHtml }}
           />
+          {settings.startTimerButton && submission && (
+            <div className="text-center mb-4">
+              {dateStarted ? (
+                <button type="button" className="btn btn-primary btn-lg" disabled>
+                  Exam has begun, please continue working.
+                </button>
+              ) : (
+                <button type="button" className="btn btn-primary btn-lg" onClick={startTimer}>
+                  I am ready to start the exam!
+                </button>
+              )}
+            </div>
+          )}
+          <hr />
+        </div>
+        {runnables.map((runnable, index) =>
+          createPortal(
+            <RunnableBlock
+              key={`${assignment.id}-${runnable.partId}-${index}`}
+              pre={runnable.pre}
+              source={runnable.source}
+              runController={props.runController}
+              blocklyMediaPath={props.blocklyMediaPath}
+            />,
+            runnable.slot,
+          ),
         )}
-        <div
-          className="p-4 blockpy-reader-content"
-          ref={bodyRef}
-          // D4-A: unsanitized instructor HTML, legacy parity.
-          dangerouslySetInnerHTML={{ __html: renderedHtml }}
-        />
-        {settings.startTimerButton && submission && (
-          <div className="text-center mb-4">
-            {dateStarted ? (
-              <button type="button" className="btn btn-primary btn-lg" disabled>
-                Exam has begun, please continue working.
-              </button>
-            ) : (
-              <button type="button" className="btn btn-primary btn-lg" onClick={startTimer}>
-                I am ready to start the exam!
-              </button>
-            )}
-          </div>
-        )}
-        <hr />
       </div>
-      {runnables.map((runnable, index) =>
-        createPortal(
-          <RunnableBlock
-            key={`${assignment.id}-${runnable.partId}-${index}`}
-            pre={runnable.pre}
-            source={runnable.source}
-            runController={props.runController}
-            blocklyMediaPath={props.blocklyMediaPath}
-          />,
-          runnable.slot,
-        ),
-      )}
-    </div>
     </AssignmentSurface>
   );
 }

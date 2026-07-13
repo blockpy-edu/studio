@@ -84,17 +84,14 @@ defineBlock('ast_Assign', {
 generator.forBlock['ast_Assign'] = function (block) {
   const typed = block as AssignBlock;
   // Create a list with any number of elements of any type.
-  const value =
-    generator.valueToCode(block, 'VALUE', generator.ORDER_NONE) ||
-    generator.blank;
+  const value = generator.valueToCode(block, 'VALUE', generator.ORDER_NONE) || generator.blank;
   const targets = new Array<string>(typed.targetCount_);
   if (typed.targetCount_ === 1 && typed.simpleTarget_) {
     targets[0] = generator.getVariableName(block.getFieldValue('VAR'));
   } else {
     for (let i = 0; i < typed.targetCount_; i++) {
       targets[i] =
-        generator.valueToCode(block, 'TARGET' + i, generator.ORDER_NONE) ||
-        generator.blank;
+        generator.valueToCode(block, 'TARGET' + i, generator.ORDER_NONE) || generator.blank;
     }
   }
   return targets.join(' = ') + ' = ' + value + '\n';
@@ -108,8 +105,7 @@ registerConverter(
 
     let values: Record<string, Element | null>;
     const fields: Record<string, string> = {};
-    const simpleTarget =
-      targets.length === 1 && targets[0]!._astname === 'Name';
+    const simpleTarget = targets.length === 1 && targets[0]!._astname === 'Name';
     if (simpleTarget) {
       values = {};
       fields['VAR'] = (targets[0] as ir.Name).id;

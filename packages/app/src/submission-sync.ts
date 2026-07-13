@@ -52,8 +52,7 @@ export class SubmissionSync {
   private cancel: (timer: number) => void;
 
   constructor(private options: SubmissionSyncOptions) {
-    this.schedule =
-      options.schedule ?? ((fn, ms) => setTimeout(fn, ms) as unknown as number);
+    this.schedule = options.schedule ?? ((fn, ms) => setTimeout(fn, ms) as unknown as number);
     this.cancel = options.cancel ?? ((timer) => clearTimeout(timer));
   }
 

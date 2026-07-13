@@ -84,7 +84,6 @@ function checkMatchingPart(studentPart: unknown, correctPart: unknown): boolean 
   return studentPart === correctPart;
 }
 
-// eslint-disable-next-line complexity
 export function checkQuizQuestion(
   question: QuizQuestion,
   check: Record<string, unknown>,
@@ -94,7 +93,13 @@ export function checkQuizQuestion(
   if (type === 'true_false_question') {
     const correct =
       String(student).toLowerCase() ===
-      String(check['correct'] === true ? 'True' : check['correct'] === false ? 'False' : check['correct']).toLowerCase();
+      String(
+        check['correct'] === true
+          ? 'True'
+          : check['correct'] === false
+            ? 'False'
+            : check['correct'],
+      ).toLowerCase();
     return {
       score: correct ? 1 : 0,
       correct,
@@ -116,7 +121,7 @@ export function checkQuizQuestion(
       for (let index = 0; index < feedbackCount; index += 1) {
         const entry = feedbackSource[index];
         feedbacks.push(
-          typeof entry === 'string' ? entry : asRecord(entry)[String(answers[index])] ?? '',
+          typeof entry === 'string' ? entry : (asRecord(entry)[String(answers[index])] ?? ''),
         );
       }
     } else if (feedbackSource && typeof feedbackSource === 'object') {
@@ -230,7 +235,11 @@ export function checkQuizQuestion(
         .map((pattern) => asRecord(check['feedback'])[pattern]);
       feedback = matched.length ? (matched[0] ?? '') : wrongAny;
     } else {
-      return { score: 0, correct: false, message: 'Unknown Short Answer Question Check: ' + JSON.stringify(check) };
+      return {
+        score: 0,
+        correct: false,
+        message: 'Unknown Short Answer Question Check: ' + JSON.stringify(check),
+      };
     }
     return { score: correct ? 1 : 0, correct, message: !correct ? feedback : 'Correct' };
   } else if (type === 'fill_in_multiple_blanks_question') {
@@ -249,9 +258,7 @@ export function checkQuizQuestion(
       corrects = Object.fromEntries(
         Object.entries(regexMap).map(([blankId, regexes]) => [
           blankId,
-          ((regexes ?? []) as string[]).some((pattern) =>
-            reMatch(pattern, chosen[blankId] ?? ''),
-          ),
+          ((regexes ?? []) as string[]).some((pattern) => reMatch(pattern, chosen[blankId] ?? '')),
         ]),
       );
     } else {

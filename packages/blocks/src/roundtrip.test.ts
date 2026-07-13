@@ -14,10 +14,7 @@ import { TextToBlocksConverter } from './text-to-blocks';
 import { xmlToPython } from './blocks-to-text';
 
 const corpus: { programs: string[] } = JSON.parse(
-  readFileSync(
-    join(__dirname, '../test/fixtures/blockmirror-corpus.json'),
-    'utf8',
-  ),
+  readFileSync(join(__dirname, '../test/fixtures/blockmirror-corpus.json'), 'utf8'),
 );
 
 function textToBlocksToText(source: string): string {
@@ -51,8 +48,7 @@ const KNOWN_LEGACY_DELTAS: Record<number, string> = {
 describe('BlockMirror corpus round-trip (§16.1.2)', () => {
   corpus.programs.forEach((program, i) => {
     it(`#${i}: ${JSON.stringify(program.slice(0, 50))}`, () => {
-      const expected =
-        i in KNOWN_LEGACY_DELTAS ? KNOWN_LEGACY_DELTAS[i]! : program.trim();
+      const expected = i in KNOWN_LEGACY_DELTAS ? KNOWN_LEGACY_DELTAS[i]! : program.trim();
       const firstTrip = textToBlocksToText(program);
       expect(firstTrip).toBe(expected);
       // Second trip must be a fixed point too (legacy asserted both).

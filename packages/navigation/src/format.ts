@@ -10,15 +10,10 @@
  *     (multiplier) overrides from submission.timeLimit().
  */
 
-export function formatAmount(
-  delta: number,
-  sign: string,
-  coarse = false,
-  round = false,
-): string {
+export function formatAmount(delta: number, sign: string, coarse = false, round = false): string {
   const operation = round ? Math.round : Math.floor;
   const years = operation(delta / (365 * 3600 * 24));
-  const days = operation(((delta % (365 * 3600 * 24)) / (3600 * 24)));
+  const days = operation((delta % (365 * 3600 * 24)) / (3600 * 24));
   const hours = operation((delta % (3600 * 24)) / 3600);
   const minutes = operation((delta % 3600) / 60);
   const seconds = operation(delta % 60);

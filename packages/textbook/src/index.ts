@@ -5,11 +5,7 @@
  * ledger LD-15).
  */
 export { Textbook } from './Textbook';
-export type {
-  TextbookAssignment,
-  TextbookLoadResult,
-  TextbookProps,
-} from './Textbook';
+export type { TextbookAssignment, TextbookLoadResult, TextbookProps } from './Textbook';
 export {
   InvalidTextbookSchema,
   MISSING_READING,
@@ -18,10 +14,6 @@ export {
   parseTextbookDocument,
   walkItems,
 } from './document';
-export type {
-  TextbookAssignmentRef,
-  TextbookDocument,
-  TextbookItem,
-} from './document';
+export type { TextbookAssignmentRef, TextbookDocument, TextbookItem } from './document';
 
 export const PACKAGE_NAME = '@blockpy/textbook';

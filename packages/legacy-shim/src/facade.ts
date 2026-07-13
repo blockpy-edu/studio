@@ -51,8 +51,7 @@ export function asLegacyDeferred<T>(promise: Promise<T>): LegacyDeferred<T> {
   return deferred;
 }
 
-const str = (value: unknown): string | undefined =>
-  typeof value === 'string' ? value : undefined;
+const str = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
 const num = (value: unknown): number | null => (typeof value === 'number' ? value : null);
 
 /** The option-bag keys the facade consumes structurally (editor.html). */
@@ -146,8 +145,7 @@ export class BlockPy {
   constructor(options: BlockPyOptions, deps: BlockPyFacadeDeps = {}) {
     const doc = deps.document ?? document;
     const globals = deps.globals ?? (globalThis as unknown as Record<string, unknown>);
-    const search =
-      deps.search ?? (typeof location === 'undefined' ? '' : location.search);
+    const search = deps.search ?? (typeof location === 'undefined' ? '' : location.search);
     const selector = str(options['attachment.point']) ?? '#blockpy-div';
     const rootElement = doc.querySelector(selector);
     if (!(rootElement instanceof HTMLElement)) {

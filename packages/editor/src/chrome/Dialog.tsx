@@ -36,12 +36,7 @@ export function Dialog(props: DialogProps) {
         <div className="modal-content" role="region" aria-label="Dialog content">
           <div className="modal-header">
             <h4 className="modal-title">{props.title}</h4>
-            <button
-              type="button"
-              className="close"
-              aria-label="Close"
-              onClick={props.onClose}
-            >
+            <button type="button" className="close" aria-label="Close" onClick={props.onClose}>
               <span aria-hidden="true">&times;</span>
             </button>
           </div>
@@ -49,19 +44,11 @@ export function Dialog(props: DialogProps) {
             {props.children}
           </div>
           <div className="modal-footer">
-            <button
-              type="button"
-              className="btn btn-white modal-close"
-              onClick={props.onClose}
-            >
+            <button type="button" className="btn btn-white modal-close" onClick={props.onClose}>
               Close
             </button>
             {props.onOkay && (
-              <button
-                type="button"
-                className="btn btn-success modal-okay"
-                onClick={props.onOkay}
-              >
+              <button type="button" className="btn btn-success modal-okay" onClick={props.onOkay}>
                 {props.okayLabel ?? 'Okay'}
               </button>
             )}

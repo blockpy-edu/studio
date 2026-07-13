@@ -60,12 +60,7 @@ describe('FileTabs component', () => {
   it('renders legacy markup and marks active/uneditable tabs', () => {
     const vfs = seededVfs();
     const { container } = render(
-      <FileTabs
-        vfs={vfs}
-        role="student"
-        activeFile="answer.py"
-        onSelect={() => {}}
-      />,
+      <FileTabs vfs={vfs} role="student" activeFile="answer.py" onSelect={() => {}} />,
     );
     expect(container.querySelector('ul.nav.nav-tabs')).not.toBeNull();
     const active = container.querySelector('.nav-link.active');
@@ -77,19 +72,12 @@ describe('FileTabs component', () => {
   it('re-renders when the VFS changes', () => {
     const vfs = seededVfs();
     const { container } = render(
-      <FileTabs
-        vfs={vfs}
-        role="student"
-        activeFile="answer.py"
-        onSelect={() => {}}
-      />,
+      <FileTabs vfs={vfs} role="student" activeFile="answer.py" onSelect={() => {}} />,
     );
     act(() => {
       vfs.write('extra_notes.txt', 'hello');
     });
-    const labels = [...container.querySelectorAll('.nav-link')].map(
-      (el) => el.textContent,
-    );
+    const labels = [...container.querySelectorAll('.nav-link')].map((el) => el.textContent);
     expect(labels).toContain('extra_notes.txt');
   });
 });
@@ -106,10 +94,7 @@ describe('resolveToolboxSetting (A4 toolbox key)', () => {
     expect(resolveToolboxSetting('custom', vfs)).toBe('empty');
     vfs.write('?toolbox.blockpy', 'not json');
     expect(resolveToolboxSetting('custom', vfs)).toBe('empty');
-    vfs.write(
-      '?toolbox.blockpy',
-      JSON.stringify([TOOLBOX_CATEGORY['VARIABLES']]),
-    );
+    vfs.write('?toolbox.blockpy', JSON.stringify([TOOLBOX_CATEGORY['VARIABLES']]));
     const custom = resolveToolboxSetting('custom', vfs);
     expect(Array.isArray(custom)).toBe(true);
   });

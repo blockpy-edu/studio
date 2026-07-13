@@ -23,18 +23,26 @@ import * as En from 'blockly/msg/en';
 Blockly.setLocale(En as unknown as { [key: string]: string });
 import { installGeneratorShims } from './generator';
 import type { TextToBlocksConverter } from './text-to-blocks';
+import type { AnyNode } from './ir/types';
 
 export type ConverterResult = Element | Element[] | null;
-export type Converter = (
+/**
+ * What `TextToBlocksConverter.convert` passes as `parent`: the enclosing IR
+ * node, or `undefined` only for the root `Module`.
+ */
+export type ConverterParent = AnyNode | undefined;
+export type Converter<N extends AnyNode = AnyNode> = (
   this: TextToBlocksConverter,
-  node: any,
-  parent: any,
+  node: N,
+  parent: ConverterParent,
 ) => ConverterResult;
 
 const converters = new Map<string, Converter>();
 
-export function registerConverter(astname: string, fn: Converter): void {
-  converters.set(astname, fn);
+export function registerConverter<N extends AnyNode>(astname: string, fn: Converter<N>): void {
+  // Dispatch is keyed by `_astname`, which pins the node type registered
+  // here; the map stores the wide signature (single controlled narrowing).
+  converters.set(astname, fn as Converter);
 }
 
 export function getConverter(astname: string): Converter | undefined {

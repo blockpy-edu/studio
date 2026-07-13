@@ -31,7 +31,8 @@ const DOC = {
   ],
 };
 
-const load = (instructions = JSON.stringify(DOC)): ((id: number) => Promise<TextbookLoadResult>) =>
+const load =
+  (instructions = JSON.stringify(DOC)): ((id: number) => Promise<TextbookLoadResult>) =>
   async (id: number) => ({
     assignment: {
       id,

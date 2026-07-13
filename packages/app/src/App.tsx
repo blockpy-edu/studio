@@ -29,11 +29,7 @@ import {
 } from '@blockpy/navigation';
 import { Textbook } from '@blockpy/textbook';
 import { LegacyIsland, createLegacyServerBridge } from './LegacyIsland';
-import {
-  installCookieFallback,
-  installFrameResize,
-  removeLoadingScreen,
-} from '@blockpy/lti-embed';
+import { installCookieFallback, installFrameResize, removeLoadingScreen } from '@blockpy/lti-embed';
 import { Reader, type ReaderLoadResult } from '@blockpy/reader';
 import { Quizzer } from '@blockpy/quizzer';
 import { createEngineRunController } from './engine-adapter';
@@ -212,7 +208,11 @@ export function App({ config, extras, registerActions }: AppProps) {
       setScore(submission?.score ?? 0);
       setSubmissionStatus(String(submission?.raw['submission_status'] ?? 'unknown'));
       setVersionOutdated(false);
-      setLoaded({ assignment: decoded, submission, vfs: vfsFromAssignment(decoded, submission ?? undefined) });
+      setLoaded({
+        assignment: decoded,
+        submission,
+        vfs: vfsFromAssignment(decoded, submission ?? undefined),
+      });
       setLoadError(null);
     },
     [api, sync],
@@ -273,8 +273,7 @@ export function App({ config, extras, registerActions }: AppProps) {
       const path = assignment.textbookPath;
       void (async () => {
         const byUrl = await api.loadAssignmentByUrl(path);
-        const resolved =
-          byUrl?.id ?? (/^\d+$/.test(path) ? Number(path) : null);
+        const resolved = byUrl?.id ?? (/^\d+$/.test(path) ? Number(path) : null);
         if (resolved === null) {
           setLoadError(`There is no textbook at "${path}".`);
           return;
@@ -372,7 +371,14 @@ export function App({ config, extras, registerActions }: AppProps) {
       isInstructor: () => config.display.instructor,
       sessionStartTime: config.sessionStartTime,
     });
-  }, [config.group, config.sessionStartTime, config.display.instructor, getGroupDuration, loadAssignment, logEvent]);
+  }, [
+    config.group,
+    config.sessionStartTime,
+    config.display.instructor,
+    getGroupDuration,
+    loadAssignment,
+    logEvent,
+  ]);
   navStoreRef.current = navStore;
 
   // §15.3 globals. `markCorrect` is the alias older content calls directly —
@@ -452,11 +458,7 @@ export function App({ config, extras, registerActions }: AppProps) {
           // Legacy fetches only files it has not seen (files.js:725-731).
           if (target.hasRemoteContents(entry.filename)) return;
           try {
-            const body = await api.downloadFile(
-              entry.placement,
-              entry.directory,
-              entry.filename,
-            );
+            const body = await api.downloadFile(entry.placement, entry.directory, entry.filename);
             target.setRemoteContents(entry.filename, body);
           } catch {
             // Fail-soft: an unfetchable file just is not staged.
@@ -703,8 +705,7 @@ export function App({ config, extras, registerActions }: AppProps) {
         {...(api.isEndpointConnected('startAssignment')
           ? {
               startAssignment: async (assignmentId: number, dateStarted: string) => ({
-                success:
-                  (await api.startAssignment(assignmentId, dateStarted)).success === true,
+                success: (await api.startAssignment(assignmentId, dateStarted)).success === true,
               }),
             }
           : {})}
@@ -734,8 +735,7 @@ export function App({ config, extras, registerActions }: AppProps) {
                   id: response.submission.id,
                   code: response.submission.code,
                   correct: response.submission.correct,
-                  dateStarted:
-                    (response.submission.raw['date_started'] as string | null) ?? null,
+                  dateStarted: (response.submission.raw['date_started'] as string | null) ?? null,
                   timeLimit: (response.submission.raw['time_limit'] as string | null) ?? null,
                 }
               : null,
@@ -770,8 +770,7 @@ export function App({ config, extras, registerActions }: AppProps) {
             (response['feedbacks'] as Record<string, never> | undefined) ??
             (typeof message === 'object' && message !== null
               ? ((message as Record<string, unknown>)['feedbacks'] as
-                  | Record<string, never>
-                  | undefined)
+                  Record<string, never> | undefined)
               : undefined);
           return {
             success: response.success === true,
@@ -895,8 +894,8 @@ export function App({ config, extras, registerActions }: AppProps) {
       <p style={{ fontSize: 'smaller' }}>
         Dev harness — {user.name ?? 'anonymous'} ({user.role});{' '}
         {active?.assignment.name ?? assignment.currentAssignmentId ?? 'no assignment'};{' '}
-        {display.instructor ? 'instructor' : 'student'} view. AssignmentHost
-        replaces this shell in Milestone 2.1.{' '}
+        {display.instructor ? 'instructor' : 'student'} view. AssignmentHost replaces this shell in
+        Milestone 2.1.{' '}
         <button
           type="button"
           className="btn btn-sm btn-outline-secondary blockpy-view-swap"
@@ -952,8 +951,8 @@ export function App({ config, extras, registerActions }: AppProps) {
       {loadError !== null && <div className="alert alert-warning">{loadError}</div>}
       {versionOutdated && (
         <div className="alert alert-warning blockpy-version-outdated">
-          The assignment has been updated since you started working on it.
-          Reload the page to get the latest version — your code is saved.{' '}
+          The assignment has been updated since you started working on it. Reload the page to get
+          the latest version — your code is saved.{' '}
           <button
             type="button"
             className="btn btn-sm btn-outline-secondary"
@@ -991,222 +990,215 @@ export function App({ config, extras, registerActions }: AppProps) {
           };
         }}
       >
-      {bootPending || (loading && active === null) ? (
-        <p>Loading! Please wait.</p>
-      ) : minified ? (
-        <MinifiedEditor
-          initialCode={vfs.read('answer.py') ?? ''}
-          runController={runController}
-          blocklyMediaPath={paths.blocklyMedia}
-          onCodeChange={(newCode) => {
-            vfs.write('answer.py', newCode);
-            setCode(newCode);
-          }}
-        />
-      ) : (
-        <CodingEditor
-          key={active?.assignment.id ?? 'harness'}
-          assignmentName={active?.assignment.name ?? 'Dev Harness Problem'}
-          instructions={instructions}
-          vfs={vfs}
-          role={instructorView ? 'instructor' : 'student'}
-          instructor={instructorView}
-          onCodeChange={setCode}
-          readOnly={display.readOnly}
-          blocklyMediaPath={paths.blocklyMedia}
-          toolboxSetting={typeof settings['toolbox'] === 'string' ? settings['toolbox'] : undefined}
-          hideFiles={
-            settings['hide_files'] !== undefined ? settingBool(settings['hide_files']) : undefined
-          }
-          hideEvaluate={
-            settings['hide_evaluate'] !== undefined
-              ? settingBool(settings['hide_evaluate'])
-              : undefined
-          }
-          disableFeedback={
-            settings['disable_feedback'] !== undefined
-              ? settingBool(settings['disable_feedback'])
-              : undefined
-          }
-          allowRealRequests={settingBool(settings['allow_real_requests'] ?? false)}
-          // Docs panel source (M4.3, LD-25): raw string per A4 semantics.
-          docsUrl={
-            typeof settings['docs_url'] === 'string' && settings['docs_url']
-              ? settings['docs_url']
-              : undefined
-          }
-          disableTifa={settingBool(settings['disable_tifa'] ?? false)}
-          disableInstructorRun={settingBool(settings['disable_instructor_run'] ?? false)}
-          // Pool-question seed (on_run.js:43-45; LD-22): legacy currentSeed
-          // = poolSeed || submission.id — no poolSeed UI yet (M2 deferral).
-          seed={active?.submission?.id != null ? String(active.submission.id) : undefined}
-          // Settings form (M3.5): assignment columns prefill from the
-          // decoded assignment; Save persists blob + columns through
-          // save_assignment (legacy saveAssignmentSettings) and live-applies
-          // by updating the loaded assignment's settings string.
-          assignmentFields={
-            active
-              ? {
-                  name: active.assignment.name,
-                  url: active.assignment.url,
-                  points: String(active.assignment.raw['points'] ?? ''),
-                  ipRanges: String(active.assignment.raw['ip_ranges'] ?? ''),
-                  public: active.assignment.raw['public'] === true,
-                  hidden: active.assignment.raw['hidden'] === true,
-                  reviewed: active.assignment.raw['reviewed'] === true,
-                }
-              : undefined
-          }
-          onSaveSettings={(blob, fields) => {
-            setLoaded((prev) =>
-              prev
+        {bootPending || (loading && active === null) ? (
+          <p>Loading! Please wait.</p>
+        ) : minified ? (
+          <MinifiedEditor
+            initialCode={vfs.read('answer.py') ?? ''}
+            runController={runController}
+            blocklyMediaPath={paths.blocklyMedia}
+            onCodeChange={(newCode) => {
+              vfs.write('answer.py', newCode);
+              setCode(newCode);
+            }}
+          />
+        ) : (
+          <CodingEditor
+            key={active?.assignment.id ?? 'harness'}
+            assignmentName={active?.assignment.name ?? 'Dev Harness Problem'}
+            instructions={instructions}
+            vfs={vfs}
+            role={instructorView ? 'instructor' : 'student'}
+            instructor={instructorView}
+            onCodeChange={setCode}
+            readOnly={display.readOnly}
+            blocklyMediaPath={paths.blocklyMedia}
+            toolboxSetting={
+              typeof settings['toolbox'] === 'string' ? settings['toolbox'] : undefined
+            }
+            hideFiles={
+              settings['hide_files'] !== undefined ? settingBool(settings['hide_files']) : undefined
+            }
+            hideEvaluate={
+              settings['hide_evaluate'] !== undefined
+                ? settingBool(settings['hide_evaluate'])
+                : undefined
+            }
+            disableFeedback={
+              settings['disable_feedback'] !== undefined
+                ? settingBool(settings['disable_feedback'])
+                : undefined
+            }
+            allowRealRequests={settingBool(settings['allow_real_requests'] ?? false)}
+            // Docs panel source (M4.3, LD-25): raw string per A4 semantics.
+            docsUrl={
+              typeof settings['docs_url'] === 'string' && settings['docs_url']
+                ? settings['docs_url']
+                : undefined
+            }
+            disableTifa={settingBool(settings['disable_tifa'] ?? false)}
+            disableInstructorRun={settingBool(settings['disable_instructor_run'] ?? false)}
+            // Pool-question seed (on_run.js:43-45; LD-22): legacy currentSeed
+            // = poolSeed || submission.id — no poolSeed UI yet (M2 deferral).
+            seed={active?.submission?.id != null ? String(active.submission.id) : undefined}
+            // Settings form (M3.5): assignment columns prefill from the
+            // decoded assignment; Save persists blob + columns through
+            // save_assignment (legacy saveAssignmentSettings) and live-applies
+            // by updating the loaded assignment's settings string.
+            assignmentFields={
+              active
                 ? {
-                    ...prev,
-                    assignment: {
-                      ...prev.assignment,
-                      settings: blob,
-                      name: fields.name ?? prev.assignment.name,
-                      url: fields.url ?? prev.assignment.url,
+                    name: active.assignment.name,
+                    url: active.assignment.url,
+                    points: String(active.assignment.raw['points'] ?? ''),
+                    ipRanges: String(active.assignment.raw['ip_ranges'] ?? ''),
+                    public: active.assignment.raw['public'] === true,
+                    hidden: active.assignment.raw['hidden'] === true,
+                    reviewed: active.assignment.raw['reviewed'] === true,
+                  }
+                : undefined
+            }
+            onSaveSettings={(blob, fields) => {
+              setLoaded((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      assignment: {
+                        ...prev.assignment,
+                        settings: blob,
+                        name: fields.name ?? prev.assignment.name,
+                        url: fields.url ?? prev.assignment.url,
+                      },
+                    }
+                  : prev,
+              );
+              if (api && active && api.isEndpointConnected('saveAssignment')) {
+                void api.saveAssignment({
+                  assignment_id: active.assignment.id ?? '',
+                  settings: blob,
+                  ...(fields.name !== undefined ? { name: fields.name } : {}),
+                  ...(fields.url !== undefined ? { url: fields.url } : {}),
+                  ...(fields.points !== undefined && fields.points !== ''
+                    ? { points: fields.points }
+                    : {}),
+                  ...(fields.ipRanges !== undefined ? { ip_ranges: fields.ipRanges } : {}),
+                  ...(fields.public !== undefined ? { public: String(fields.public) } : {}),
+                  ...(fields.hidden !== undefined ? { hidden: String(fields.hidden) } : {}),
+                  ...(fields.reviewed !== undefined ? { reviewed: String(fields.reviewed) } : {}),
+                });
+              }
+            }}
+            assignmentHidden={active?.assignment.raw['hidden'] === true}
+            runController={runController}
+            onFileEdit={(filename, contents) => {
+              if (sync && AUTOSAVE_FILES.has(filename)) {
+                sync.saveFileDebounced(filename, contents);
+              }
+            }}
+            onRunStart={(studentCode) => {
+              // run.js:13 — answer.py saves immediately when a run starts.
+              void sync?.saveFileNow('answer.py', studentCode);
+            }}
+            onGraded={(grade) => {
+              void sync?.handleGraded(grade);
+              // Display OR-chain (on_run.js:165) feeds the mark-submitted
+              // text; the monotonic score feeds the instructor header.
+              if (grade.success) setCorrect(true);
+              if (sync) setScore(sync.displayScore);
+            }}
+            onLogEvent={logEvent}
+            onEditorReady={(editor) => {
+              dualEditorRef.current = editor;
+            }}
+            uploads={uploads}
+            // Ratings render unless the assignment is hidden (blockpy.js:789).
+            provideRatings={active ? active.assignment.raw['hidden'] !== true : true}
+            submissionScore={score}
+            onResetScore={() => {
+              void sync?.resetScore();
+              setScore(0);
+              setCorrect(false);
+            }}
+            loadHistory={loadHistory}
+            quickMenu={{
+              grader: true,
+              instructor: instructorView,
+              onInstructorChange: setInstructorView,
+              hasClock: true,
+              // Fullscreen event stream (X-Display.Fullscreen.*, A2).
+              onLogEvent: (eventType, message) => logEvent(eventType, '', '', message, ''),
+              // Legacy canShare (blockpy.js:632-650): parts base64 → shareUrl.
+              ...(config.urls.shareUrl
+                ? {
+                    shareUrl: () => {
+                      const base = config.urls.shareUrl as string;
+                      const encoded = btoa(
+                        [
+                          'group',
+                          user.courseId,
+                          assignment.assignmentGroupId,
+                          active?.assignment.id ?? '',
+                          user.id,
+                          new Date().toISOString(),
+                        ].join('_'),
+                      );
+                      return base + (base.endsWith('/') ? '' : '/') + encoded;
                     },
                   }
-                : prev,
-            );
-            if (api && active && api.isEndpointConnected('saveAssignment')) {
-              void api.saveAssignment({
-                assignment_id: active.assignment.id ?? '',
-                settings: blob,
-                ...(fields.name !== undefined ? { name: fields.name } : {}),
-                ...(fields.url !== undefined ? { url: fields.url } : {}),
-                ...(fields.points !== undefined && fields.points !== ''
-                  ? { points: fields.points }
-                  : {}),
-                ...(fields.ipRanges !== undefined
-                  ? { ip_ranges: fields.ipRanges }
-                  : {}),
-                ...(fields.public !== undefined
-                  ? { public: String(fields.public) }
-                  : {}),
-                ...(fields.hidden !== undefined
-                  ? { hidden: String(fields.hidden) }
-                  : {}),
-                ...(fields.reviewed !== undefined
-                  ? { reviewed: String(fields.reviewed) }
-                  : {}),
-              });
-            }
-          }}
-          assignmentHidden={active?.assignment.raw['hidden'] === true}
-          runController={runController}
-          onFileEdit={(filename, contents) => {
-            if (sync && AUTOSAVE_FILES.has(filename)) {
-              sync.saveFileDebounced(filename, contents);
-            }
-          }}
-          onRunStart={(studentCode) => {
-            // run.js:13 — answer.py saves immediately when a run starts.
-            void sync?.saveFileNow('answer.py', studentCode);
-          }}
-          onGraded={(grade) => {
-            void sync?.handleGraded(grade);
-            // Display OR-chain (on_run.js:165) feeds the mark-submitted
-            // text; the monotonic score feeds the instructor header.
-            if (grade.success) setCorrect(true);
-            if (sync) setScore(sync.displayScore);
-          }}
-          onLogEvent={logEvent}
-          onEditorReady={(editor) => {
-            dualEditorRef.current = editor;
-          }}
-          uploads={uploads}
-          // Ratings render unless the assignment is hidden (blockpy.js:789).
-          provideRatings={active ? active.assignment.raw['hidden'] !== true : true}
-          submissionScore={score}
-          onResetScore={() => {
-            void sync?.resetScore();
-            setScore(0);
-            setCorrect(false);
-          }}
-          loadHistory={loadHistory}
-          quickMenu={{
-            grader: true,
-            instructor: instructorView,
-            onInstructorChange: setInstructorView,
-            hasClock: true,
-            // Fullscreen event stream (X-Display.Fullscreen.*, A2).
-            onLogEvent: (eventType, message) => logEvent(eventType, '', '', message, ''),
-            // Legacy canShare (blockpy.js:632-650): parts base64 → shareUrl.
-            ...(config.urls.shareUrl
-              ? {
-                  shareUrl: () => {
-                    const base = config.urls.shareUrl as string;
-                    const encoded = btoa(
-                      [
-                        'group',
-                        user.courseId,
-                        assignment.assignmentGroupId,
-                        active?.assignment.id ?? '',
-                        user.id,
-                        new Date().toISOString(),
-                      ].join('_'),
-                    );
-                    return base + (base.endsWith('/') ? '' : '/') + encoded;
-                  },
-                }
-              : {}),
-            // Mark-submitted ladder (blockpy.js:590-625) — the button shows
-            // only for reviewed/can_close assignments (QuickMenu gates it).
-            ...(active && api
-              ? {
-                  submission: {
-                    status: submissionStatus,
-                    reviewed: active.assignment.raw['reviewed'] === true,
-                    canClose: settingBool(settings['can_close'] ?? false),
-                    hidden: active.assignment.raw['hidden'] === true,
-                    correct,
-                    grouped: assignment.assignmentGroupId !== null,
-                    onUpdateStatus: (status: string) => {
-                      void api
-                        .updateSubmissionStatus(status)
-                        .then((response) => {
-                          // Legacy postStatusChange (server.js:593-597):
-                          // local status updates only on success; logical
-                          // failures are silent.
-                          if (response.success) setSubmissionStatus(status);
-                        })
-                        .catch(() => {
-                          // Legacy _postBlocking exhausts 2 attempts then
-                          // shows the error dialog (dialog.js:151-154).
-                          alert(
-                            'BlockPy encountered an error while updating your submission status.\n' +
-                              'Please reload the page and try again.',
-                          );
-                        });
+                : {}),
+              // Mark-submitted ladder (blockpy.js:590-625) — the button shows
+              // only for reviewed/can_close assignments (QuickMenu gates it).
+              ...(active && api
+                ? {
+                    submission: {
+                      status: submissionStatus,
+                      reviewed: active.assignment.raw['reviewed'] === true,
+                      canClose: settingBool(settings['can_close'] ?? false),
+                      hidden: active.assignment.raw['hidden'] === true,
+                      correct,
+                      grouped: assignment.assignmentGroupId !== null,
+                      onUpdateStatus: (status: string) => {
+                        void api
+                          .updateSubmissionStatus(status)
+                          .then((response) => {
+                            // Legacy postStatusChange (server.js:593-597):
+                            // local status updates only on success; logical
+                            // failures are silent.
+                            if (response.success) setSubmissionStatus(status);
+                          })
+                          .catch(() => {
+                            // Legacy _postBlocking exhausts 2 attempts then
+                            // shows the error dialog (dialog.js:151-154).
+                            alert(
+                              'BlockPy encountered an error while updating your submission status.\n' +
+                                'Please reload the page and try again.',
+                            );
+                          });
+                      },
                     },
-                  },
-                }
-              : {}),
-          }}
-          footer={{
-            instructor: instructorView,
-            // Instructor force-load: a JSON file replaces the loaded pair
-            // (blockpy.js:1186-1200 → loadAssignmentData_).
-            onForceLoadAssignment: (data) =>
-              adoptAssignmentData(data as LegacyAssignmentPayload),
-            // Update Submission badge click re-POSTs with force_update
-            // (blockpy.js:1202-1208).
-            onForceUpdateSubmission: () => void sync?.forceUpdate(),
-            identity: {
-              userId: user.id ?? undefined,
-              userName: user.name,
-              userRole: user.role,
-              courseId: user.courseId ?? undefined,
-              groupId: assignment.assignmentGroupId ?? undefined,
-              assignmentId: active?.assignment.id ?? assignment.currentAssignmentId ?? undefined,
-              editorVersion: '0.1.0',
-            },
-          }}
-        />
-      )}
+                  }
+                : {}),
+            }}
+            footer={{
+              instructor: instructorView,
+              // Instructor force-load: a JSON file replaces the loaded pair
+              // (blockpy.js:1186-1200 → loadAssignmentData_).
+              onForceLoadAssignment: (data) => adoptAssignmentData(data as LegacyAssignmentPayload),
+              // Update Submission badge click re-POSTs with force_update
+              // (blockpy.js:1202-1208).
+              onForceUpdateSubmission: () => void sync?.forceUpdate(),
+              identity: {
+                userId: user.id ?? undefined,
+                userName: user.name,
+                userRole: user.role,
+                courseId: user.courseId ?? undefined,
+                groupId: assignment.assignmentGroupId ?? undefined,
+                assignmentId: active?.assignment.id ?? assignment.currentAssignmentId ?? undefined,
+                editorVersion: '0.1.0',
+              },
+            }}
+          />
+        )}
       </AssignmentHost>
       {navStore && !focusedMode && <GroupNav store={navStore} />}
     </main>

@@ -70,16 +70,10 @@ describe('AddNewMenu (files.js FILES_HTML + ui.files.add)', () => {
       )!,
     );
     expect(vfs.read('!on_change.py')).toBe('');
-    expect(added).toEqual([
-      'images.blockpy',
-      '?toolbox.blockpy',
-      '!on_change.py',
-    ]);
+    expect(added).toEqual(['images.blockpy', '?toolbox.blockpy', '!on_change.py']);
     // Tags stays dead (legacy has no click binding): clicking is a no-op.
     fireEvent.click(
-      Array.from(openMenu(container).querySelectorAll('a')).find(
-        (a) => a.textContent === 'Tags',
-      )!,
+      Array.from(openMenu(container).querySelectorAll('a')).find((a) => a.textContent === 'Tags')!,
     );
     expect(vfs.read('!tags.blockpy')).toBeUndefined();
   });
@@ -99,19 +93,16 @@ describe('AddNewMenu (files.js FILES_HTML + ui.files.add)', () => {
       )!,
     );
     const dialog = container.querySelector('.blockpy-dialog')!;
-    fireEvent.change(
-      dialog.querySelector('.blockpy-instructor-file-dialog-filename')!,
-      { target: { value: 'data.csv' } },
-    );
+    fireEvent.change(dialog.querySelector('.blockpy-instructor-file-dialog-filename')!, {
+      target: { value: 'data.csv' },
+    });
     // Filetype display derives from the extension.
-    expect(
-      dialog.querySelector('.blockpy-instructor-file-dialog-filetype')!
-        .textContent,
-    ).toBe('csv');
-    fireEvent.change(
-      dialog.querySelector('.blockpy-instructor-file-dialog-namespace')!,
-      { target: { value: '&' } },
+    expect(dialog.querySelector('.blockpy-instructor-file-dialog-filetype')!.textContent).toBe(
+      'csv',
     );
+    fireEvent.change(dialog.querySelector('.blockpy-instructor-file-dialog-namespace')!, {
+      target: { value: '&' },
+    });
     fireEvent.click(dialog.querySelector('.modal-okay')!);
     expect(vfs.read('&data.csv')).toBe('');
     expect(added).toEqual(['&data.csv']);
@@ -122,25 +113,18 @@ describe('AddNewMenu (files.js FILES_HTML + ui.files.add)', () => {
     const added: string[] = [];
     const { container } = render(
       <ul>
-        <AddNewMenu
-          vfs={vfs}
-          instructor={false}
-          onAdd={(name) => added.push(name)}
-        />
+        <AddNewMenu vfs={vfs} instructor={false} onAdd={(name) => added.push(name)} />
       </ul>,
     );
     const menu = openMenu(container);
     expect(
-      Array.from(menu.querySelectorAll('.dropdown-item')).map(
-        (item) => item.textContent,
-      ),
+      Array.from(menu.querySelectorAll('.dropdown-item')).map((item) => item.textContent),
     ).toEqual(['Student File']);
     fireEvent.click(menu.querySelector('a')!);
     const dialog = container.querySelector('.blockpy-dialog')!;
-    fireEvent.change(
-      dialog.querySelector('.blockpy-instructor-file-dialog-filename')!,
-      { target: { value: 'notes.txt' } },
-    );
+    fireEvent.change(dialog.querySelector('.blockpy-instructor-file-dialog-filename')!, {
+      target: { value: 'notes.txt' },
+    });
     fireEvent.click(dialog.querySelector('.modal-okay')!);
     expect(vfs.read('notes.txt')).toBe('');
     expect(added).toEqual(['notes.txt']);

@@ -113,9 +113,7 @@ export function FileTree({
           <div key={space} className="blockpy-file-tree-bucket">
             <div className="blockpy-file-tree-header">
               {label}
-              {instructor && prefix && (
-                <code className="blockpy-file-tree-prefix">{prefix}</code>
-              )}
+              {instructor && prefix && <code className="blockpy-file-tree-prefix">{prefix}</code>}
             </div>
             {entries.map((entry) => (
               <div

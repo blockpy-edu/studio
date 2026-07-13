@@ -42,16 +42,10 @@ defineBlocks(
 generator.forBlock['ast_For'] = function (block) {
   // For each loop.
   const argument0 =
-    generator.valueToCode(
-      block,
-      'TARGET',
-      (generator as any).ORDER_RELATIONAL,
-    ) || generator.blank;
+    generator.valueToCode(block, 'TARGET', generator.ORDER_RELATIONAL) || generator.blank;
   const argument1 =
-    generator.valueToCode(block, 'ITER', (generator as any).ORDER_RELATIONAL) ||
-    generator.blank;
-  const branchBody =
-    generator.statementToCode(block, 'BODY') || generator.PASS;
+    generator.valueToCode(block, 'ITER', generator.ORDER_RELATIONAL) || generator.blank;
+  const branchBody = generator.statementToCode(block, 'BODY') || generator.PASS;
   let code = 'for ' + argument0 + ' in ' + argument1 + ':\n' + branchBody;
 
   if (block.getInputTargetBlock('ELSE')) {
@@ -64,7 +58,7 @@ generator.forBlock['ast_For'] = function (block) {
   return code;
 };
 
-const convertFor: Converter = function (
+const convertFor: Converter<ir.For> = function (
   this: TextToBlocksConverter,
   node: ir.For,
   _parent: unknown,

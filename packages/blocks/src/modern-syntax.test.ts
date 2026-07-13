@@ -37,9 +37,7 @@ describe('modern syntax round trips (M3.6)', () => {
   }
 
   it('produces real blocks, not ast_Raw, for the new constructs', () => {
-    const { rawXml } = convert(
-      `if (n := 10) > 4:\n    d = b'ab'\n    e = ...\n    r = await go()`,
-    );
+    const { rawXml } = convert(`if (n := 10) > 4:\n    d = b'ab'\n    e = ...\n    r = await go()`);
     expect(rawXml.querySelectorAll('block[type="ast_Raw"]').length).toBe(0);
     for (const type of ['ast_NamedExpr', 'ast_Bytes', 'ast_Ellipsis', 'ast_Await']) {
       expect(rawXml.querySelectorAll(`block[type="${type}"]`).length).toBe(1);
@@ -62,10 +60,7 @@ describe('async constructs degrade per-statement (M3.6)', () => {
   });
 
   it('async for and async with also raw-fallback cleanly', () => {
-    for (const source of [
-      `async for x in feed:\n    print(x)`,
-      `async with lock:\n    print(1)`,
-    ]) {
+    for (const source of [`async for x in feed:\n    print(x)`, `async with lock:\n    print(1)`]) {
       const { rawXml } = convert(source);
       expect(rawXml.querySelectorAll('block[type="ast_Raw"]').length).toBe(1);
       expect(xmlToPython(rawXml).trim()).toBe(source);

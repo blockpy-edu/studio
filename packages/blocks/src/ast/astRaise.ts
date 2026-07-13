@@ -68,13 +68,9 @@ generator.forBlock['ast_Raise'] = function (block) {
   // Legacy used `this.exc_`/`this.cause_`; generator functions are invoked
   // with the block as `this`, so these are the same values.
   if (typed.exc_) {
-    const exc =
-      generator.valueToCode(block, 'EXC', generator.ORDER_NONE) ||
-      generator.blank;
+    const exc = generator.valueToCode(block, 'EXC', generator.ORDER_NONE) || generator.blank;
     if (typed.cause_) {
-      const cause =
-        generator.valueToCode(block, 'CAUSE', generator.ORDER_NONE) ||
-        generator.blank;
+      const cause = generator.valueToCode(block, 'CAUSE', generator.ORDER_NONE) || generator.blank;
       return 'raise ' + exc + ' from ' + cause + '\n';
     } else {
       return 'raise ' + exc + '\n';
@@ -100,9 +96,16 @@ registerConverter(
       values['CAUSE'] = this.convert(cause, node) as Element;
       hasCause = true;
     }
-    return createBlock('ast_Raise', node.lineno, {}, values, {}, {
-      '@exc': hasExc,
-      '@cause': hasCause,
-    });
+    return createBlock(
+      'ast_Raise',
+      node.lineno,
+      {},
+      values,
+      {},
+      {
+        '@exc': hasExc,
+        '@cause': hasCause,
+      },
+    );
   },
 );

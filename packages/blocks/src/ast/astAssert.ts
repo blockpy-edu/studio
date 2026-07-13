@@ -31,19 +31,13 @@ defineBlocks(
 );
 
 generator.forBlock['ast_Assert'] = function (block) {
-  const test =
-    generator.valueToCode(block, 'TEST', generator.ORDER_ATOMIC) ||
-    generator.blank;
+  const test = generator.valueToCode(block, 'TEST', generator.ORDER_ATOMIC) || generator.blank;
   return 'assert ' + test + '\n';
 };
 
 generator.forBlock['ast_AssertFull'] = function (block) {
-  const test =
-    generator.valueToCode(block, 'TEST', generator.ORDER_ATOMIC) ||
-    generator.blank;
-  const msg =
-    generator.valueToCode(block, 'MSG', generator.ORDER_ATOMIC) ||
-    generator.blank;
+  const test = generator.valueToCode(block, 'TEST', generator.ORDER_ATOMIC) || generator.blank;
+  const msg = generator.valueToCode(block, 'MSG', generator.ORDER_ATOMIC) || generator.blank;
   return 'assert ' + test + ', ' + msg + '\n';
 };
 
@@ -53,14 +47,24 @@ registerConverter(
     const test = node.test;
     const msg = node.msg;
     if (msg == null) {
-      return createBlock('ast_Assert', node.lineno, {}, {
-        TEST: this.convert(test, node) as Element,
-      });
+      return createBlock(
+        'ast_Assert',
+        node.lineno,
+        {},
+        {
+          TEST: this.convert(test, node) as Element,
+        },
+      );
     } else {
-      return createBlock('ast_AssertFull', node.lineno, {}, {
-        TEST: this.convert(test, node) as Element,
-        MSG: this.convert(msg, node) as Element,
-      });
+      return createBlock(
+        'ast_AssertFull',
+        node.lineno,
+        {},
+        {
+          TEST: this.convert(test, node) as Element,
+          MSG: this.convert(msg, node) as Element,
+        },
+      );
     }
   },
 );

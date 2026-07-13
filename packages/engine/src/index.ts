@@ -28,10 +28,5 @@ export { default as RUNTIME_PY } from './runtime.py?raw';
 
 export const PACKAGE_NAME = '@blockpy/engine';
 export { PedalEnvironment, DEFAULT_PEDAL_PACKAGES } from './pedal';
-export type {
-  PedalEvalOptions,
-  PedalFeedback,
-  PedalGradeOptions,
-  PedalPyodideLike,
-} from './pedal';
+export type { PedalEvalOptions, PedalFeedback, PedalGradeOptions, PedalPyodideLike } from './pedal';
 export { default as PEDAL_ENV_PY } from './pedal-env.py?raw';

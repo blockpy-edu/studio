@@ -4,6 +4,7 @@ import { COLOR } from '../colors';
 import { generator } from '../generator';
 import { defineBlock, registerConverter } from '../registry';
 import { createBlock } from '../xml';
+import type { MutationValue } from '../xml';
 import type { TextToBlocksConverter } from '../text-to-blocks';
 import type * as ir from '../ir/types';
 
@@ -27,9 +28,7 @@ defineBlock('ast_Try', {
     this.hasElse_ = false;
     this.hasFinally_ = false;
     this.appendDummyInput().appendField('try:');
-    this.appendStatementInput('BODY')
-      .setCheck(null)
-      .setAlign(Blockly.inputs.Align.RIGHT);
+    this.appendStatementInput('BODY').setCheck(null).setAlign(Blockly.inputs.Align.RIGHT);
     this.setInputsInline(true);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
@@ -89,9 +88,13 @@ defineBlock('ast_Try', {
     this.hasFinally_ = 'true' === xmlElement.getAttribute('finalbody');
     this.handlersCount_ = parseInt(xmlElement.getAttribute('handlers')!, 10);
     this.handlers_ = [];
-    for (let i = 0, childNode: any; (childNode = xmlElement.childNodes[i]); i++) {
+    for (
+      let i = 0, childNode: Element | undefined;
+      (childNode = xmlElement.childNodes[i] as Element | undefined);
+      i++
+    ) {
       if (childNode.nodeName.toLowerCase() === 'arg') {
-        this.handlers_.push(parseInt(childNode.getAttribute('name'), 10));
+        this.handlers_.push(parseInt(childNode.getAttribute('name')!, 10));
       }
     }
     this.updateShape_();
@@ -111,15 +114,12 @@ generator.forBlock['ast_Try'] = function (block) {
       // Legacy quirk preserved: `+` binds tighter than `||`, so the blank
       // fallback on the right never fires.
       clause +=
-        ' ' + generator.valueToCode(block, 'TYPE' + i, generator.ORDER_NONE) ||
-        generator.blank;
+        ' ' + generator.valueToCode(block, 'TYPE' + i, generator.ORDER_NONE) || generator.blank;
       if (level === HANDLERS_COMPLETE) {
-        clause +=
-          ' as ' + generator.getVariableName(block.getFieldValue('NAME' + i));
+        clause += ' as ' + generator.getVariableName(block.getFieldValue('NAME' + i));
       }
     }
-    clause +=
-      ':\n' + (generator.statementToCode(block, 'HANDLER' + i) || generator.PASS);
+    clause += ':\n' + (generator.statementToCode(block, 'HANDLER' + i) || generator.PASS);
     handlers[i] = clause;
   }
   // Orelse:
@@ -127,74 +127,60 @@ generator.forBlock['ast_Try'] = function (block) {
   // Legacy used `this.hasElse_`; generator functions are invoked with the
   // block as `this`, so this is the same value.
   if (typed.hasElse_) {
-    orelse =
-      'else:\n' + (generator.statementToCode(block, 'ORELSE') || generator.PASS);
+    orelse = 'else:\n' + (generator.statementToCode(block, 'ORELSE') || generator.PASS);
   }
   // Finally:
   let finalbody = '';
   if (typed.hasFinally_) {
-    finalbody =
-      'finally:\n' +
-      (generator.statementToCode(block, 'FINALBODY') || generator.PASS);
+    finalbody = 'finally:\n' + (generator.statementToCode(block, 'FINALBODY') || generator.PASS);
   }
   return 'try:\n' + body + handlers.join('') + orelse + finalbody;
 };
 
-registerConverter(
-  'Try',
-  function (this: TextToBlocksConverter, node: ir.Try, _parent: unknown) {
-    const body = node.body;
-    const handlers = node.handlers;
-    const orelse = node.orelse;
-    const finalbody = node.finalbody;
+registerConverter('Try', function (this: TextToBlocksConverter, node: ir.Try, _parent: unknown) {
+  const body = node.body;
+  const handlers = node.handlers;
+  const orelse = node.orelse;
+  const finalbody = node.finalbody;
 
-    const fields: Record<string, string> = {};
-    const values: Record<string, Element | null> = {};
-    const mutations: Record<string, any> = {
-      '@ORELSE': orelse !== null && orelse.length > 0,
-      '@FINALBODY': finalbody !== null && finalbody.length > 0,
-      '@HANDLERS': handlers.length,
-    };
+  const fields: Record<string, string> = {};
+  const values: Record<string, Element | null> = {};
+  const mutations: Record<string, MutationValue> = {
+    '@ORELSE': orelse !== null && orelse.length > 0,
+    '@FINALBODY': finalbody !== null && finalbody.length > 0,
+    '@HANDLERS': handlers.length,
+  };
 
-    const statements: Record<string, Element[] | null> = {
-      BODY: this.convertBody(body, node),
-    };
-    if (orelse !== null) {
-      statements['ORELSE'] = this.convertBody(orelse, node);
-    }
-    if (finalbody !== null && finalbody.length) {
-      statements['FINALBODY'] = this.convertBody(finalbody, node);
-    }
+  const statements: Record<string, Element[] | null> = {
+    BODY: this.convertBody(body, node),
+  };
+  if (orelse !== null) {
+    statements['ORELSE'] = this.convertBody(orelse, node);
+  }
+  if (finalbody !== null && finalbody.length) {
+    statements['FINALBODY'] = this.convertBody(finalbody, node);
+  }
 
-    const handledLevels: number[] = [];
-    for (let i = 0; i < handlers.length; i++) {
-      const handler = handlers[i]!;
-      statements['HANDLER' + i] = this.convertBody(handler.body, node);
-      if (handler.type === null) {
-        handledLevels.push(HANDLERS_CATCH_ALL);
+  const handledLevels: number[] = [];
+  for (let i = 0; i < handlers.length; i++) {
+    const handler = handlers[i]!;
+    statements['HANDLER' + i] = this.convertBody(handler.body, node);
+    if (handler.type === null) {
+      handledLevels.push(HANDLERS_CATCH_ALL);
+    } else {
+      values['TYPE' + i] = this.convert(handler.type, node) as Element;
+      if (handler.name === null) {
+        handledLevels.push(HANDLERS_NO_AS);
       } else {
-        values['TYPE' + i] = this.convert(handler.type, node) as Element;
-        if (handler.name === null) {
-          handledLevels.push(HANDLERS_NO_AS);
-        } else {
-          handledLevels.push(HANDLERS_COMPLETE);
-          // Legacy read `handler.name.id` through Sk.ffi; the IR gives the
-          // handler name as a plain string.
-          fields['NAME' + i] = handler.name;
-        }
+        handledLevels.push(HANDLERS_COMPLETE);
+        // Legacy read `handler.name.id` through Sk.ffi; the IR gives the
+        // handler name as a plain string.
+        fields['NAME' + i] = handler.name;
       }
     }
+  }
 
-    mutations['ARG'] = handledLevels;
+  mutations['ARG'] = handledLevels;
 
-    return createBlock(
-      'ast_Try',
-      node.lineno,
-      fields,
-      values,
-      {},
-      mutations,
-      statements,
-    );
-  },
-);
+  return createBlock('ast_Try', node.lineno, fields, values, {}, mutations, statements);
+});

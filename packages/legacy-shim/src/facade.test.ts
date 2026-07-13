@@ -1,12 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
 import { StudioHandle, type BootConfig } from '@blockpy/app';
-import {
-  BlockPy,
-  asLegacyDeferred,
-  installLegacyShim,
-  optionsToBootConfig,
-} from './facade';
+import { BlockPy, asLegacyDeferred, installLegacyShim, optionsToBootConfig } from './facade';
 
 /** The exact option bag editor.html:263-292 passes. */
 const EDITOR_HTML_OPTIONS = {
@@ -41,7 +36,7 @@ describe('optionsToBootConfig (§15.1)', () => {
   });
 
   it('stringifies non-string settings for the legacy "" + v coercion', () => {
-    const config = optionsToBootConfig({ 'hide_files': true, 'start_view': 5 });
+    const config = optionsToBootConfig({ hide_files: true, start_view: 5 });
     expect(config.settings).toEqual({ hide_files: 'true', start_view: '5' });
   });
 
@@ -66,7 +61,9 @@ describe('asLegacyDeferred', () => {
   it('routes rejections to .fail without unhandled rejections', async () => {
     const fail = vi.fn();
     const done = vi.fn();
-    asLegacyDeferred(Promise.reject(new Error('nope'))).done(done).fail(fail);
+    asLegacyDeferred(Promise.reject(new Error('nope')))
+      .done(done)
+      .fail(fail);
     await Promise.resolve();
     await Promise.resolve();
     expect(fail).toHaveBeenCalled();

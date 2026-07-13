@@ -20,10 +20,7 @@ if (!Blockly.registry.hasItem(Blockly.registry.Type.FIELD, multilineInputType)) 
 defineBlocks({
   type: 'ast_Raw',
   message0: 'Code Block: %1 %2',
-  args0: [
-    { type: 'input_dummy' },
-    { type: multilineInputType, name: 'TEXT', value: '' },
-  ],
+  args0: [{ type: 'input_dummy' }, { type: multilineInputType, name: 'TEXT', value: '' }],
   colour: COLOR.PYTHON,
   previousStatement: null,
   nextStatement: null,

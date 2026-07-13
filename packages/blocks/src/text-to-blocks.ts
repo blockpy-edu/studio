@@ -10,9 +10,10 @@
  */
 import { COLOR } from './colors';
 import { getConverter } from './registry';
+import type { ConverterParent } from './registry';
 import { createBlock, rawBlock, xmlToString } from './xml';
 import { sourceToAst, AstParseError } from './cst/to-ast';
-import type { Module, Stmt } from './ir/types';
+import type { AnyNode, Expr, Module, Stmt } from './ir/types';
 import {
   FUNCTION_SIGNATURES,
   METHOD_SIGNATURES,
@@ -145,16 +146,16 @@ export class TextToBlocksConverter {
     };
   }
 
-  private recursiveMeasure(node: any, nextBlockLine: number): void {
+  private recursiveMeasure(node: Module | Stmt | undefined, nextBlockLine: number): void {
     if (node === undefined) {
       return;
     }
     let myNext = nextBlockLine;
     if ('orelse' in node && node.orelse.length > 0) {
-      if (node.orelse.length === 1 && node.orelse[0]._astname === 'If') {
-        myNext = node.orelse[0].lineno - 1;
+      if (node.orelse.length === 1 && node.orelse[0]!._astname === 'If') {
+        myNext = node.orelse[0]!.lineno - 1;
       } else {
-        myNext = node.orelse[0].lineno - 1 - 1;
+        myNext = node.orelse[0]!.lineno - 1 - 1;
       }
     }
     this.heights.push(nextBlockLine);
@@ -164,7 +165,7 @@ export class TextToBlocksConverter {
         if (i + 1 === node.body.length) {
           next = myNext;
         } else {
-          next = node.body[i + 1].lineno - 1;
+          next = node.body[i + 1]!.lineno - 1;
         }
         this.recursiveMeasure(node.body[i], next);
       }
@@ -175,7 +176,7 @@ export class TextToBlocksConverter {
         if (i === node.orelse.length) {
           next = nextBlockLine;
         } else {
-          next = 1 + (node.orelse[i].lineno - 1);
+          next = 1 + (node.orelse[i]!.lineno - 1);
         }
         this.recursiveMeasure(node.orelse[i], next);
       }
@@ -185,13 +186,13 @@ export class TextToBlocksConverter {
     // header line, or the match's own successor for the final case.
     if ('cases' in node) {
       for (let c = 0; c < node.cases.length; c++) {
-        const matchCase = node.cases[c];
+        const matchCase = node.cases[c]!;
         for (let i = 0; i < matchCase.body.length; i++) {
           let next;
           if (i + 1 < matchCase.body.length) {
-            next = matchCase.body[i + 1].lineno - 1;
+            next = matchCase.body[i + 1]!.lineno - 1;
           } else if (c + 1 < node.cases.length) {
-            next = node.cases[c + 1].lineno - 1;
+            next = node.cases[c + 1]!.lineno - 1;
           } else {
             next = myNext;
           }
@@ -219,11 +220,11 @@ export class TextToBlocksConverter {
     return lines.join('\n');
   }
 
-  isTopLevel(parent: any): boolean {
+  isTopLevel(parent: ConverterParent): boolean {
     return !parent || this.TOP_LEVEL_NODES.indexOf(parent._astname) !== -1;
   }
 
-  convert(node: any, parent: any): Element | Element[] | null {
+  convert(node: AnyNode, parent: ConverterParent): Element | Element[] | null {
     const converter = getConverter(node._astname);
     if (converter === undefined) {
       throw new Error('Could not find function: ast_' + node._astname);
@@ -235,34 +236,34 @@ export class TextToBlocksConverter {
   convertStatement(
     node: Stmt,
     _fullSource: string,
-    parent: any,
+    parent: ConverterParent,
   ): Element | Element[] | null {
     try {
       return this.convert(node, parent);
     } catch (e) {
       const heights = this.getChunkHeights(node);
-      const extractedSource = this.getSourceCode(
-        arrayMin(heights),
-        arrayMax(heights),
-      );
+      const extractedSource = this.getSourceCode(arrayMin(heights), arrayMax(heights));
       console.error(e);
       return rawBlock(extractedSource);
     }
   }
 
-  getChunkHeights(node: any): number[] {
+  getChunkHeights(node: Stmt): number[] {
     let lineNumbers: number[] = [];
+    // The `hasOwnProperty` probes are legacy; the casts below only restate
+    // what each probe established.
+    const probed = node as Stmt & { body?: Stmt[]; orelse?: Stmt[] };
     if (Object.prototype.hasOwnProperty.call(node, 'lineno')) {
       lineNumbers.push(node.lineno);
     }
     if (Object.prototype.hasOwnProperty.call(node, 'body')) {
-      for (let i = 0; i < node.body.length; i += 1) {
-        lineNumbers = lineNumbers.concat(this.getChunkHeights(node.body[i]));
+      for (let i = 0; i < probed.body!.length; i += 1) {
+        lineNumbers = lineNumbers.concat(this.getChunkHeights(probed.body![i]!));
       }
     }
     if (Object.prototype.hasOwnProperty.call(node, 'orelse')) {
-      for (let i = 0; i < node.orelse.length; i += 1) {
-        lineNumbers = lineNumbers.concat(this.getChunkHeights(node.orelse[i]));
+      for (let i = 0; i < probed.orelse!.length; i += 1) {
+        lineNumbers = lineNumbers.concat(this.getChunkHeights(probed.orelse![i]!));
       }
     }
     return lineNumbers;
@@ -273,19 +274,15 @@ export class TextToBlocksConverter {
     return createBlock('ast_Comment', lineno, { BODY: commentText });
   }
 
-  convertElements(
-    key: string,
-    values: any[],
-    parent: any,
-  ): Record<string, Element> {
+  convertElements(key: string, values: Expr[], parent: ConverterParent): Record<string, Element> {
     const output: Record<string, Element> = {};
     for (let i = 0; i < values.length; i++) {
-      output[key + i] = this.convert(values[i], parent) as Element;
+      output[key + i] = this.convert(values[i]!, parent) as Element;
     }
     return output;
   }
 
-  convertBody(node: Stmt[], parent: any): Element[] {
+  convertBody(node: Stmt[], parent: ConverterParent): Element[] {
     this.levelIndex += 1;
     const is_top_level = this.isTopLevel(parent);
 
@@ -326,7 +323,9 @@ export class TextToBlocksConverter {
       }
     }
 
-    let lineNumberInBody = 0;
+    // Dead bookkeeping in legacy too (text_to_blocks.js:199-221 increments
+    // it, nothing reads it) — kept for port shape, `_`-marked as unused.
+    let _lineNumberInBody = 0;
     let lineNumberInProgram: number = 0;
     let previousLineInProgram: number | null = null;
     let distance: number;
@@ -336,14 +335,14 @@ export class TextToBlocksConverter {
 
     // Iterate through each node
     for (let i = 0; i < node.length; i++) {
-      lineNumberInBody += 1;
+      _lineNumberInBody += 1;
 
       lineNumberInProgram = node[i]!.lineno;
       distance = 0;
       if (previousLineInProgram != null) {
         distance = lineNumberInProgram - previousLineInProgram - 1;
       }
-      lineNumberInBody += distance;
+      _lineNumberInBody += distance;
 
       // Handle earlier comments
       for (const commentLineInProgram in this.comments) {
@@ -352,18 +351,14 @@ export class TextToBlocksConverter {
 
           if (parseInt(comment[0], 10) / 4 == this.levelIndex - 1) {
             const commentLine = comment[1];
-            const commentChild = this.astComment(
-              commentLine,
-              Number(commentLineInProgram),
-            );
+            const commentChild = this.astComment(commentLine, Number(commentLineInProgram));
             this.highestLineSeen += 1;
 
             if (previousLineInProgram == null) {
               nestChild(commentChild);
             } else {
               const skipped_previous_line =
-                Math.abs(previousLineInProgram - Number(commentLineInProgram)) >
-                1;
+                Math.abs(previousLineInProgram - Number(commentLineInProgram)) > 1;
               if (is_top_level && skipped_previous_line) {
                 addPeer(commentChild);
               } else {
@@ -443,10 +438,7 @@ export class TextToBlocksConverter {
 
         if (parseInt(comment[0], 10) / 4 == this.levelIndex - 1) {
           const commentInProgram = comment[1];
-          const commentChild = this.astComment(
-            commentInProgram,
-            Number(commentLineInProgram),
-          );
+          const commentChild = this.astComment(commentInProgram, Number(commentLineInProgram));
 
           distance = Number(commentLineInProgram) - (previousLineInProgram ?? 0);
 

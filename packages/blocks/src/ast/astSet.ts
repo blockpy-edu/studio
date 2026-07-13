@@ -26,9 +26,7 @@ defineBlock('ast_Set', {
     this.itemCount_ = 3;
     this.updateShape_();
     this.setOutput(true, 'Set');
-    this.setMutator(
-      new Blockly.icons.MutatorIcon(['ast_Set_create_with_item'], this),
-    );
+    this.setMutator(new Blockly.icons.MutatorIcon(['ast_Set_create_with_item'], this));
   },
   /**
    * Create XML to represent set inputs.
@@ -73,9 +71,7 @@ defineBlock('ast_Set', {
    * @this Blockly.Block
    */
   compose: function (this: SetBlock, containerBlock: Blockly.Block) {
-    let itemBlock = containerBlock.getInputTargetBlock(
-      'STACK',
-    ) as SetItemBlock | null;
+    let itemBlock = containerBlock.getInputTargetBlock('STACK') as SetItemBlock | null;
     // Count number of inputs.
     const connections: (Blockly.Connection | null | undefined)[] = [];
     while (itemBlock) {
@@ -103,9 +99,7 @@ defineBlock('ast_Set', {
    * @this Blockly.Block
    */
   saveConnections: function (this: SetBlock, containerBlock: Blockly.Block) {
-    let itemBlock = containerBlock.getInputTargetBlock(
-      'STACK',
-    ) as SetItemBlock | null;
+    let itemBlock = containerBlock.getInputTargetBlock('STACK') as SetItemBlock | null;
     let i = 0;
     while (itemBlock) {
       const input = this.getInput('ADD' + i);
@@ -132,9 +126,7 @@ defineBlock('ast_Set', {
       if (!this.getInput('ADD' + i)) {
         const input = this.appendValueInput('ADD' + i);
         if (i === 0) {
-          input
-            .appendField('create set with {')
-            .setAlign(Blockly.inputs.Align.RIGHT);
+          input.appendField('create set with {').setAlign(Blockly.inputs.Align.RIGHT);
         } else {
           input.appendField(',').setAlign(Blockly.inputs.Align.RIGHT);
         }
@@ -150,9 +142,7 @@ defineBlock('ast_Set', {
       this.removeInput('TAIL');
     }
     if (this.itemCount_) {
-      this.appendDummyInput('TAIL')
-        .appendField('}')
-        .setAlign(Blockly.inputs.Align.RIGHT);
+      this.appendDummyInput('TAIL').appendField('}').setAlign(Blockly.inputs.Align.RIGHT);
     }
   },
 });
@@ -192,9 +182,7 @@ generator.forBlock['ast_Set'] = function (block) {
   }
   const elements = new Array<string>(typed.itemCount_);
   for (let i = 0; i < typed.itemCount_; i++) {
-    elements[i] =
-      generator.valueToCode(block, 'ADD' + i, generator.ORDER_NONE) ||
-      generator.blank;
+    elements[i] = generator.valueToCode(block, 'ADD' + i, generator.ORDER_NONE) || generator.blank;
   }
   const code = '{' + elements.join(', ') + '}';
   return [code, generator.ORDER_ATOMIC];

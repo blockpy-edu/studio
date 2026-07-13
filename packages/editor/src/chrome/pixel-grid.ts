@@ -23,12 +23,7 @@ export function gridHeight(grid: PixelGrid): number {
 }
 
 /** Immutable single-cell paint ('' erases). */
-export function paint(
-  grid: PixelGrid,
-  x: number,
-  y: number,
-  color: string,
-): PixelGrid {
+export function paint(grid: PixelGrid, x: number, y: number, color: string): PixelGrid {
   if (y < 0 || y >= grid.length || x < 0 || x >= (grid[y]?.length ?? 0)) {
     return grid;
   }
@@ -39,11 +34,7 @@ export function paint(
 }
 
 /** Resize preserving the top-left corner; new cells are transparent. */
-export function resizeGrid(
-  grid: PixelGrid,
-  width: number,
-  height: number,
-): PixelGrid {
+export function resizeGrid(grid: PixelGrid, width: number, height: number): PixelGrid {
   return Array.from({ length: height }, (_, y) =>
     Array.from({ length: width }, (_, x) => grid[y]?.[x] ?? ''),
   );
@@ -70,8 +61,7 @@ export function gridFromImageData(image: ImageDataLike): PixelGrid {
   return grid;
 }
 
-const CELL_PATTERN =
-  /^rgba\((\d{1,3}),(\d{1,3}),(\d{1,3}),([01](?:\.\d+)?)\)$/;
+const CELL_PATTERN = /^rgba\((\d{1,3}),(\d{1,3}),(\d{1,3}),([01](?:\.\d+)?)\)$/;
 
 /**
  * Fill an ImageData-shaped buffer from the grid (the component wraps the

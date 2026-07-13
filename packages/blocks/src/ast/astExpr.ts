@@ -2,6 +2,7 @@
 import { COLOR } from '../colors';
 import { generator } from '../generator';
 import { defineBlocks, registerConverter } from '../registry';
+import type { ConverterParent } from '../registry';
 import { createBlock } from '../xml';
 import type { TextToBlocksConverter } from '../text-to-blocks';
 import type * as ir from '../ir/types';
@@ -18,16 +19,14 @@ defineBlocks({
 
 generator.forBlock['ast_Expr'] = function (block) {
   // Numeric value.
-  const value =
-    generator.valueToCode(block, 'VALUE', generator.ORDER_ATOMIC) ||
-    generator.blank;
+  const value = generator.valueToCode(block, 'VALUE', generator.ORDER_ATOMIC) || generator.blank;
   // TODO: Assemble JavaScript into code variable.
   return value + '\n';
 };
 
 registerConverter(
   'Expr',
-  function (this: TextToBlocksConverter, node: ir.ExprStmt, parent: unknown) {
+  function (this: TextToBlocksConverter, node: ir.ExprStmt, parent: ConverterParent) {
     const value = node.value;
 
     const converted = this.convert(value, node);
@@ -39,9 +38,14 @@ registerConverter(
       // `convertBody` unwraps it into a peer block.
       return [this.convert(value, node) as Element];
     } else {
-      return createBlock('ast_Expr', node.lineno, {}, {
-        VALUE: this.convert(value, node) as Element,
-      });
+      return createBlock(
+        'ast_Expr',
+        node.lineno,
+        {},
+        {
+          VALUE: this.convert(value, node) as Element,
+        },
+      );
     }
   },
 );

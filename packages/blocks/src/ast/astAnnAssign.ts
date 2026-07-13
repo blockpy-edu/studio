@@ -41,9 +41,7 @@ defineBlock('ast_AnnAssignFull', {
   updateShape_: function (this: AnnAssignFullBlock) {
     // Add new inputs.
     if (this.initialized_ && !this.getInput('VALUE')) {
-      this.appendValueInput('VALUE')
-        .appendField('=')
-        .setAlign(Blockly.inputs.Align.RIGHT);
+      this.appendValueInput('VALUE').appendField('=').setAlign(Blockly.inputs.Align.RIGHT);
     }
     if (!this.initialized_ && this.getInput('VALUE')) {
       this.removeInput('VALUE');
@@ -105,9 +103,7 @@ defineBlock('ast_AnnAssign', {
   updateShape_: function (this: AnnAssignBlock) {
     // Add new inputs.
     if (this.initialized_ && !this.getInput('VALUE')) {
-      this.appendValueInput('VALUE')
-        .appendField('=')
-        .setAlign(Blockly.inputs.Align.RIGHT);
+      this.appendValueInput('VALUE').appendField('=').setAlign(Blockly.inputs.Align.RIGHT);
     }
     if (!this.initialized_ && this.getInput('VALUE')) {
       this.removeInput('VALUE');
@@ -118,19 +114,14 @@ defineBlock('ast_AnnAssign', {
 generator.forBlock['ast_AnnAssignFull'] = function (block) {
   const typed = block as AnnAssignFullBlock;
   // Create a list with any number of elements of any type.
-  const target =
-    generator.valueToCode(block, 'TARGET', generator.ORDER_NONE) ||
-    generator.blank;
+  const target = generator.valueToCode(block, 'TARGET', generator.ORDER_NONE) || generator.blank;
   const annotation =
-    generator.valueToCode(block, 'ANNOTATION', generator.ORDER_NONE) ||
-    generator.blank;
+    generator.valueToCode(block, 'ANNOTATION', generator.ORDER_NONE) || generator.blank;
   let value = '';
   if (typed.initialized_) {
     // Legacy precedence quirk preserved: `' = ' + code || blank` groups as
     // `(' = ' + code) || blank`, so the blank fallback never fires.
-    value =
-      ' = ' + generator.valueToCode(block, 'VALUE', generator.ORDER_NONE) ||
-      generator.blank;
+    value = ' = ' + generator.valueToCode(block, 'VALUE', generator.ORDER_NONE) || generator.blank;
   }
   return target + ': ' + annotation + value + '\n';
 };
@@ -141,22 +132,17 @@ generator.forBlock['ast_AnnAssign'] = function (block) {
   const target = generator.getVariableName(block.getFieldValue('TARGET'));
   let annotation = block.getFieldValue('ANNOTATION');
   if (typed.strAnnotations_) {
-    annotation = (generator as any).quote_(annotation);
+    annotation = generator.quote_(annotation);
   }
   let value = '';
   if (typed.initialized_) {
     // Legacy precedence quirk preserved (see ast_AnnAssignFull above).
-    value =
-      ' = ' + generator.valueToCode(block, 'VALUE', generator.ORDER_NONE) ||
-      generator.blank;
+    value = ' = ' + generator.valueToCode(block, 'VALUE', generator.ORDER_NONE) || generator.blank;
   }
   return target + ': ' + annotation + value + '\n';
 };
 
-function getBuiltinAnnotation(
-  this: TextToBlocksConverter,
-  annotation: ir.Expr,
-): string | false {
+function getBuiltinAnnotation(this: TextToBlocksConverter, annotation: ir.Expr): string | false {
   let result: string | false = false;
   // Can we turn it into a basic type?
   if (annotation._astname === 'Name') {

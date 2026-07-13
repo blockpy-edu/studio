@@ -20,9 +20,10 @@ const COMPARES: [string, string, string][] = [
   ['not in', 'NotIn', 'Return whether the left value is not in the right value.'],
 ];
 
-const COMPARES_BLOCKLY_DISPLAY: [string, string][] = COMPARES.map(
-  (boolop) => [boolop[0], boolop[1]],
-);
+const COMPARES_BLOCKLY_DISPLAY: [string, string][] = COMPARES.map((boolop) => [
+  boolop[0],
+  boolop[1],
+]);
 const COMPARES_BLOCKLY_GENERATE: Record<string, string> = {};
 COMPARES.forEach(function (boolop) {
   COMPARES_BLOCKLY_GENERATE[boolop[1]] = boolop[0];
@@ -45,13 +46,9 @@ generator.forBlock['ast_Compare'] = function (block) {
   // Basic arithmetic operators, and power.
   const tuple = COMPARES_BLOCKLY_GENERATE[block.getFieldValue('OP')]!;
   const operator = ' ' + tuple + ' ';
-  // ORDER_RELATIONAL exists at runtime (deprecated alias) but is not in the
-  // LegacyPythonGenerator typing, hence the cast.
-  const order = (generator as any).ORDER_RELATIONAL as number;
-  const argument0 =
-    generator.valueToCode(block, 'A', order) || generator.blank;
-  const argument1 =
-    generator.valueToCode(block, 'B', order) || generator.blank;
+  const order = generator.ORDER_RELATIONAL;
+  const argument0 = generator.valueToCode(block, 'A', order) || generator.blank;
+  const argument1 = generator.valueToCode(block, 'B', order) || generator.blank;
   const code = argument0 + operator + argument1;
   return [code, order];
 };
@@ -72,7 +69,7 @@ registerConverter(
         },
         {
           A: result_block,
-          B: this.convert(values[i], node) as Element,
+          B: this.convert(values[i]!, node) as Element,
         },
         {
           inline: 'true',

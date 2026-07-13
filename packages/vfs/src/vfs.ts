@@ -223,8 +223,7 @@ export class Vfs {
    * Remote files are URLs, not contents, so they are not staged here.
    */
   stageFiles(role: Role): Record<string, string> {
-    const order =
-      role === 'instructor' ? INSTRUCTOR_EVERYWHERE_ORDER : STUDENT_ORDER;
+    const order = role === 'instructor' ? INSTRUCTOR_EVERYWHERE_ORDER : STUDENT_ORDER;
     const staged: Record<string, string> = {};
     // Remote files are consulted LAST in every search order (A1 §4a), so
     // their fetched contents stage at the lowest priority — any local space

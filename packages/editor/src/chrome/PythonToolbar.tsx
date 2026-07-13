@@ -43,12 +43,11 @@ export interface PythonToolbarProps {
   docsOpen?: boolean;
 }
 
-const MODE_TABS: { name: string; iconName: IconName; mode: DualEditorMode }[] =
-  [
-    { name: 'Blocks', iconName: 'blocks', mode: 'block' },
-    { name: 'Split', iconName: 'split', mode: 'split' },
-    { name: 'Text', iconName: 'text', mode: 'text' },
-  ];
+const MODE_TABS: { name: string; iconName: IconName; mode: DualEditorMode }[] = [
+  { name: 'Blocks', iconName: 'blocks', mode: 'block' },
+  { name: 'Split', iconName: 'split', mode: 'split' },
+  { name: 'Text', iconName: 'text', mode: 'text' },
+];
 
 export function PythonToolbar({
   onRun,
@@ -70,9 +69,7 @@ export function PythonToolbar({
   const setPythonMode = useEditorChromeStore((state) => state.setPythonMode);
   const historyMode = useEditorChromeStore((state) => state.historyMode);
   const autocomplete = useEditorChromeStore((state) => state.autocomplete);
-  const toggleAutocomplete = useEditorChromeStore(
-    (state) => state.toggleAutocomplete,
-  );
+  const toggleAutocomplete = useEditorChromeStore((state) => state.toggleAutocomplete);
   const running = runState === 'running';
 
   return (
@@ -91,11 +88,7 @@ export function PythonToolbar({
         </button>
       </div>
       {enableBlocks && (
-        <div
-          className="btn-group btn-group-toggle mr-2"
-          role="group"
-          aria-label="View mode"
-        >
+        <div className="btn-group btn-group-toggle mr-2" role="group" aria-label="View mode">
           {MODE_TABS.map((tab) => (
             <label
               key={tab.mode}
@@ -117,11 +110,7 @@ export function PythonToolbar({
         </div>
       )}
       <div className="btn-group mr-2" role="group">
-        <button
-          type="button"
-          className="btn btn-outline-secondary"
-          onClick={onReset}
-        >
+        <button type="button" className="btn btn-outline-secondary" onClick={onReset}>
           <Icon name="reset" /> Reset
         </button>
       </div>
@@ -159,8 +148,7 @@ export function PythonToolbar({
           <button
             type="button"
             className={
-              'btn btn-outline-secondary blockpy-toggle-docs' +
-              (docsOpen ? ' active' : '')
+              'btn btn-outline-secondary blockpy-toggle-docs' + (docsOpen ? ' active' : '')
             }
             aria-pressed={docsOpen}
             title="Toggle the documentation panel"
@@ -176,14 +164,11 @@ export function PythonToolbar({
           <button
             type="button"
             className={
-              'btn btn-outline-secondary blockpy-toggle-focus' +
-              (focusedMode ? ' active' : '')
+              'btn btn-outline-secondary blockpy-toggle-focus' + (focusedMode ? ' active' : '')
             }
             aria-pressed={focusedMode}
             title={
-              focusedMode
-                ? 'Exit focused editor mode (Esc)'
-                : 'Focused editor mode (Ctrl+Alt+F)'
+              focusedMode ? 'Exit focused editor mode (Esc)' : 'Focused editor mode (Ctrl+Alt+F)'
             }
             onClick={onToggleFocus}
           >
@@ -194,9 +179,7 @@ export function PythonToolbar({
       <div className="btn-group mr-2" role="group" aria-label="History Group">
         <button
           type="button"
-          className={
-            'btn btn-outline-secondary' + (historyMode ? ' active' : '')
-          }
+          className={'btn btn-outline-secondary' + (historyMode ? ' active' : '')}
           aria-pressed={historyMode}
           disabled={!onHistory}
           onClick={onHistory}

@@ -117,15 +117,26 @@ describe('multipart uploads transport (server.js FormData paths)', () => {
     };
     const { api } = harness([{ ok: true }]);
     const readOnlyApi = new ApiClient({
-      urls: { listUploadedFiles: '/list', uploadFile: '/upload', downloadFile: '/download', renameFile: '/rename' },
+      urls: {
+        listUploadedFiles: '/list',
+        uploadFile: '/upload',
+        downloadFile: '/download',
+        renameFile: '/rename',
+      },
       context: api.context,
-      transport: new Transport({ fetch: fetchStub, storage: new MemoryStorage(), schedule: (fn) => fn() }),
+      transport: new Transport({
+        fetch: fetchStub,
+        storage: new MemoryStorage(),
+        schedule: (fn) => fn(),
+      }),
       readOnly: () => true,
     });
     expect((await readOnlyApi.uploadFile('user', 42, 'f.txt', 'x')).readOnly).toBe(true);
     expect((await readOnlyApi.renameFile('user', 42, 'a', 'b')).readOnly).toBe(true);
     await readOnlyApi.listUploadedFiles();
     await readOnlyApi.downloadFile('user', 42, 'f.txt');
-    expect(calls.filter((call) => call.url === '/upload' || call.url === '/rename')).toHaveLength(0);
+    expect(calls.filter((call) => call.url === '/upload' || call.url === '/rename')).toHaveLength(
+      0,
+    );
   });
 });

@@ -8,13 +8,7 @@
  * emit `@ORELSE`-style keys while `domToMutation` reads `orelse`). Requires
  * a DOM (browser or jsdom) — same constraint legacy had.
  */
-export type MutationValue =
-  | string
-  | number
-  | boolean
-  | null
-  | Element
-  | (string | number)[];
+export type MutationValue = string | number | boolean | null | Element | (string | number)[];
 
 export interface CreateBlockOptions {
   fields?: Record<string, string | number | boolean>;

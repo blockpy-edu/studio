@@ -118,13 +118,12 @@ export class ApiClient {
     if (!this.isEndpointConnected('loadAssignmentByUrl')) return null;
     try {
       const courseId = this.options.context.courseId;
-      const response = await this.options.transport.getJson(
-        this.url('loadAssignmentByUrl'),
-        { url, ...(courseId !== null ? { course_id: courseId } : {}) },
-      );
+      const response = await this.options.transport.getJson(this.url('loadAssignmentByUrl'), {
+        url,
+        ...(courseId !== null ? { course_id: courseId } : {}),
+      });
       const record = response['assignment'] as
-        | { id?: unknown; name?: unknown; url?: unknown }
-        | undefined;
+        { id?: unknown; name?: unknown; url?: unknown } | undefined;
       if (response.success !== true || !record || typeof record.id !== 'number') {
         return null;
       }
@@ -201,10 +200,7 @@ export class ApiClient {
    * assignment_group_id/course_id. Response: `{success, duration}`.
    */
   async estimateGroupDuration(): Promise<LegacyResponse> {
-    return this.options.transport.postRetry(
-      this.url('estimateGroupDuration'),
-      this.buildPayload(),
-    );
+    return this.options.transport.postRetry(this.url('estimateGroupDuration'), this.buildPayload());
   }
 
   async saveImage(directory: string, image: string): Promise<LegacyResponse> {
@@ -222,10 +218,7 @@ export class ApiClient {
    * Legacy `_postBlocking(…, 2 attempts)` with the base urlencoded payload.
    */
   async listUploadedFiles(): Promise<LegacyResponse> {
-    return this.options.transport.postRetry(
-      this.url('listUploadedFiles'),
-      this.buildPayload(),
-    );
+    return this.options.transport.postRetry(this.url('listUploadedFiles'), this.buildPayload());
   }
 
   /**

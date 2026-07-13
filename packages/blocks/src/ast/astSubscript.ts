@@ -9,11 +9,7 @@ import type * as ir from '../ir/types';
 
 type SubscriptBlock = Blockly.Block & {
   sliceKinds_: string[];
-  setExistence(
-    label: string,
-    exist: boolean,
-    isDummy: boolean,
-  ): Blockly.Input | null;
+  setExistence(label: string, exist: boolean, isDummy: boolean): Blockly.Input | null;
   createSlice_(i: number, kind: string): void;
   updateShape_(): void;
 };
@@ -30,12 +26,7 @@ defineBlock('ast_Subscript', {
     this.appendDummyInput('CLOSE_BRACKET').appendField(']');
     this.updateShape_();
   },
-  setExistence: function (
-    this: SubscriptBlock,
-    label: string,
-    exist: boolean,
-    isDummy: boolean,
-  ) {
+  setExistence: function (this: SubscriptBlock, label: string, exist: boolean, isDummy: boolean) {
     if (exist && !this.getInput(label)) {
       if (isDummy) {
         return this.appendDummyInput(label);
@@ -57,28 +48,16 @@ defineBlock('ast_Subscript', {
     const isIndex = kind.charAt(0) === 'I';
     input = this.setExistence('INDEX' + i, isIndex, false);
     // First index
-    input = this.setExistence(
-      'SLICELOWER' + i,
-      !isIndex && '1' === kind.charAt(1),
-      false,
-    );
+    input = this.setExistence('SLICELOWER' + i, !isIndex && '1' === kind.charAt(1), false);
     // First colon
     input = this.setExistence('SLICECOLON' + i, !isIndex, true);
     if (input) {
       input.appendField(':').setAlign(Blockly.inputs.Align.RIGHT);
     }
     // Second index
-    input = this.setExistence(
-      'SLICEUPPER' + i,
-      !isIndex && '1' === kind.charAt(2),
-      false,
-    );
+    input = this.setExistence('SLICEUPPER' + i, !isIndex && '1' === kind.charAt(2), false);
     // Second colon and third index
-    input = this.setExistence(
-      'SLICESTEP' + i,
-      !isIndex && '1' === kind.charAt(3),
-      false,
-    );
+    input = this.setExistence('SLICESTEP' + i, !isIndex && '1' === kind.charAt(3), false);
     if (input) {
       input.appendField(':').setAlign(Blockly.inputs.Align.RIGHT);
     }
@@ -156,46 +135,31 @@ defineBlock('ast_Subscript', {
 generator.forBlock['ast_Subscript'] = function (block) {
   const typed = block as SubscriptBlock;
   // Create a list with any number of elements of any type.
-  const value =
-    generator.valueToCode(block, 'VALUE', generator.ORDER_MEMBER) ||
-    generator.blank;
+  const value = generator.valueToCode(block, 'VALUE', generator.ORDER_MEMBER) || generator.blank;
   const slices = new Array<string>(typed.sliceKinds_.length);
   for (let i = 0; i < typed.sliceKinds_.length; i++) {
     const kind = typed.sliceKinds_[i]!;
     if (kind.charAt(0) === 'I') {
       slices[i] =
-        generator.valueToCode(block, 'INDEX' + i, generator.ORDER_MEMBER) ||
-        generator.blank;
+        generator.valueToCode(block, 'INDEX' + i, generator.ORDER_MEMBER) || generator.blank;
     } else {
       slices[i] = '';
       if (kind.charAt(1) === '1') {
         slices[i] +=
-          generator.valueToCode(
-            block,
-            'SLICELOWER' + i,
-            generator.ORDER_MEMBER,
-          ) || generator.blank;
+          generator.valueToCode(block, 'SLICELOWER' + i, generator.ORDER_MEMBER) || generator.blank;
       }
       slices[i] += ':';
       if (kind.charAt(2) === '1') {
         slices[i] +=
-          generator.valueToCode(
-            block,
-            'SLICEUPPER' + i,
-            generator.ORDER_MEMBER,
-          ) || generator.blank;
+          generator.valueToCode(block, 'SLICEUPPER' + i, generator.ORDER_MEMBER) || generator.blank;
       }
       if (kind.charAt(3) === '1') {
         // Legacy precedence quirk preserved: `':' + code || blank` groups as
         // `(':' + code) || blank`, so the blank fallback never fires and an
         // empty step renders as a bare ':'.
         slices[i] +=
-          ':' +
-            generator.valueToCode(
-              block,
-              'SLICESTEP' + i,
-              generator.ORDER_MEMBER,
-            ) || generator.blank;
+          ':' + generator.valueToCode(block, 'SLICESTEP' + i, generator.ORDER_MEMBER) ||
+          generator.blank;
       }
     }
   }

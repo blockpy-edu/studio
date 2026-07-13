@@ -19,13 +19,9 @@ describe('ImageEditor (M4.5, LD-27)', () => {
     const { container } = render(
       <ImageEditor value={PNG_URL} onChange={() => {}} onRawView={() => {}} />,
     );
-    const img = container.querySelector<HTMLImageElement>(
-      '.blockpy-image-preview img',
-    )!;
+    const img = container.querySelector<HTMLImageElement>('.blockpy-image-preview img')!;
     expect(img.src).toBe(PNG_URL);
-    expect(
-      container.querySelector('.blockpy-image-checkerboard'),
-    ).not.toBeNull();
+    expect(container.querySelector('.blockpy-image-checkerboard')).not.toBeNull();
     // Zoom drives the CSS scale transform.
     fireEvent.change(container.querySelector('.blockpy-image-zoom')!, {
       target: { value: '4' },
@@ -43,9 +39,7 @@ describe('ImageEditor (M4.5, LD-27)', () => {
   });
 
   it('non-image contents offer the blank-canvas creator; painting + Apply needs canvas', () => {
-    const { container } = render(
-      <ImageEditor value="" onChange={() => {}} onRawView={() => {}} />,
-    );
+    const { container } = render(<ImageEditor value="" onChange={() => {}} onRawView={() => {}} />);
     expect(container.querySelector('.blockpy-image-create')).not.toBeNull();
     fireEvent.change(container.querySelector('.blockpy-image-new-width')!, {
       target: { value: '2' },
@@ -59,9 +53,7 @@ describe('ImageEditor (M4.5, LD-27)', () => {
     expect(container.querySelectorAll('.blockpy-pixel-cell')).toHaveLength(4);
     expect(container.querySelectorAll('.blockpy-pixel-swatch').length).toBeGreaterThan(4);
     // Paint a cell: the style updates to the selected palette color.
-    const cell = container.querySelector<HTMLButtonElement>(
-      '[aria-label="Pixel 0,0"]',
-    )!;
+    const cell = container.querySelector<HTMLButtonElement>('[aria-label="Pixel 0,0"]')!;
     fireEvent.mouseDown(cell);
     expect(cell.style.backgroundColor).toBe('rgb(0, 0, 0)');
     // Eraser clears it again.
@@ -73,9 +65,7 @@ describe('ImageEditor (M4.5, LD-27)', () => {
       target: { value: '3' },
     });
     expect(
-      container.querySelectorAll('.blockpy-pixel-row')[0]!.querySelectorAll(
-        '.blockpy-pixel-cell',
-      ),
+      container.querySelectorAll('.blockpy-pixel-row')[0]!.querySelectorAll('.blockpy-pixel-cell'),
     ).toHaveLength(3);
     // Apply in jsdom (no canvas backend) fails soft with the error notice.
     fireEvent.click(container.querySelector('.blockpy-pixel-apply')!);

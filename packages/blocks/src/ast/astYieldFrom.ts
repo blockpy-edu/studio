@@ -16,9 +16,7 @@ defineBlocks({
 });
 
 generator.forBlock['ast_YieldFrom'] = function (block) {
-  const value =
-    generator.valueToCode(block, 'VALUE', generator.ORDER_LAMBDA) ||
-    generator.blank;
+  const value = generator.valueToCode(block, 'VALUE', generator.ORDER_LAMBDA) || generator.blank;
   return ['yield from ' + value, generator.ORDER_LAMBDA];
 };
 
@@ -27,8 +25,13 @@ registerConverter(
   function (this: TextToBlocksConverter, node: ir.YieldFrom, _parent: unknown) {
     const value = node.value;
 
-    return createBlock('ast_YieldFrom', node.lineno, {}, {
-      VALUE: this.convert(value, node) as Element,
-    });
+    return createBlock(
+      'ast_YieldFrom',
+      node.lineno,
+      {},
+      {
+        VALUE: this.convert(value, node) as Element,
+      },
+    );
   },
 );

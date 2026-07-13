@@ -52,9 +52,7 @@ export interface EngineAdapterOptions {
   onRunScript?: string;
 }
 
-export function createEngineRunController(
-  options: EngineAdapterOptions = {},
-): RunController {
+export function createEngineRunController(options: EngineAdapterOptions = {}): RunController {
   let client: EngineClient | null = null;
   let booted = false;
   let jobCounter = 0;
@@ -65,10 +63,9 @@ export function createEngineRunController(
       client = new EngineClient({
         workerFactory: () =>
           workerPort(
-            new Worker(
-              new URL('../../engine/src/worker.entry.ts', import.meta.url),
-              { type: 'module' },
-            ),
+            new Worker(new URL('../../engine/src/worker.entry.ts', import.meta.url), {
+              type: 'module',
+            }),
           ),
         indexURL: options.indexURL,
       });
@@ -77,11 +74,7 @@ export function createEngineRunController(
   }
 
   return {
-    async run(
-      code: string,
-      handlers: RunHandlers,
-      runOptions?: RunOptions,
-    ): Promise<RunOutcome> {
+    async run(code: string, handlers: RunHandlers, runOptions?: RunOptions): Promise<RunOutcome> {
       const engine = ensureClient();
       if (!booted) {
         options.onBootStateChange?.(true);
@@ -122,15 +115,10 @@ export function createEngineRunController(
         // (M3.2) — grading never swallows it.
         const studentError = result.success
           ? null
-          : result.error?.traceback ||
-            result.error?.message ||
-            'Execution failed.';
+          : result.error?.traceback || result.error?.message || 'Execution failed.';
         // Per-run script (the live !on_run.py from the VFS) beats the
         // static fallback; empty/whitespace means "no grader".
-        const onRun =
-          runOptions?.onRun !== undefined
-            ? runOptions.onRun
-            : options.onRunScript;
+        const onRun = runOptions?.onRun !== undefined ? runOptions.onRun : options.onRunScript;
         // Legacy parity (engine.js:109-124): the grading pass chains after
         // EVERY run — `failure()` resolves, so student syntax/runtime errors
         // reach Pedal, whose own set_source → run captures them as feedback.
@@ -159,8 +147,7 @@ export function createEngineRunController(
         // No grader (or feedback disabled): hand-built runtime/syntax
         // feedback with student-relative lines (§6.3).
         const error = result.error;
-        const where =
-          error?.studentLine != null ? ` on line ${error.studentLine}` : '';
+        const where = error?.studentLine != null ? ` on line ${error.studentLine}` : '';
         return {
           error: studentError,
           trace,
@@ -199,8 +186,7 @@ export function createEngineRunController(
       if (!result.success) {
         return {
           value: null,
-          error:
-            result.error?.message ?? result.error?.traceback ?? 'Evaluation failed.',
+          error: result.error?.message ?? result.error?.traceback ?? 'Evaluation failed.',
         };
       }
       const outcome: EvalOutcome = { value: result.value ?? null, error: null };
@@ -366,8 +352,5 @@ async function gradeWithPedal(
 }
 
 function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }

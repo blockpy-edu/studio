@@ -79,11 +79,11 @@ describe('FileTree (M3.7)', () => {
       />,
     );
     const rows = [...container.querySelectorAll('.blockpy-file-tree-row')];
-    const answerRow = rows.find((row) =>
-      row.querySelector('.blockpy-file-tree-name')?.textContent === 'answer.py',
+    const answerRow = rows.find(
+      (row) => row.querySelector('.blockpy-file-tree-name')?.textContent === 'answer.py',
     )!;
-    const notesRow = rows.find((row) =>
-      row.querySelector('.blockpy-file-tree-name')?.textContent === 'notes.txt',
+    const notesRow = rows.find(
+      (row) => row.querySelector('.blockpy-file-tree-name')?.textContent === 'notes.txt',
     )!;
     // answer.py is magic: no rename/delete buttons at all.
     expect(answerRow.querySelectorAll('.blockpy-file-tree-action').length).toBe(0);

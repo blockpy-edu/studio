@@ -69,8 +69,7 @@ export function computeTabs(vfs: Vfs, role: Role): FileTab[] {
       label: entry.legacyName,
       instructorOnly: false,
       uneditable:
-        parse(entry.legacyName).space === 'readonly' ||
-        !vfs.canEdit(entry.legacyName, role),
+        parse(entry.legacyName).space === 'readonly' || !vfs.canEdit(entry.legacyName, role),
     });
   }
   return tabs;
@@ -98,10 +97,7 @@ export function FileTabs({
   instructor = false,
 }: FileTabsProps) {
   const [, setVersion] = useState(0);
-  useEffect(
-    () => vfs.onChange(() => setVersion((v) => v + 1)),
-    [vfs],
-  );
+  useEffect(() => vfs.onChange(() => setVersion((v) => v + 1)), [vfs]);
   const fileTree = useEditorChromeStore((state) => state.fileTree);
   const toggleFileTree = useEditorChromeStore((state) => state.toggleFileTree);
   const tabs = computeTabs(vfs, role);
@@ -127,9 +123,7 @@ export function FileTabs({
         {tabs.map((tab) => (
           <li
             key={tab.legacyName}
-            className={
-              'nav-item' + (tab.instructorOnly ? ' blockpy-file-instructor' : '')
-            }
+            className={'nav-item' + (tab.instructorOnly ? ' blockpy-file-instructor' : '')}
           >
             <a
               className={
@@ -149,9 +143,7 @@ export function FileTabs({
             </a>
           </li>
         ))}
-        {addVisible && (
-          <AddNewMenu vfs={vfs} instructor={instructor} onAdd={onSelect} />
-        )}
+        {addVisible && <AddNewMenu vfs={vfs} instructor={instructor} onAdd={onSelect} />}
       </ul>
     </div>
   );

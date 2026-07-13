@@ -38,10 +38,7 @@ describe('ApiClient group organizer endpoints', () => {
       new_url: 'week2',
     });
     expect(postRetry).toHaveBeenCalledTimes(1);
-    const [url, payload] = postRetry.mock.calls[0] as unknown as [
-      string,
-      Record<string, unknown>,
-    ];
+    const [url, payload] = postRetry.mock.calls[0] as unknown as [string, Record<string, unknown>];
     expect(url).toBe('/assignment_group/edit');
     expect(payload['assignment_group_id']).toBe(3);
     expect(payload['new_name']).toBe('Week 2');
@@ -60,10 +57,7 @@ describe('ApiClient group organizer endpoints', () => {
       old_group_id: 3,
       new_group_id: -1,
     });
-    const [, payload] = postRetry.mock.calls[0] as unknown as [
-      string,
-      Record<string, unknown>,
-    ];
+    const [, payload] = postRetry.mock.calls[0] as unknown as [string, Record<string, unknown>];
     expect(payload['assignment_id']).toBe(42);
     expect(payload['old_group_id']).toBe(3);
     expect(payload['new_group_id']).toBe(-1);
@@ -94,10 +88,7 @@ describe('ApiClient group organizer endpoints', () => {
       name: 'Reading: Variables',
       url: 'reading_variables',
     });
-    const [url, params] = getJson.mock.calls[0] as unknown as [
-      string,
-      Record<string, unknown>,
-    ];
+    const [url, params] = getJson.mock.calls[0] as unknown as [string, Record<string, unknown>];
     expect(url).toBe('/assignments/by_url');
     expect(params['url']).toBe('reading_variables');
     expect(params['course_id']).toBe(1);

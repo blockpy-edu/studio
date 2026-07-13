@@ -31,9 +31,7 @@ export interface RunnableSlot {
 /** Scan a rendered reading body for hydratable blocks. Only blockpy slots
  *  with a part id are runnable; the rest render as plain highlighted code. */
 export function collectRunnableSlots(container: HTMLElement): RunnableSlot[] {
-  return Array.from(
-    container.querySelectorAll<HTMLElement>('.reader-runnable-slot'),
-  )
+  return Array.from(container.querySelectorAll<HTMLElement>('.reader-runnable-slot'))
     .map((slot) => {
       const hidden = slot.previousElementSibling as HTMLElement | null;
       const pre = (hidden?.previousElementSibling as HTMLElement | null) ?? null;
@@ -42,9 +40,7 @@ export function collectRunnableSlots(container: HTMLElement): RunnableSlot[] {
         pre,
         source: hidden?.textContent ?? '',
         partId: slot.dataset['partId'] ?? '',
-        kind: (slot.dataset['kind'] === 'kettle' ? 'kettle' : 'blockpy') as
-          | 'blockpy'
-          | 'kettle',
+        kind: (slot.dataset['kind'] === 'kettle' ? 'kettle' : 'blockpy') as 'blockpy' | 'kettle',
       };
     })
     .filter((candidate) => candidate.kind === 'blockpy' && candidate.partId !== '');
@@ -57,7 +53,12 @@ export interface RunnableBlockProps {
   blocklyMediaPath?: string;
 }
 
-export function RunnableBlock({ pre, source, runController, blocklyMediaPath }: RunnableBlockProps) {
+export function RunnableBlock({
+  pre,
+  source,
+  runController,
+  blocklyMediaPath,
+}: RunnableBlockProps) {
   const [launched, setLaunched] = useState(false);
   if (launched) {
     // A minified child surface (§12): inherits the hosting reading's ids
@@ -81,8 +82,7 @@ export function RunnableBlock({ pre, source, runController, blocklyMediaPath }: 
         setLaunched(true);
       }}
     >
-      <Play size={14} strokeWidth={1.75} aria-hidden style={{ verticalAlign: 'text-bottom' }} />{' '}
-      Run
+      <Play size={14} strokeWidth={1.75} aria-hidden style={{ verticalAlign: 'text-bottom' }} /> Run
     </button>
   );
 }

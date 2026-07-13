@@ -45,12 +45,7 @@ export type EvalState = 'hidden' | 'button' | 'input';
 export type ThemeName = 'light' | 'dark' | 'win2000';
 
 /** Legacy `StatusState` enum (server.js:8-14). */
-export type ServerStatusState =
-  | 'ready'
-  | 'active'
-  | 'retrying'
-  | 'failed'
-  | 'offline';
+export type ServerStatusState = 'ready' | 'active' | 'retrying' | 'failed' | 'offline';
 
 /** The endpoints the footer badges report on (footer.js:4-21). */
 export const SERVER_ENDPOINTS = [
@@ -165,11 +160,7 @@ export interface EditorChromeState {
   setTrace(steps: TraceStepView[]): void;
   setTraceStep(index: number): void;
   setTraceVisible(visible: boolean): void;
-  setServerStatus(
-    endpoint: ServerEndpoint,
-    status: ServerStatusState,
-    message?: string,
-  ): void;
+  setServerStatus(endpoint: ServerEndpoint, status: ServerStatusState, message?: string): void;
   setQueuedInputs(inputs: string[]): void;
   setClearInputs(clear: boolean): void;
   toggleRenderImages(): void;
@@ -241,9 +232,7 @@ export const THEME_NAMES: readonly ThemeName[] = ['light', 'dark', 'win2000'];
 function readStoredTheme(): ThemeName {
   try {
     const stored = localStorage.getItem(THEME_KEY);
-    return THEME_NAMES.includes(stored as ThemeName)
-      ? (stored as ThemeName)
-      : 'light';
+    return THEME_NAMES.includes(stored as ThemeName) ? (stored as ThemeName) : 'light';
   } catch {
     return 'light';
   }
@@ -299,18 +288,14 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   instructionsOverride: null,
 
   setPythonMode: (mode) => set({ pythonMode: mode }),
-  toggleHistoryMode: () =>
-    set((state) => ({ historyMode: !state.historyMode })),
+  toggleHistoryMode: () => set((state) => ({ historyMode: !state.historyMode })),
   setHistoryMode: (on) => set({ historyMode: on }),
   setRunState: (runState) => set({ runState }),
   appendConsole: (entry) =>
     set((state) => ({
       console: [...state.console, entry],
       // Notify the badge when the other console is in the slot.
-      consoleUnseen:
-        state.activeConsole === 'dev'
-          ? state.consoleUnseen + 1
-          : state.consoleUnseen,
+      consoleUnseen: state.activeConsole === 'dev' ? state.consoleUnseen + 1 : state.consoleUnseen,
     })),
   // Legacy clears the whole printer on each run — the beginEval button line
   // lives inside it, so it goes too (and there is nothing left unseen).
@@ -335,8 +320,7 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
     })),
   setQueuedInputs: (inputs) => set({ queuedInputs: inputs }),
   setClearInputs: (clear) => set({ clearInputs: clear }),
-  toggleRenderImages: () =>
-    set((state) => ({ renderImages: !state.renderImages })),
+  toggleRenderImages: () => set((state) => ({ renderImages: !state.renderImages })),
   toggleAutocomplete: () =>
     set((state) => {
       const next = !state.autocomplete;
@@ -371,10 +355,7 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   appendDevConsole: (entry) =>
     set((state) => ({
       devConsole: [...state.devConsole, entry],
-      devUnseen:
-        state.activeConsole === 'student'
-          ? state.devUnseen + 1
-          : state.devUnseen,
+      devUnseen: state.activeConsole === 'student' ? state.devUnseen + 1 : state.devUnseen,
     })),
   clearDevConsole: () => set({ devConsole: [], devUnseen: 0 }),
   setActiveConsole: (which) =>
@@ -384,7 +365,6 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
         : { activeConsole: which, consoleUnseen: 0 },
     ),
   requestPromptedShare: () => set({ promptedShare: true }),
-  setInstructionsOverride: (instructions) =>
-    set({ instructionsOverride: instructions }),
+  setInstructionsOverride: (instructions) => set({ instructionsOverride: instructions }),
   clearPromptedShare: () => set({ promptedShare: false }),
 }));

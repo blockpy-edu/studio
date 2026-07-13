@@ -118,9 +118,7 @@ defineBlock('ast_JoinedStr', {
    * @this Blockly.Block
    */
   decompose: function (this: JoinedStrBlock, workspace: Blockly.WorkspaceSvg) {
-    const containerBlock = workspace.newBlock(
-      'ast_JoinedStr_create_with_container',
-    );
+    const containerBlock = workspace.newBlock('ast_JoinedStr_create_with_container');
     containerBlock.initSvg();
     let connection = containerBlock.getInput('STACK')!.connection;
     for (let i = 0; i < this.itemCount_; i++) {
@@ -147,9 +145,7 @@ defineBlock('ast_JoinedStr', {
    * @this Blockly.Block
    */
   compose: function (this: JoinedStrBlock, containerBlock: Blockly.Block) {
-    let itemBlock = containerBlock.getInputTargetBlock(
-      'STACK',
-    ) as JoinedStrItemBlock | null;
+    let itemBlock = containerBlock.getInputTargetBlock('STACK') as JoinedStrItemBlock | null;
     // Count number of inputs.
     const connections: (Blockly.Connection | null | undefined)[] = [];
     const blockTypes: string[] = [];
@@ -187,9 +183,7 @@ defineBlock('ast_JoinedStr', {
         itemBlock.setDeletable(false);
         itemBlock.setMovable(false);
         itemBlock.initSvg();
-        this.getInput('ADD' + i)!.connection!.connect(
-          itemBlock.outputConnection!,
-        );
+        this.getInput('ADD' + i)!.connection!.connect(itemBlock.outputConnection!);
         itemBlock.render();
         //this.get(itemBlock, 'ADD'+i)
       }
@@ -201,13 +195,8 @@ defineBlock('ast_JoinedStr', {
    * @param {!Blockly.Block} containerBlock Root block in mutator.
    * @this Blockly.Block
    */
-  saveConnections: function (
-    this: JoinedStrBlock,
-    containerBlock: Blockly.Block,
-  ) {
-    let itemBlock = containerBlock.getInputTargetBlock(
-      'STACK',
-    ) as JoinedStrItemBlock | null;
+  saveConnections: function (this: JoinedStrBlock, containerBlock: Blockly.Block) {
+    let itemBlock = containerBlock.getInputTargetBlock('STACK') as JoinedStrItemBlock | null;
     let i = 0;
     while (itemBlock) {
       const input = this.getInput('ADD' + i);
@@ -233,9 +222,7 @@ defineBlock('ast_JoinedStr', {
     let i = 0;
     for (; i < this.itemCount_; i++) {
       if (!this.getInput('ADD' + i)) {
-        const input = this.appendValueInput('ADD' + i).setCheck(
-          'FormattedValueStr',
-        );
+        const input = this.appendValueInput('ADD' + i).setCheck('FormattedValueStr');
         if (i === 0) {
           input.appendField('Join:').setAlign(Blockly.inputs.Align.RIGHT);
         }
@@ -337,19 +324,14 @@ generator.forBlock['ast_JoinedStr'] = function (block) {
       indices.push(i);
       strings.push(value);
     } else if (child.type === 'ast_FormattedValue') {
-      const value =
-        generator.valueToCode(child, 'VALUE', generator.ORDER_NONE) ||
-        generator.blank;
+      const value = generator.valueToCode(child, 'VALUE', generator.ORDER_NONE) || generator.blank;
       elements[i] = `{${value}}`;
     } else if (child.type === 'ast_FormattedValueFull') {
-      const value =
-        generator.valueToCode(child, 'VALUE', generator.ORDER_NONE) ||
-        generator.blank;
+      const value = generator.valueToCode(child, 'VALUE', generator.ORDER_NONE) || generator.blank;
       let formatSpec = child.getFieldValue('FORMAT_SPEC');
       formatSpec = formatSpec ? `:${formatSpec}` : '';
       const conversion = child.getFieldValue('CONVERSION');
-      elements[i] =
-        `{${value}${formatSpec}${conversion === '-1' ? '' : `!${conversion}`}}`;
+      elements[i] = `{${value}${formatSpec}${conversion === '-1' ? '' : `!${conversion}`}}`;
     }
   }
 

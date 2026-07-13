@@ -63,8 +63,7 @@ generator.forBlock['ast_Delete'] = function (block) {
   const elements = new Array<string>(typed.targetCount_);
   for (let i = 0; i < typed.targetCount_; i++) {
     elements[i] =
-      generator.valueToCode(block, 'TARGET' + i, generator.ORDER_NONE) ||
-      generator.blank;
+      generator.valueToCode(block, 'TARGET' + i, generator.ORDER_NONE) || generator.blank;
   }
   const code = 'del ' + elements.join(', ') + '\n';
   return code;

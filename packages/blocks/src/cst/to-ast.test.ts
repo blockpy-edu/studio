@@ -6,10 +6,7 @@ import { parseSource } from './parse';
 import type * as ir from '../ir/types';
 
 const corpus: { programs: string[] } = JSON.parse(
-  readFileSync(
-    join(__dirname, '../../test/fixtures/blockmirror-corpus.json'),
-    'utf8',
-  ),
+  readFileSync(join(__dirname, '../../test/fixtures/blockmirror-corpus.json'), 'utf8'),
 );
 
 describe('parseSource (B3 gate)', () => {
@@ -111,24 +108,18 @@ describe('sourceToAst', () => {
   });
 
   it('is not / not in', () => {
-    expect(
-      ((first<ir.ExprStmt>('a is not b')).value as ir.Compare).ops[0]!
-        ._astname,
-    ).toBe('IsNot');
-    expect(
-      ((first<ir.ExprStmt>('a not in b')).value as ir.Compare).ops[0]!
-        ._astname,
-    ).toBe('NotIn');
+    expect((first<ir.ExprStmt>('a is not b').value as ir.Compare).ops[0]!._astname).toBe('IsNot');
+    expect((first<ir.ExprStmt>('a not in b').value as ir.Compare).ops[0]!._astname).toBe('NotIn');
   });
 
   it('same-op boolean chains flatten (parens preserved as nesting)', () => {
-    const flat = (first<ir.ExprStmt>('a and b and c')).value as ir.BoolOp;
+    const flat = first<ir.ExprStmt>('a and b and c').value as ir.BoolOp;
     expect(flat.values).toHaveLength(3);
-    const mixed = (first<ir.ExprStmt>('a and b or c')).value as ir.BoolOp;
+    const mixed = first<ir.ExprStmt>('a and b or c').value as ir.BoolOp;
     expect(mixed.op._astname).toBe('Or');
     expect(mixed.values).toHaveLength(2);
     expect((mixed.values[0] as ir.BoolOp).op._astname).toBe('And');
-    const nested = (first<ir.ExprStmt>('(a and b) and c')).value as ir.BoolOp;
+    const nested = first<ir.ExprStmt>('(a and b) and c').value as ir.BoolOp;
     expect(nested.values).toHaveLength(2);
   });
 
@@ -158,36 +149,28 @@ describe('sourceToAst', () => {
   });
 
   it('subscript kinds: Index / Slice / ExtSlice', () => {
-    const index = (first<ir.ExprStmt>('a[1]')).value as ir.Subscript;
+    const index = first<ir.ExprStmt>('a[1]').value as ir.Subscript;
     expect(index.slice._astname).toBe('Index');
 
-    const slice = (first<ir.ExprStmt>('a[::-1]')).value as ir.Subscript;
+    const slice = first<ir.ExprStmt>('a[::-1]').value as ir.Subscript;
     expect(slice.slice._astname).toBe('Slice');
     const s = slice.slice as ir.Slice;
     expect(s.lower).toBeNull();
     expect(s.upper).toBeNull();
     expect((s.step as ir.UnaryOp)._astname).toBe('UnaryOp');
 
-    const ext = (first<ir.ExprStmt>('a[1:2, ::3]')).value as ir.Subscript;
+    const ext = first<ir.ExprStmt>('a[1:2, ::3]').value as ir.Subscript;
     expect(ext.slice._astname).toBe('ExtSlice');
-    expect((ext.slice as ir.ExtSlice).dims.map((d) => d._astname)).toEqual([
-      'Slice',
-      'Slice',
-    ]);
+    expect((ext.slice as ir.ExtSlice).dims.map((d) => d._astname)).toEqual(['Slice', 'Slice']);
 
     // All-index multi-dim is ExtSlice (corpus-driven; see subscriptSlice).
-    const multi = (first<ir.ExprStmt>('a[1, 2]')).value as ir.Subscript;
+    const multi = first<ir.ExprStmt>('a[1, 2]').value as ir.Subscript;
     expect(multi.slice._astname).toBe('ExtSlice');
-    expect((multi.slice as ir.ExtSlice).dims.map((d) => d._astname)).toEqual([
-      'Index',
-      'Index',
-    ]);
+    expect((multi.slice as ir.ExtSlice).dims.map((d) => d._astname)).toEqual(['Index', 'Index']);
   });
 
   it('function definition with full parameter forms', () => {
-    const fn = first<ir.FunctionDef>(
-      'def f(a, b=1, *args, c, d=2, **kw) -> int:\n    return a',
-    );
+    const fn = first<ir.FunctionDef>('def f(a, b=1, *args, c, d=2, **kw) -> int:\n    return a');
     expect(fn.name).toBe('f');
     expect(fn.args.args.map((a) => a.arg)).toEqual(['a', 'b']);
     expect(fn.args.defaults).toHaveLength(1);
@@ -214,9 +197,7 @@ describe('sourceToAst', () => {
   });
 
   it('elif chains nest through orelse', () => {
-    const node = first<ir.If>(
-      'if a:\n    pass\nelif b:\n    pass\nelse:\n    pass',
-    );
+    const node = first<ir.If>('if a:\n    pass\nelif b:\n    pass\nelse:\n    pass');
     expect(node.orelse).toHaveLength(1);
     const elifNode = node.orelse[0] as ir.If;
     expect(elifNode._astname).toBe('If');
@@ -240,9 +221,7 @@ describe('sourceToAst', () => {
   });
 
   it('with-multiple items', () => {
-    const node = first<ir.With>(
-      "with open('f') as g, h() as i, other:\n    pass",
-    );
+    const node = first<ir.With>("with open('f') as g, h() as i, other:\n    pass");
     expect(node.items).toHaveLength(3);
     expect(node.items[0]!.optional_vars).toMatchObject({ id: 'g' });
     expect(node.items[2]!.optional_vars).toBeNull();
@@ -263,13 +242,11 @@ describe('sourceToAst', () => {
     expect(from2).toMatchObject({ module: null, level: 1 });
 
     const star = first<ir.ImportFrom>('from os import *');
-    expect(star.names).toEqual([
-      { _astname: 'alias', name: '*', asname: null },
-    ]);
+    expect(star.names).toEqual([{ _astname: 'alias', name: '*', asname: null }]);
   });
 
   it('comprehensions (all four kinds)', () => {
-    const list = (first<ir.ExprStmt>('[x for x in y if z]')).value as ir.ListComp;
+    const list = first<ir.ExprStmt>('[x for x in y if z]').value as ir.ListComp;
     expect(list._astname).toBe('ListComp');
     expect(list.generators[0]).toMatchObject({
       target: { id: 'x' },
@@ -277,31 +254,26 @@ describe('sourceToAst', () => {
     });
     expect(list.generators[0]!.ifs).toHaveLength(1);
 
-    const dict = (first<ir.ExprStmt>('{k: v for k, v in d}')).value as ir.DictComp;
+    const dict = first<ir.ExprStmt>('{k: v for k, v in d}').value as ir.DictComp;
     expect(dict._astname).toBe('DictComp');
     expect((dict.generators[0]!.target as ir.Tuple)._astname).toBe('Tuple');
 
-    expect((first<ir.ExprStmt>('{x for x in y}')).value._astname).toBe(
-      'SetComp',
-    );
-    expect((first<ir.ExprStmt>('(x for x in y)')).value._astname).toBe(
-      'GeneratorExp',
-    );
+    expect(first<ir.ExprStmt>('{x for x in y}').value._astname).toBe('SetComp');
+    expect(first<ir.ExprStmt>('(x for x in y)').value._astname).toBe('GeneratorExp');
 
-    const multi = (first<ir.ExprStmt>('[x for x in y for z in x if z]'))
-      .value as ir.ListComp;
+    const multi = first<ir.ExprStmt>('[x for x in y for z in x if z]').value as ir.ListComp;
     expect(multi.generators).toHaveLength(2);
     expect(multi.generators[1]!.ifs).toHaveLength(1);
   });
 
   it('dict / set / tuple / list literals', () => {
-    expect((first<ir.ExprStmt>('{}')).value._astname).toBe('Dict');
-    expect((first<ir.ExprStmt>('{1: 2}')).value).toMatchObject({
+    expect(first<ir.ExprStmt>('{}').value._astname).toBe('Dict');
+    expect(first<ir.ExprStmt>('{1: 2}').value).toMatchObject({
       _astname: 'Dict',
       keys: [{ n: 1 }],
       values: [{ n: 2 }],
     });
-    expect((first<ir.ExprStmt>('{1, 2}')).value._astname).toBe('Set');
+    expect(first<ir.ExprStmt>('{1, 2}').value._astname).toBe('Set');
     const bare = first<ir.Assign>('x = 1, 2');
     expect(bare.value._astname).toBe('Tuple');
     const empty = first<ir.Assign>('x = ()');
@@ -309,29 +281,23 @@ describe('sourceToAst', () => {
   });
 
   it('yield forms', () => {
-    const bare = first<ir.ExprStmt>('def f():\n    yield', );
+    const bare = first<ir.ExprStmt>('def f():\n    yield');
     void bare; // top-level body[0] is the def; dig in:
     const fn = first<ir.FunctionDef>('def f():\n    yield');
     const yieldStmt = fn.body[0] as ir.ExprStmt;
-    expect((yieldStmt.value as ir.Yield)).toMatchObject({
+    expect(yieldStmt.value as ir.Yield).toMatchObject({
       _astname: 'Yield',
       value: null,
     });
 
     const fn2 = first<ir.FunctionDef>('def f():\n    yield 5');
-    expect(((fn2.body[0] as ir.ExprStmt).value as ir.Yield).value).toMatchObject(
-      { n: 5 },
-    );
+    expect(((fn2.body[0] as ir.ExprStmt).value as ir.Yield).value).toMatchObject({ n: 5 });
 
     const fn3 = first<ir.FunctionDef>('def f():\n    yield from g()');
-    expect(((fn3.body[0] as ir.ExprStmt).value as ir.YieldFrom)._astname).toBe(
-      'YieldFrom',
-    );
+    expect(((fn3.body[0] as ir.ExprStmt).value as ir.YieldFrom)._astname).toBe('YieldFrom');
 
     const fn4 = first<ir.FunctionDef>('def f():\n    x = yield b + 4');
-    expect(((fn4.body[0] as ir.Assign).value as ir.Yield)._astname).toBe(
-      'Yield',
-    );
+    expect(((fn4.body[0] as ir.Assign).value as ir.Yield)._astname).toBe('Yield');
   });
 
   it('lambda', () => {
@@ -377,12 +343,12 @@ describe('sourceToAst', () => {
   });
 
   it('numbers preserve source text', () => {
-    expect((first<ir.ExprStmt>('0x10')).value).toMatchObject({
+    expect(first<ir.ExprStmt>('0x10').value).toMatchObject({
       n: 16,
       source: '0x10',
     });
-    expect((first<ir.ExprStmt>('1j')).value).toMatchObject({ source: '1j' });
-    expect((first<ir.ExprStmt>('1_000')).value).toMatchObject({ n: 1000 });
+    expect(first<ir.ExprStmt>('1j').value).toMatchObject({ source: '1j' });
+    expect(first<ir.ExprStmt>('1_000').value).toMatchObject({ n: 1000 });
   });
 });
 

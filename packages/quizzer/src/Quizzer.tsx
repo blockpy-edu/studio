@@ -84,10 +84,7 @@ export interface QuizzerProps {
     code: string,
   ) => Promise<{ success: boolean }>;
   /** updateSubmission {status: 0, correct: false} with the QUIZ's ids. */
-  submitQuiz?: (
-    assignmentId: number,
-    submissionId: number | null,
-  ) => Promise<QuizSubmitResponse>;
+  submitQuiz?: (assignmentId: number, submissionId: number | null) => Promise<QuizSubmitResponse>;
   markCorrect?: (assignmentId: number) => void;
   logEvent?: (
     eventType: string,
@@ -383,10 +380,7 @@ export function Quizzer(props: QuizzerProps) {
       });
   }, [loaded?.assignment.id]);
 
-  const pools = useMemo(
-    () => (loaded ? poolByQuestion(loaded.instructions) : new Map()),
-    [loaded],
-  );
+  const pools = useMemo(() => (loaded ? poolByQuestion(loaded.instructions) : new Map()), [loaded]);
 
   const questionEntries = useMemo(
     () => Object.entries(loaded?.instructions.questions ?? {}),
@@ -409,10 +403,10 @@ export function Quizzer(props: QuizzerProps) {
   );
 
   if (!loaded) {
-    return withSurface(
-      <div className="blockpy-quizzer">{errorMessage || 'Loading quiz…'}</div>,
-      { a: null, s: null },
-    );
+    return withSurface(<div className="blockpy-quizzer">{errorMessage || 'Loading quiz…'}</div>, {
+      a: null,
+      s: null,
+    });
   }
 
   // The visual editor is the instructor's normal workflow (new requirement,
@@ -472,11 +466,7 @@ export function Quizzer(props: QuizzerProps) {
     );
   }
 
-  const shuffleBase = poolSeed(
-    loaded.instructions.settings?.poolRandomness,
-    seed,
-    attemptCount,
-  );
+  const shuffleBase = poolSeed(loaded.instructions.settings?.poolRandomness, seed, attemptCount);
 
   const attemptBar = (position: 'below' | 'above') => (
     <div className="quizzer-attempt-bar">
@@ -503,12 +493,7 @@ export function Quizzer(props: QuizzerProps) {
           <span>Quiz In Progress!</span>
           <br />
           <div className="text-center">
-            <button
-              type="button"
-              className="btn btn-success"
-              disabled={isDirty}
-              onClick={submit}
-            >
+            <button type="button" className="btn btn-success" disabled={isDirty} onClick={submit}>
               Submit answer
             </button>
           </div>
@@ -526,8 +511,8 @@ export function Quizzer(props: QuizzerProps) {
           )}
           {feedbackType === 'SUMMARY' && (
             <>
-              However, you will <strong>not</strong> see any feedback until the instructor
-              releases grades; the feedback you receive will be limited.
+              However, you will <strong>not</strong> see any feedback until the instructor releases
+              grades; the feedback you receive will be limited.
               <br />
             </>
           )}
@@ -582,7 +567,9 @@ export function Quizzer(props: QuizzerProps) {
       )}
       {readingId !== null && !asStudent && (
         <div>
-          <strong>Reading is hidden; Click &quot;View as Student&quot; to preview the Reading.</strong>
+          <strong>
+            Reading is hidden; Click &quot;View as Student&quot; to preview the Reading.
+          </strong>
           <hr />
         </div>
       )}

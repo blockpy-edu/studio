@@ -42,9 +42,7 @@ generator.forBlock['ast_Attribute'] = function (block) {
 
 generator.forBlock['ast_AttributeFull'] = function (block) {
   // Text value.
-  const value =
-    generator.valueToCode(block, 'VALUE', generator.ORDER_NONE) ||
-    generator.blank;
+  const value = generator.valueToCode(block, 'VALUE', generator.ORDER_NONE) || generator.blank;
   const attr = block.getFieldValue('ATTR');
   const code = value + '.' + attr;
   return [code, generator.ORDER_MEMBER];

@@ -44,6 +44,7 @@ export interface LegacyPythonGenerator extends PythonGenerator {
   ORDER_CONDITIONAL: number;
   ORDER_LAMBDA: number;
   ORDER_NONE: number;
+  ORDER_RELATIONAL: number;
 }
 
 export const generator = pythonGenerator as unknown as LegacyPythonGenerator;
@@ -74,8 +75,7 @@ export function installGeneratorShims(): void {
     // Convert the definitions dictionary into a list.
     const imports: string[] = [];
     const definitions: string[] = [];
-    const defs = (this as unknown as { definitions_: Record<string, string> })
-      .definitions_;
+    const defs = (this as unknown as { definitions_: Record<string, string> }).definitions_;
     for (const name in defs) {
       const def = defs[name]!;
       if (def.match(/^(from\s+\S+\s+)?import\s+\S+/)) {
@@ -84,10 +84,8 @@ export function installGeneratorShims(): void {
         definitions.push(def);
       }
     }
-    (this as unknown as { definitions_: object }).definitions_ =
-      Object.create(null);
-    (this as unknown as { functionNames_: object }).functionNames_ =
-      Object.create(null);
+    (this as unknown as { definitions_: object }).definitions_ = Object.create(null);
+    (this as unknown as { functionNames_: object }).functionNames_ = Object.create(null);
     generator.imported_ = Object.create(null);
     this.isInitialized = false;
 
@@ -158,8 +156,10 @@ function installCaseSensitiveNames(): void {
     return safeName;
   };
 
-  (Blockly.Names as unknown as { equals(a: string, b: string): boolean }).equals =
-    function (name1: string, name2: string): boolean {
-      return name1 === name2;
-    };
+  (Blockly.Names as unknown as { equals(a: string, b: string): boolean }).equals = function (
+    name1: string,
+    name2: string,
+  ): boolean {
+    return name1 === name2;
+  };
 }

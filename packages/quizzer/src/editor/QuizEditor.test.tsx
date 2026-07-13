@@ -25,7 +25,7 @@ describe('QuizEditor (visual authoring, 2026-07-11 requirement)', () => {
     const { view } = renderEditor();
     expect(view.container.querySelector('.quizzer-editor-question')).not.toBeNull();
     expect(screen.getByText('No issues found')).toBeDefined();
-    expect((screen.getByDisplayValue('Variables can change.') as HTMLTextAreaElement)).toBeDefined();
+    expect(screen.getByDisplayValue('Variables can change.') as HTMLTextAreaElement).toBeDefined();
   });
 
   it('edits flow into the documents and Save persists both', async () => {
@@ -45,7 +45,9 @@ describe('QuizEditor (visual authoring, 2026-07-11 requirement)', () => {
   it('live validation flags issues as you edit', async () => {
     renderEditor(
       JSON.stringify({
-        questions: { mc1: { type: 'multiple_choice_question', body: 'B', points: 1, answers: ['a'] } },
+        questions: {
+          mc1: { type: 'multiple_choice_question', body: 'B', points: 1, answers: ['a'] },
+        },
       }),
       JSON.stringify({ questions: { mc1: { correct: 'ghost' } } }),
     );

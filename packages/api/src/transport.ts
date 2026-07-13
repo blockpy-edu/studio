@@ -106,10 +106,7 @@ export class Transport {
    * that refuses POST. No retry loop; resolution failures are cosmetic
    * (Missing Reading style) so callers fail soft.
    */
-  async getJson(
-    url: string,
-    params: Record<string, string | number>,
-  ): Promise<LegacyResponse> {
+  async getJson(url: string, params: Record<string, string | number>): Promise<LegacyResponse> {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
       query.set(key, String(value));

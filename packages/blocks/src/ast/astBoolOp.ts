@@ -8,12 +8,20 @@ import type * as ir from '../ir/types';
 
 /** `[keyword, opName, order, tooltip]` (legacy `BlockMirrorTextToBlocks.BOOLOPS`). */
 const BOOLOPS: [string, string, number, string][] = [
-  ['and', 'And', generator.ORDER_LOGICAL_AND, 'Return whether the left and right both evaluate to True.'],
-  ['or', 'Or', generator.ORDER_LOGICAL_OR, 'Return whether either the left or right evaluate to True.'],
+  [
+    'and',
+    'And',
+    generator.ORDER_LOGICAL_AND,
+    'Return whether the left and right both evaluate to True.',
+  ],
+  [
+    'or',
+    'Or',
+    generator.ORDER_LOGICAL_OR,
+    'Return whether either the left or right evaluate to True.',
+  ],
 ];
-const BOOLOPS_BLOCKLY_DISPLAY: [string, string][] = BOOLOPS.map(
-  (boolop) => [boolop[0], boolop[1]],
-);
+const BOOLOPS_BLOCKLY_DISPLAY: [string, string][] = BOOLOPS.map((boolop) => [boolop[0], boolop[1]]);
 // Built for parity with legacy; the generator below reads the field directly.
 const BOOLOPS_BLOCKLY_GENERATE: Record<string, [string, number]> = {};
 BOOLOPS.forEach(function (boolop) {
@@ -36,14 +44,9 @@ defineBlocks({
 generator.forBlock['ast_BoolOp'] = function (block) {
   // Operations 'and', 'or'.
   const operator = block.getFieldValue('OP') === 'And' ? 'and' : 'or';
-  const order =
-    operator === 'and'
-      ? generator.ORDER_LOGICAL_AND
-      : generator.ORDER_LOGICAL_OR;
-  const argument0 =
-    generator.valueToCode(block, 'A', order) || generator.blank;
-  const argument1 =
-    generator.valueToCode(block, 'B', order) || generator.blank;
+  const order = operator === 'and' ? generator.ORDER_LOGICAL_AND : generator.ORDER_LOGICAL_OR;
+  const argument0 = generator.valueToCode(block, 'A', order) || generator.blank;
+  const argument1 = generator.valueToCode(block, 'B', order) || generator.blank;
   const code = argument0 + ' ' + operator + ' ' + argument1;
   return [code, order];
 };
@@ -53,7 +56,7 @@ registerConverter(
   function (this: TextToBlocksConverter, node: ir.BoolOp, _parent: unknown) {
     const op = node.op;
     const values = node.values;
-    let result_block = this.convert(values[0], node) as Element;
+    let result_block = this.convert(values[0]!, node) as Element;
     for (let i = 1; i < values.length; i += 1) {
       result_block = createBlock(
         'ast_BoolOp',
@@ -63,7 +66,7 @@ registerConverter(
         },
         {
           A: result_block,
-          B: this.convert(values[i], node) as Element,
+          B: this.convert(values[i]!, node) as Element,
         },
         {
           inline: 'true',

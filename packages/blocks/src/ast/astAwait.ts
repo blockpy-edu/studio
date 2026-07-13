@@ -20,17 +20,20 @@ defineBlocks({
 });
 
 generator.forBlock['ast_Await'] = function (block) {
-  const value =
-    generator.valueToCode(block, 'VALUE', generator.ORDER_LAMBDA) ||
-    generator.blank;
+  const value = generator.valueToCode(block, 'VALUE', generator.ORDER_LAMBDA) || generator.blank;
   return ['await ' + value, generator.ORDER_LAMBDA];
 };
 
 registerConverter(
   'Await',
   function (this: TextToBlocksConverter, node: ir.Await, _parent: unknown) {
-    return createBlock('ast_Await', node.lineno, {}, {
-      VALUE: this.convert(node.value, node) as Element,
-    });
+    return createBlock(
+      'ast_Await',
+      node.lineno,
+      {},
+      {
+        VALUE: this.convert(node.value, node) as Element,
+      },
+    );
   },
 );

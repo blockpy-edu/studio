@@ -30,8 +30,7 @@ export function publishNavigationGlobals(
   group: GroupNavBootData,
   options: NavigationGlobalsOptions = {},
 ): () => void {
-  const globals =
-    options.globals ?? (globalThis as unknown as Record<string, unknown>);
+  const globals = options.globals ?? (globalThis as unknown as Record<string, unknown>);
   const doc = options.document ?? (typeof document === 'undefined' ? null : document);
   // The macro's sorted_group rejects subordinates (:2) before building
   // URL_MAP/INDICES.

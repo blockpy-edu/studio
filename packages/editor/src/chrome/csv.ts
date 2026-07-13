@@ -71,11 +71,7 @@ export function parseCsv(text: string): string[][] | null {
 export function serializeCsv(rows: string[][]): string {
   return rows
     .map((row) =>
-      row
-        .map((cell) =>
-          /[",\r\n]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell,
-        )
-        .join(','),
+      row.map((cell) => (/[",\r\n]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell)).join(','),
     )
     .join('\n');
 }

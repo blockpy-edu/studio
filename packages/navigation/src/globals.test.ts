@@ -10,10 +10,38 @@ import type { GroupNavBootData } from './store';
 
 const GROUP: GroupNavBootData = {
   assignments: [
-    { id: 101, name: 'A', url: '/load?assignment_id=101', subordinate: false, hidden: false, correct: false },
-    { id: 104, name: 'B', url: '/load?assignment_id=104', subordinate: false, hidden: false, correct: false },
-    { id: 102, name: 'Sub', url: '/load?assignment_id=102', subordinate: true, hidden: false, correct: false },
-    { id: 103, name: 'C', url: '/load?assignment_id=103', subordinate: false, hidden: false, correct: false },
+    {
+      id: 101,
+      name: 'A',
+      url: '/load?assignment_id=101',
+      subordinate: false,
+      hidden: false,
+      correct: false,
+    },
+    {
+      id: 104,
+      name: 'B',
+      url: '/load?assignment_id=104',
+      subordinate: false,
+      hidden: false,
+      correct: false,
+    },
+    {
+      id: 102,
+      name: 'Sub',
+      url: '/load?assignment_id=102',
+      subordinate: true,
+      hidden: false,
+      correct: false,
+    },
+    {
+      id: 103,
+      name: 'C',
+      url: '/load?assignment_id=103',
+      subordinate: false,
+      hidden: false,
+      correct: false,
+    },
   ],
   anySecretive: false,
   currentAssignmentId: 101,

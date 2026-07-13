@@ -27,9 +27,7 @@ defineBlock('ast_List', {
     this.itemCount_ = 3;
     this.updateShape_();
     this.setOutput(true, 'List');
-    this.setMutator(
-      new Blockly.icons.MutatorIcon(['ast_List_create_with_item'], this),
-    );
+    this.setMutator(new Blockly.icons.MutatorIcon(['ast_List_create_with_item'], this));
   },
   /**
    * Create XML to represent list inputs.
@@ -74,9 +72,7 @@ defineBlock('ast_List', {
    * @this Blockly.Block
    */
   compose: function (this: ListBlock, containerBlock: Blockly.Block) {
-    let itemBlock = containerBlock.getInputTargetBlock(
-      'STACK',
-    ) as ListItemBlock | null;
+    let itemBlock = containerBlock.getInputTargetBlock('STACK') as ListItemBlock | null;
     // Count number of inputs.
     const connections: (Blockly.Connection | null | undefined)[] = [];
     while (itemBlock) {
@@ -104,9 +100,7 @@ defineBlock('ast_List', {
    * @this Blockly.Block
    */
   saveConnections: function (this: ListBlock, containerBlock: Blockly.Block) {
-    let itemBlock = containerBlock.getInputTargetBlock(
-      'STACK',
-    ) as ListItemBlock | null;
+    let itemBlock = containerBlock.getInputTargetBlock('STACK') as ListItemBlock | null;
     let i = 0;
     while (itemBlock) {
       const input = this.getInput('ADD' + i);
@@ -149,9 +143,7 @@ defineBlock('ast_List', {
       this.removeInput('TAIL');
     }
     if (this.itemCount_) {
-      this.appendDummyInput('TAIL')
-        .appendField(']')
-        .setAlign(Blockly.inputs.Align.RIGHT);
+      this.appendDummyInput('TAIL').appendField(']').setAlign(Blockly.inputs.Align.RIGHT);
     }
   },
 });
@@ -188,9 +180,7 @@ generator.forBlock['ast_List'] = function (block) {
   const typed = block as ListBlock;
   const elements = new Array<string>(typed.itemCount_);
   for (let i = 0; i < typed.itemCount_; i++) {
-    elements[i] =
-      generator.valueToCode(block, 'ADD' + i, generator.ORDER_NONE) ||
-      generator.blank;
+    elements[i] = generator.valueToCode(block, 'ADD' + i, generator.ORDER_NONE) || generator.blank;
   }
   const code = '[' + elements.join(', ') + ']';
   return [code, generator.ORDER_ATOMIC];

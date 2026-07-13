@@ -13,7 +13,7 @@
     "typecheck": "pnpm -r run typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "format": "prettier --write \"**/*.{ts,tsx,css,json,html,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,css,json,html,yml,yaml}\"",
     "e2e": "playwright test"

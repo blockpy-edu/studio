@@ -47,9 +47,7 @@ defineBlock('ast_Import', {
     for (i = 0; i < this.nameCount_; i++) {
       let input = this.getInput('CLAUSE' + i);
       if (!input) {
-        input = this.appendDummyInput('CLAUSE' + i).setAlign(
-          Blockly.inputs.Align.RIGHT,
-        );
+        input = this.appendDummyInput('CLAUSE' + i).setAlign(Blockly.inputs.Align.RIGHT);
         if (i === 0) {
           input.appendField('import');
         }
@@ -102,11 +100,7 @@ defineBlock('ast_Import', {
     this.nameCount_ = parseInt(xmlElement.getAttribute('names')!, 10);
     this.from_ = 'true' === xmlElement.getAttribute('from');
     this.regulars_ = [];
-    for (
-      let i = 0, childNode;
-      (childNode = xmlElement.childNodes[i] as Element | undefined);
-      i++
-    ) {
+    for (let i = 0, childNode; (childNode = xmlElement.childNodes[i] as Element | undefined); i++) {
       if (childNode.nodeName.toLowerCase() === 'regular') {
         this.regulars_.push('true' === childNode.getAttribute('name'));
       }
@@ -145,7 +139,7 @@ generator.forBlock['ast_Import'] = function (block) {
 const convertImport = function (
   this: TextToBlocksConverter,
   node: ir.Import | ir.ImportFrom,
-  _parent: any,
+  _parent: unknown,
 ): Element | null {
   const names = node.names;
 
@@ -179,14 +173,7 @@ const convertImport = function (
     mutations['@from'] = false;
   }
 
-  return createBlock(
-    'ast_Import',
-    node.lineno,
-    fields,
-    {},
-    { inline: true },
-    mutations,
-  );
+  return createBlock('ast_Import', node.lineno, fields, {}, { inline: true }, mutations);
 };
 
 registerConverter('Import', convertImport);

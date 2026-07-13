@@ -109,38 +109,27 @@ const highlightField = StateField.define<HighlightEntry[]>({
         ];
       } else if (effect.is(clearHighlight)) {
         next =
-          effect.value.style === null
-            ? []
-            : next.filter((e) => e.style !== effect.value.style);
+          effect.value.style === null ? [] : next.filter((e) => e.style !== effect.value.style);
       }
     }
     return next;
   },
 });
 
-const highlightPlugin = EditorView.decorations.compute(
-  ['doc', highlightField],
-  (state) => {
-    const builder = new RangeSetBuilder<Decoration>();
-    const entries = [...state.field(highlightField)].sort(
-      (a, b) => a.line - b.line,
-    );
-    const seen = new Set<string>();
-    for (const entry of entries) {
-      if (entry.line < 1 || entry.line > state.doc.lines) continue;
-      const key = `${entry.line}|${entry.style}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      const line = state.doc.line(entry.line);
-      builder.add(
-        line.from,
-        line.from,
-        Decoration.line({ class: entry.style }),
-      );
-    }
-    return builder.finish();
-  },
-);
+const highlightPlugin = EditorView.decorations.compute(['doc', highlightField], (state) => {
+  const builder = new RangeSetBuilder<Decoration>();
+  const entries = [...state.field(highlightField)].sort((a, b) => a.line - b.line);
+  const seen = new Set<string>();
+  for (const entry of entries) {
+    if (entry.line < 1 || entry.line > state.doc.lines) continue;
+    const key = `${entry.line}|${entry.style}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const line = state.doc.line(entry.line);
+    builder.add(line.from, line.from, Decoration.line({ class: entry.style }));
+  }
+  return builder.finish();
+});
 
 /** Syntax lint from the shared Lezer parse — same gate as block generation. */
 function pythonSyntaxLinter() {
@@ -182,10 +171,7 @@ export interface TextEditorHost {
 }
 
 export class DualTextEditor {
-  static readonly VIEW_CONFIGURATIONS: Record<
-    string,
-    TextEditorViewConfiguration
-  > = {
+  static readonly VIEW_CONFIGURATIONS: Record<string, TextEditorViewConfiguration> = {
     split: { width: '40%', visible: true, indentSidebar: false },
     text: { width: '100%', visible: true, indentSidebar: true },
     block: { width: '0%', visible: false, indentSidebar: false },
@@ -246,9 +232,7 @@ export class DualTextEditor {
           ]),
           EditorView.updateListener.of((update) => {
             if (!update.docChanged) return;
-            const quiet = update.transactions.some((tr) =>
-              tr.annotation(silentSet),
-            );
+            const quiet = update.transactions.some((tr) => tr.annotation(silentSet));
             if (quiet) return;
             this.host.onTextChanged(this.getCode());
           }),

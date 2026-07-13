@@ -16,9 +16,7 @@ defineBlock('ast_While', {
   init: function (this: WhileBlock) {
     this.orelse_ = 0;
     this.appendValueInput('TEST').appendField('while');
-    this.appendStatementInput('BODY')
-      .setCheck(null)
-      .setAlign(Blockly.inputs.Align.RIGHT);
+    this.appendStatementInput('BODY').setCheck(null).setAlign(Blockly.inputs.Align.RIGHT);
     this.setInputsInline(false);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
@@ -63,8 +61,7 @@ generator.forBlock['ast_While'] = function (block) {
   // Test
   const test =
     'while ' +
-    (generator.valueToCode(block, 'TEST', generator.ORDER_NONE) ||
-      generator.blank) +
+    (generator.valueToCode(block, 'TEST', generator.ORDER_NONE) || generator.blank) +
     ':\n';
   // Body:
   const body = generator.statementToCode(block, 'BODY') || generator.PASS;
@@ -73,9 +70,7 @@ generator.forBlock['ast_While'] = function (block) {
   // Legacy used `this.orelse_`; generator functions are invoked with the
   // block as `this`, so this is the same value.
   if (typed.orelse_) {
-    orelse =
-      'else:\n' +
-      (generator.statementToCode(block, 'ORELSEBODY') || generator.PASS);
+    orelse = 'else:\n' + (generator.statementToCode(block, 'ORELSEBODY') || generator.PASS);
   }
   return test + body + orelse;
 };

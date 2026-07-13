@@ -13,8 +13,7 @@ export function workspaceToPython(workspace: Blockly.Workspace): string {
 
 /** Load Blockly XML (string or element) into a fresh headless workspace. */
 export function xmlToWorkspace(xml: string | Element): Blockly.Workspace {
-  const dom =
-    typeof xml === 'string' ? Blockly.utils.xml.textToDom(xml) : xml;
+  const dom = typeof xml === 'string' ? Blockly.utils.xml.textToDom(xml) : xml;
   const workspace = new Blockly.Workspace();
   Blockly.Xml.domToWorkspace(dom, workspace);
   return workspace;

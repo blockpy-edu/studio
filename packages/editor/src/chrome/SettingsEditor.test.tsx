@@ -21,23 +21,15 @@ const BLOB = JSON.stringify({
 describe('SettingsEditor', () => {
   it('initializes from the blob and round-trips unknown keys on save', () => {
     const onSave = vi.fn();
-    const { container, getByText } = render(
-      <SettingsEditor blob={BLOB} onSave={onSave} />,
-    );
+    const { container, getByText } = render(<SettingsEditor blob={BLOB} onSave={onSave} />);
     // Prefilled from the blob.
-    const toolbox = container.querySelector<HTMLSelectElement>(
-      '#blockpy-settings-toolbox',
-    )!;
+    const toolbox = container.querySelector<HTMLSelectElement>('#blockpy-settings-toolbox')!;
     expect(toolbox.value).toBe('ct');
-    const hideFiles = container.querySelector<HTMLInputElement>(
-      '#blockpy-settings-hide_files',
-    )!;
+    const hideFiles = container.querySelector<HTMLInputElement>('#blockpy-settings-hide_files')!;
     expect(hideFiles.checked).toBe(false);
 
     // Edit one boolean, save.
-    fireEvent.click(
-      container.querySelector('#blockpy-settings-disable_timeout')!,
-    );
+    fireEvent.click(container.querySelector('#blockpy-settings-disable_timeout')!);
     fireEvent.click(getByText('Save changes'));
     expect(onSave).toHaveBeenCalledTimes(1);
     const [blob, fields] = onSave.mock.calls[0] as [string, object];
@@ -51,21 +43,15 @@ describe('SettingsEditor', () => {
   });
 
   it('shows defaults for absent keys (hide_files defaults TRUE per A4)', () => {
-    const { container } = render(
-      <SettingsEditor blob="" onSave={() => undefined} />,
+    const { container } = render(<SettingsEditor blob="" onSave={() => undefined} />);
+    expect(container.querySelector<HTMLInputElement>('#blockpy-settings-hide_files')!.checked).toBe(
+      true,
+    );
+    expect(container.querySelector<HTMLInputElement>('#blockpy-settings-can_blocks')!.checked).toBe(
+      true,
     );
     expect(
-      container.querySelector<HTMLInputElement>('#blockpy-settings-hide_files')!
-        .checked,
-    ).toBe(true);
-    expect(
-      container.querySelector<HTMLInputElement>('#blockpy-settings-can_blocks')!
-        .checked,
-    ).toBe(true);
-    expect(
-      container.querySelector<HTMLInputElement>(
-        '#blockpy-settings-allow_real_requests',
-      )!.checked,
+      container.querySelector<HTMLInputElement>('#blockpy-settings-allow_real_requests')!.checked,
     ).toBe(false);
   });
 
@@ -78,29 +64,20 @@ describe('SettingsEditor', () => {
         onSave={onSave}
       />,
     );
-    const name = container.querySelector<HTMLInputElement>(
-      '#blockpy-settings-name',
-    )!;
+    const name = container.querySelector<HTMLInputElement>('#blockpy-settings-name')!;
     fireEvent.change(name, { target: { value: 'New Name' } });
     fireEvent.click(container.querySelector('#blockpy-settings-hidden')!);
     fireEvent.click(getByText('Save changes'));
-    const [, fields] = onSave.mock.calls[0] as [
-      string,
-      { name: string; hidden: boolean },
-    ];
+    const [, fields] = onSave.mock.calls[0] as [string, { name: string; hidden: boolean }];
     expect(fields.name).toBe('New Name');
     expect(fields.hidden).toBe(true);
   });
 
   it('raw-JSON escape hatch overrides the form and rejects bad JSON', () => {
     const onSave = vi.fn();
-    const { container, getByText } = render(
-      <SettingsEditor blob={BLOB} onSave={onSave} />,
-    );
+    const { container, getByText } = render(<SettingsEditor blob={BLOB} onSave={onSave} />);
     fireEvent.click(getByText('Edit raw JSON'));
-    const textarea = container.querySelector<HTMLTextAreaElement>(
-      '.blockpy-settings-raw',
-    )!;
+    const textarea = container.querySelector<HTMLTextAreaElement>('.blockpy-settings-raw')!;
     fireEvent.change(textarea, { target: { value: '{not json' } });
     fireEvent.click(getByText('Save changes'));
     expect(onSave).not.toHaveBeenCalled(); // invalid JSON blocked

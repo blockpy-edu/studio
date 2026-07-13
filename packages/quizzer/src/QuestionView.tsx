@@ -110,6 +110,8 @@ interface BlankSlot {
 }
 
 export function QuestionView(props: QuestionViewProps) {
+  // Destructured (M5.1): exact hook deps without the whole `props`.
+  const { renderMarkdown } = props;
   const { question, answer, feedback, readOnly, asStudent, feedbackType, index } = props;
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const [slots, setSlots] = useState<BlankSlot[]>([]);
@@ -144,10 +146,7 @@ export function QuestionView(props: QuestionViewProps) {
     return body;
   }, [question]);
 
-  const bodyHtml = useMemo(
-    () => props.renderMarkdown(preparedBody),
-    [props.renderMarkdown, preparedBody],
-  );
+  const bodyHtml = useMemo(() => renderMarkdown(preparedBody), [renderMarkdown, preparedBody]);
 
   // Students only see question content once an attempt exists
   // (questions_ui.html:25) — the slot scan must re-run when the body
@@ -238,7 +237,7 @@ export function QuestionView(props: QuestionViewProps) {
                     disabled={readOnly}
                     onChange={() => props.onChange(option)}
                   />
-                  <span dangerouslySetInnerHTML={{ __html: props.renderMarkdown(option) }} />
+                  <span dangerouslySetInnerHTML={{ __html: renderMarkdown(option) }} />
                 </label>
               </div>
             ))}
@@ -287,7 +286,7 @@ export function QuestionView(props: QuestionViewProps) {
               <div className="row justify-content-between mb-3" key={statementIndex}>
                 <div
                   className="col"
-                  dangerouslySetInnerHTML={{ __html: props.renderMarkdown(statement) }}
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(statement) }}
                 />
                 <div className="col">
                   <select
@@ -392,10 +391,7 @@ export function QuestionView(props: QuestionViewProps) {
                   : 'bg-danger'
             }`}
           >
-            <span
-              className="text-white"
-              dangerouslySetInnerHTML={{ __html: feedback.message }}
-            />
+            <span className="text-white" dangerouslySetInnerHTML={{ __html: feedback.message }} />
           </div>
         )}
       </div>

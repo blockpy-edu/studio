@@ -43,9 +43,7 @@ generator.forBlock['ast_Return'] = function () {
 };
 
 generator.forBlock['ast_ReturnFull'] = function (block) {
-  const value =
-    generator.valueToCode(block, 'VALUE', generator.ORDER_ATOMIC) ||
-    generator.blank;
+  const value = generator.valueToCode(block, 'VALUE', generator.ORDER_ATOMIC) || generator.blank;
   return 'return ' + value + '\n';
 };
 
@@ -57,9 +55,14 @@ registerConverter(
     if (value == null) {
       return createBlock('ast_Return', node.lineno);
     } else {
-      return createBlock('ast_ReturnFull', node.lineno, {}, {
-        VALUE: this.convert(value, node) as Element,
-      });
+      return createBlock(
+        'ast_ReturnFull',
+        node.lineno,
+        {},
+        {
+          VALUE: this.convert(value, node) as Element,
+        },
+      );
     }
   },
 );

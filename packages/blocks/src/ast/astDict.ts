@@ -36,9 +36,7 @@ defineBlock('ast_Dict', {
     this.itemCount_ = 3;
     this.updateShape_();
     this.setOutput(true, 'Dict');
-    this.setMutator(
-      new Blockly.icons.MutatorIcon(['ast_Dict_create_with_item'], this),
-    );
+    this.setMutator(new Blockly.icons.MutatorIcon(['ast_Dict_create_with_item'], this));
   },
   /**
    * Create XML to represent dict inputs.
@@ -83,9 +81,7 @@ defineBlock('ast_Dict', {
    * @this Blockly.Block
    */
   compose: function (this: DictBlock, containerBlock: Blockly.Block) {
-    let itemBlock = containerBlock.getInputTargetBlock(
-      'STACK',
-    ) as DictItemBlock | null;
+    let itemBlock = containerBlock.getInputTargetBlock('STACK') as DictItemBlock | null;
     // Count number of inputs.
     const connections: (Blockly.Connection | null | undefined)[] = [];
     while (itemBlock) {
@@ -119,9 +115,7 @@ defineBlock('ast_Dict', {
         itemBlock.setDeletable(false);
         itemBlock.setMovable(false);
         itemBlock.initSvg();
-        this.getInput('ADD' + i)!.connection!.connect(
-          itemBlock.outputConnection!,
-        );
+        this.getInput('ADD' + i)!.connection!.connect(itemBlock.outputConnection!);
         itemBlock.render();
         //this.get(itemBlock, 'ADD'+i)
       }
@@ -133,9 +127,7 @@ defineBlock('ast_Dict', {
    * @this Blockly.Block
    */
   saveConnections: function (this: DictBlock, containerBlock: Blockly.Block) {
-    let itemBlock = containerBlock.getInputTargetBlock(
-      'STACK',
-    ) as DictItemBlock | null;
+    let itemBlock = containerBlock.getInputTargetBlock('STACK') as DictItemBlock | null;
     let i = 0;
     while (itemBlock) {
       const input = this.getInput('ADD' + i);
@@ -162,9 +154,7 @@ defineBlock('ast_Dict', {
       if (!this.getInput('ADD' + i)) {
         const input = this.appendValueInput('ADD' + i).setCheck('DictPair');
         if (i === 0) {
-          input
-            .appendField('create dict with')
-            .setAlign(Blockly.inputs.Align.RIGHT);
+          input.appendField('create dict with').setAlign(Blockly.inputs.Align.RIGHT);
         }
       }
     }
@@ -223,67 +213,53 @@ generator.forBlock['ast_Dict'] = function (block) {
       elements[i] = generator.blank + ': ' + generator.blank;
       continue;
     }
-    const key =
-      generator.valueToCode(child, 'KEY', generator.ORDER_NONE) ||
-      generator.blank;
-    const value =
-      generator.valueToCode(child, 'VALUE', generator.ORDER_NONE) ||
-      generator.blank;
+    const key = generator.valueToCode(child, 'KEY', generator.ORDER_NONE) || generator.blank;
+    const value = generator.valueToCode(child, 'VALUE', generator.ORDER_NONE) || generator.blank;
     elements[i] = key + ': ' + value;
   }
   const code = '{' + elements.join(', ') + '}';
   return [code, generator.ORDER_ATOMIC];
 };
 
-registerConverter(
-  'Dict',
-  function (this: TextToBlocksConverter, node: ir.Dict, _parent: unknown) {
-    // Legacy guarded against a null `keys` array (a Skulpt possibility);
-    // the IR always delivers an array, but the guard is kept verbatim.
-    const keys = node.keys as ir.Dict['keys'] | null;
-    const values = node.values;
+registerConverter('Dict', function (this: TextToBlocksConverter, node: ir.Dict, _parent: unknown) {
+  // Legacy guarded against a null `keys` array (a Skulpt possibility);
+  // the IR always delivers an array, but the guard is kept verbatim.
+  const keys = node.keys as ir.Dict['keys'] | null;
+  const values = node.values;
 
-    if (keys === null) {
-      return createBlock(
-        'ast_Dict',
-        node.lineno,
-        {},
-        {},
-        { inline: 'false' },
-        { '@items': 0 },
-      );
-    }
+  if (keys === null) {
+    return createBlock('ast_Dict', node.lineno, {}, {}, { inline: 'false' }, { '@items': 0 });
+  }
 
-    const elements: Record<string, Element | null> = {};
-    for (let i = 0; i < keys.length; i++) {
-      // NOTE: a `null` key entry (a `**expansion`) was not handled by legacy
-      // either — `this.convert(null, ...)` throws, and the statement falls
-      // back to a raw block.
-      const key = keys[i]!;
-      const value = values[i]!;
-      elements['ADD' + i] = createBlock(
-        'ast_DictItem',
-        node.lineno,
-        {},
-        {
-          KEY: this.convert(key, node) as Element,
-          VALUE: this.convert(value, node) as Element,
-        },
-        this.LOCKED_BLOCK,
-      );
-    }
-
-    return createBlock(
-      'ast_Dict',
+  const elements: Record<string, Element | null> = {};
+  for (let i = 0; i < keys.length; i++) {
+    // NOTE: a `null` key entry (a `**expansion`) was not handled by legacy
+    // either — `this.convert(null, ...)` throws, and the statement falls
+    // back to a raw block.
+    const key = keys[i]!;
+    const value = values[i]!;
+    elements['ADD' + i] = createBlock(
+      'ast_DictItem',
       node.lineno,
       {},
-      elements,
       {
-        inline: 'false',
+        KEY: this.convert(key, node) as Element,
+        VALUE: this.convert(value, node) as Element,
       },
-      {
-        '@items': keys.length,
-      },
+      this.LOCKED_BLOCK,
     );
-  },
-);
+  }
+
+  return createBlock(
+    'ast_Dict',
+    node.lineno,
+    {},
+    elements,
+    {
+      inline: 'false',
+    },
+    {
+      '@items': keys.length,
+    },
+  );
+});

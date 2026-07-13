@@ -62,9 +62,7 @@ export function Footer(props: FooterProps) {
     if (!file || !props.onForceLoadAssignment) return;
     const reader = new FileReader();
     reader.onload = (loaded) => {
-      props.onForceLoadAssignment?.(
-        JSON.parse(String(loaded.target?.result ?? 'null')),
-      );
+      props.onForceLoadAssignment?.(JSON.parse(String(loaded.target?.result ?? 'null')));
     };
     reader.readAsText(file);
     event.target.value = '';
@@ -84,18 +82,12 @@ export function Footer(props: FooterProps) {
             />
           )}
         </label>
-        {SERVER_ENDPOINTS.filter(
-          (endpoint) => endpoint !== 'loadAssignment',
-        ).map((endpoint) => (
+        {SERVER_ENDPOINTS.filter((endpoint) => endpoint !== 'loadAssignment').map((endpoint) => (
           <span key={endpoint}>
             {', '}
             <span
               className={`badge server-status-${serverStatus[endpoint]}`}
-              onClick={
-                endpoint === 'updateSubmission'
-                  ? props.onForceUpdateSubmission
-                  : undefined
-              }
+              onClick={endpoint === 'updateSubmission' ? props.onForceUpdateSubmission : undefined}
             >
               {ENDPOINT_LABELS[endpoint]}
             </span>
@@ -107,8 +99,7 @@ export function Footer(props: FooterProps) {
       </div>
       <div>
         <span>
-          User: <span>{identity.userId ?? ''}</span> (
-          <span>{identity.userName ?? ''}</span>,{' '}
+          User: <span>{identity.userId ?? ''}</span> (<span>{identity.userName ?? ''}</span>,{' '}
           <span>{identity.userRole ?? ''}</span>)
         </span>
         , <span>Course: {identity.courseId ?? ''}</span>,{' '}

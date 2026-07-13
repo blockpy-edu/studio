@@ -11,9 +11,7 @@ import {
 import { Footer } from './Footer';
 import { requestPasscode, useEditorChromeStore } from './store';
 
-function controls(
-  overrides: Partial<SubmissionControls> = {},
-): SubmissionControls {
+function controls(overrides: Partial<SubmissionControls> = {}): SubmissionControls {
   return {
     status: 'inProgress',
     reviewed: true,
@@ -45,34 +43,24 @@ describe('formatClockTime (utilities.js getCurrentTime)', () => {
 
 describe('markSubmittedText ladder (blockpy.js:593-607)', () => {
   it('completed → closed caption, grouped variant', () => {
-    expect(markSubmittedText(controls({ status: 'Completed' }), false)).toBe(
-      'Assignment closed',
+    expect(markSubmittedText(controls({ status: 'Completed' }), false)).toBe('Assignment closed');
+    expect(markSubmittedText(controls({ status: 'completed', grouped: true }), false)).toBe(
+      'Problem closed',
     );
-    expect(
-      markSubmittedText(controls({ status: 'completed', grouped: true }), false),
-    ).toBe('Problem closed');
   });
 
   it('submitted (reviewed/canClose) → reopen', () => {
-    expect(markSubmittedText(controls({ status: 'Submitted' }), false)).toBe(
-      'Reopen for editing',
-    );
-    expect(
-      isSubmitted(controls({ status: 'submitted', reviewed: false })),
-    ).toBe(false);
+    expect(markSubmittedText(controls({ status: 'Submitted' }), false)).toBe('Reopen for editing');
+    expect(isSubmitted(controls({ status: 'submitted', reviewed: false }))).toBe(false);
   });
 
   it('dirty → Run; clean → Submit when visible+correct, else Submit early', () => {
     expect(markSubmittedText(controls(), true)).toBe('Run');
-    expect(markSubmittedText(controls({ correct: true }), false)).toBe(
-      'Submit',
-    );
-    expect(
-      markSubmittedText(controls({ correct: true, hidden: true }), false),
-    ).toBe('Submit early');
-    expect(markSubmittedText(controls({ correct: false }), false)).toBe(
+    expect(markSubmittedText(controls({ correct: true }), false)).toBe('Submit');
+    expect(markSubmittedText(controls({ correct: true, hidden: true }), false)).toBe(
       'Submit early',
     );
+    expect(markSubmittedText(controls({ correct: false }), false)).toBe('Submit early');
   });
 });
 
@@ -96,9 +84,7 @@ describe('QuickMenu component', () => {
     // Bug icon present but display:none via CSS (dead in legacy too).
     expect(menu!.querySelector('.blockpy-student-error')).not.toBeNull();
     // No share URL configured → no share button (legacy canShare).
-    expect(
-      menu!.querySelector('[title^="Get Shareable Link"]'),
-    ).toBeNull();
+    expect(menu!.querySelector('[title^="Get Shareable Link"]')).toBeNull();
   });
 
   it('hides the queued-inputs button under hide_queued_inputs', () => {
@@ -111,9 +97,7 @@ describe('QuickMenu component', () => {
     const { container, rerender } = render(<QuickMenu />);
     expect(container.querySelector('#blockpy-as-instructor')).toBeNull();
     rerender(<QuickMenu grader onInstructorChange={(on) => seen.push(on)} />);
-    const checkbox = container.querySelector<HTMLInputElement>(
-      '#blockpy-as-instructor',
-    );
+    const checkbox = container.querySelector<HTMLInputElement>('#blockpy-as-instructor');
     expect(checkbox).not.toBeNull();
     fireEvent.click(checkbox!);
     expect(seen).toEqual([true]);
@@ -149,9 +133,7 @@ describe('QuickMenu component', () => {
     );
     const button = () =>
       Array.from(container.querySelectorAll('button')).find((b) =>
-        ['Run', 'Submit early', 'Submit', 'Reopen for editing'].includes(
-          b.textContent ?? '',
-        ),
+        ['Run', 'Submit early', 'Submit', 'Reopen for editing'].includes(b.textContent ?? ''),
       )!;
     expect(button().textContent).toBe('Run');
     fireEvent.click(button());
@@ -167,21 +149,17 @@ describe('QuickMenu component', () => {
   it('share button opens START_SHARE with the built link + copy (dialog.js:218)', async () => {
     const writeText = vi.fn(() => Promise.resolve());
     Object.assign(navigator, { clipboard: { writeText } });
-    const { container } = render(
-      <QuickMenu shareUrl={() => 'https://share.example/abc123'} />,
-    );
+    const { container } = render(<QuickMenu shareUrl={() => 'https://share.example/abc123'} />);
     fireEvent.click(
-      container.querySelector(
-        '[title="Get Shareable Link for Instructors or TAs"]',
-      )!,
+      container.querySelector('[title="Get Shareable Link for Instructors or TAs"]')!,
     );
-    expect(
-      container.querySelector('.blockpy-copy-share-link-area')!.textContent,
-    ).toBe('https://share.example/abc123');
+    expect(container.querySelector('.blockpy-copy-share-link-area')!.textContent).toBe(
+      'https://share.example/abc123',
+    );
     // QR fails soft exactly like legacy without its QRCode lib.
-    expect(
-      container.querySelector('.blockpy-copy-share-qrcode')!.textContent,
-    ).toContain('QR code generation failed');
+    expect(container.querySelector('.blockpy-copy-share-qrcode')!.textContent).toContain(
+      'QR code generation failed',
+    );
     const copy = container.querySelector('.blockpy-copy-share-link')!;
     fireEvent.click(copy);
     expect(writeText).toHaveBeenCalledWith('https://share.example/abc123');
@@ -192,16 +170,13 @@ describe('QuickMenu component', () => {
   it('renders no share button without a shareUrl (legacy canShare)', () => {
     const { container } = render(<QuickMenu />);
     expect(
-      container.querySelector(
-        '[title="Get Shareable Link for Instructors or TAs"]',
-      ),
+      container.querySelector('[title="Get Shareable Link for Instructors or TAs"]'),
     ).toBeNull();
   });
 
   it('theme cycler: light → dark → win2000 → light, persisted + data-theme (M4.1)', () => {
     const { container } = render(<QuickMenu />);
-    const button = () =>
-      container.querySelector<HTMLButtonElement>('[title^="Color Theme:"]')!;
+    const button = () => container.querySelector<HTMLButtonElement>('[title^="Color Theme:"]')!;
     expect(button().title).toContain('Light');
     expect(document.documentElement.dataset.theme).toBeUndefined();
 
@@ -227,16 +202,12 @@ describe('QuickMenu component', () => {
     const { container, rerender } = render(<QuickMenu />);
     expect(container.querySelector('.blockpy-menu-clock')).toBeNull();
     rerender(<QuickMenu hasClock />);
-    expect(
-      container.querySelector('.blockpy-menu-clock')!.textContent,
-    ).toBe('9:05am');
+    expect(container.querySelector('.blockpy-menu-clock')!.textContent).toBe('9:05am');
     act(() => {
       vi.setSystemTime(new Date(2026, 6, 10, 9, 6));
       vi.advanceTimersByTime(1000);
     });
-    expect(
-      container.querySelector('.blockpy-menu-clock')!.textContent,
-    ).toBe('9:06am');
+    expect(container.querySelector('.blockpy-menu-clock')!.textContent).toBe('9:06am');
   });
 });
 
@@ -252,9 +223,7 @@ describe('Footer (footer.js FOOTER_HTML)', () => {
     const badges = status!.querySelectorAll('.badge');
     expect(badges.length).toBe(8);
     // Defaults to offline until an API client attaches.
-    badges.forEach((badge) =>
-      expect(badge.className).toContain('server-status-offline'),
-    );
+    badges.forEach((badge) => expect(badge.className).toContain('server-status-offline'));
     expect(badges[0]!.textContent).toContain('Load Assignment');
     expect(badges[7]!.textContent).toBe('Execution');
   });
@@ -266,13 +235,9 @@ describe('Footer (footer.js FOOTER_HTML)', () => {
         .setServerStatus('saveFile', 'retrying', 'timeout contacting server'),
     );
     const { container } = render(<Footer />);
-    expect(
-      container.querySelector('.badge.server-status-retrying')!.textContent,
-    ).toBe('Save File');
+    expect(container.querySelector('.badge.server-status-retrying')!.textContent).toBe('Save File');
     expect(container.textContent).toContain('Timeout contacting server');
-    act(() =>
-      useEditorChromeStore.getState().setServerStatus('saveFile', 'offline', ''),
-    );
+    act(() => useEditorChromeStore.getState().setServerStatus('saveFile', 'offline', ''));
   });
 
   it('identity line shows owner id only when it differs from the user', () => {
@@ -292,13 +257,9 @@ describe('Footer (footer.js FOOTER_HTML)', () => {
 
   it('instructor force-load input renders only for instructors', () => {
     const { container, rerender } = render(<Footer />);
-    expect(
-      container.querySelector('.blockpy-force-load-assignment-file'),
-    ).toBeNull();
+    expect(container.querySelector('.blockpy-force-load-assignment-file')).toBeNull();
     rerender(<Footer instructor onForceLoadAssignment={() => {}} />);
-    expect(
-      container.querySelector('.blockpy-force-load-assignment-file'),
-    ).not.toBeNull();
+    expect(container.querySelector('.blockpy-force-load-assignment-file')).not.toBeNull();
   });
 });
 

@@ -9,7 +9,10 @@ beforeEach(() => {
   document.body.innerHTML = '';
 });
 
-function loadResult(overrides: Partial<ReaderLoadResult['assignment']> = {}, submission = true): ReaderLoadResult {
+function loadResult(
+  overrides: Partial<ReaderLoadResult['assignment']> = {},
+  submission = true,
+): ReaderLoadResult {
   return {
     assignment: {
       id: 103,
@@ -27,9 +30,7 @@ function loadResult(overrides: Partial<ReaderLoadResult['assignment']> = {}, sub
 
 function renderReader(props: Partial<ReaderProps> = {}, result = loadResult()) {
   const loadAssignment = vi.fn(async () => result);
-  const view = render(
-    <Reader assignmentId={103} loadAssignment={loadAssignment} {...props} />,
-  );
+  const view = render(<Reader assignmentId={103} loadAssignment={loadAssignment} {...props} />);
   return { view, loadAssignment };
 }
 

@@ -30,12 +30,8 @@ UNARYOPS.forEach(function (unaryop) {
 
   generator.forBlock[fullName] = function (block) {
     // Basic arithmetic operators, and power.
-    const order =
-      unaryop[1] === 'Not'
-        ? generator.ORDER_LOGICAL_NOT
-        : generator.ORDER_UNARY_SIGN;
-    const argument1 =
-      generator.valueToCode(block, 'VALUE', order) || generator.blank;
+    const order = unaryop[1] === 'Not' ? generator.ORDER_LOGICAL_NOT : generator.ORDER_UNARY_SIGN;
+    const argument1 = generator.valueToCode(block, 'VALUE', order) || generator.blank;
     const code = unaryop[0] + (unaryop[1] === 'Not' ? ' ' : '') + argument1;
     return [code, order];
   };

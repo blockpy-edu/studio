@@ -47,9 +47,7 @@ const LOG: HistoryEntry[] = [
 describe('prettyPrintDateTime (history.js port)', () => {
   it('renders today / same-year / other-year forms', () => {
     const today = new Date(2026, 6, 10, 9, 30, 5);
-    expect(prettyPrintDateTime(ts(today), NOW)).toBe(
-      'Today at ' + today.toLocaleTimeString(),
-    );
+    expect(prettyPrintDateTime(ts(today), NOW)).toBe('Today at ' + today.toLocaleTimeString());
     const sameYear = new Date(2026, 2, 4, 9, 30, 5);
     expect(prettyPrintDateTime(ts(sameYear), NOW)).toBe(
       'Wed, Mar 4 at ' + sameYear.toLocaleTimeString(),
@@ -72,17 +70,11 @@ describe('history filtering (history.js load())', () => {
       'X-Submission.LMS',
       'File.Edit',
     ]);
-    expect(
-      filterHistory(LOG, true).map((e) => e.event_type),
-    ).not.toContain('X-Submission.LMS');
+    expect(filterHistory(LOG, true).map((e) => e.event_type)).not.toContain('X-Submission.LMS');
   });
 
   it('edit events are File.Edit/File.Create rows for the current file', () => {
-    expect(editEvents(LOG, 'answer.py').map((e) => e.message)).toEqual([
-      'a = 0',
-      'a = 1',
-      'a = 2',
-    ]);
+    expect(editEvents(LOG, 'answer.py').map((e) => e.message)).toEqual(['a = 0', 'a = 1', 'a = 2']);
     expect(editEvents(LOG, 'other.py')).toEqual([]);
   });
 });
@@ -105,9 +97,13 @@ describe('HistoryToolbar', () => {
     expect(options).toHaveLength(5);
     // Only File.Edit options are enabled (File.Create is disabled — legacy
     // quirk: it is navigable via the buttons but not the dropdown).
-    expect(
-      Array.from(options).map((option) => option.disabled),
-    ).toEqual([true, true, false, true, false]);
+    expect(Array.from(options).map((option) => option.disabled)).toEqual([
+      true,
+      true,
+      false,
+      true,
+      false,
+    ]);
     fireEvent.click(screen.getByRole('button', { name: /Next/ })); // clamps at last
     expect(selections.at(-1)).toBe(2);
     fireEvent.click(screen.getByRole('button', { name: /Start/ }));
@@ -144,10 +140,7 @@ describe('CodingEditor history mode', () => {
 
   it('toggle loads the log, shows the merge diff, Use adopts the version', async () => {
     const { container } = render(
-      <CodingEditor
-        startingCode="a = 9"
-        loadHistory={() => Promise.resolve(LOG)}
-      />,
+      <CodingEditor startingCode="a = 9" loadHistory={() => Promise.resolve(LOG)} />,
     );
     await act(async () => {
       screen.getByRole('button', { name: /History/ }).click();
@@ -160,9 +153,7 @@ describe('CodingEditor history mode', () => {
     });
     expect(container.querySelector('.blockpy-python-blockmirror')).toBeNull();
     expect(useEditorChromeStore.getState().historyMode).toBe(true);
-    const select = container.querySelector(
-      '.blockpy-history-selector',
-    ) as HTMLSelectElement;
+    const select = container.querySelector('.blockpy-history-selector') as HTMLSelectElement;
     expect(select.value).toBe('2'); // a = 2, the most recent edit
     // Use → exits history mode, editor returns with the old version.
     await act(async () => {
@@ -176,10 +167,7 @@ describe('CodingEditor history mode', () => {
 
   it('failed load shows the legacy error dialog', async () => {
     const { container } = render(
-      <CodingEditor
-        startingCode="a = 0"
-        loadHistory={() => Promise.reject(new Error('nope'))}
-      />,
+      <CodingEditor startingCode="a = 0" loadHistory={() => Promise.reject(new Error('nope'))} />,
     );
     await act(async () => {
       screen.getByRole('button', { name: /History/ }).click();

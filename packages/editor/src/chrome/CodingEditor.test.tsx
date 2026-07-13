@@ -1,13 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  act,
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { CodingEditor, type RunController } from './CodingEditor';
 import { renderInstructions } from './Instructions';
 import { categoryPresentation } from './categories';
@@ -191,9 +184,7 @@ describe('CodingEditor chrome', () => {
 
   it('exposes the editor for block-PNG capture; getPng fails soft in jsdom', async () => {
     let captured: import('../dual/dual-editor').DualEditor | null = null;
-    render(
-      <CodingEditor startingCode="a = 0" onEditorReady={(editor) => (captured = editor)} />,
-    );
+    render(<CodingEditor startingCode="a = 0" onEditorReady={(editor) => (captured = editor)} />);
     expect(captured).not.toBeNull();
     // jsdom has no SVG layout (getBBox) — the legacy-ported fail-soft path
     // must resolve '' instead of throwing (block_editor.js:381-383).
@@ -202,9 +193,7 @@ describe('CodingEditor chrome', () => {
 
   it('logs X-File.Reset on reset (blockpy.js:1046)', async () => {
     const events: string[] = [];
-    render(
-      <CodingEditor startingCode="a = 0" onLogEvent={(type) => events.push(type)} />,
-    );
+    render(<CodingEditor startingCode="a = 0" onLogEvent={(type) => events.push(type)} />);
     await act(async () => {
       screen.getByRole('button', { name: /Reset/ }).click();
     });
@@ -217,9 +206,7 @@ describe('CodingEditor chrome', () => {
         return { error: 'Traceback: boom' };
       },
     };
-    const { container } = render(
-      <CodingEditor startingCode="a = 0" runController={controller} />,
-    );
+    const { container } = render(<CodingEditor startingCode="a = 0" runController={controller} />);
     await act(async () => {
       screen.getByRole('button', { name: /Run/ }).click();
     });
@@ -234,9 +221,7 @@ describe('CodingEditor chrome', () => {
     await act(async () => {
       screen.getByRole('button', { name: /Run/ }).click();
     });
-    expect(
-      screen.getByText('No execution engine attached to this editor.'),
-    ).toBeTruthy();
+    expect(screen.getByText('No execution engine attached to this editor.')).toBeTruthy();
   });
 
   it('view toggle drives the store and marks the active tab', () => {
@@ -246,9 +231,7 @@ describe('CodingEditor chrome', () => {
       (textRadio as HTMLInputElement).click();
     });
     expect(useEditorChromeStore.getState().pythonMode).toBe('text');
-    const activeLabels = container.querySelectorAll(
-      '.blockpy-mode-set-blocks.active',
-    );
+    const activeLabels = container.querySelectorAll('.blockpy-mode-set-blocks.active');
     expect(activeLabels).toHaveLength(1);
     expect(activeLabels[0]!.textContent).toContain('Text');
   });
@@ -264,9 +247,7 @@ describe('CodingEditor chrome', () => {
       />,
     );
     // Enter via the toolbar button.
-    const focusButton = container.querySelector<HTMLButtonElement>(
-      '.blockpy-toggle-focus',
-    )!;
+    const focusButton = container.querySelector<HTMLButtonElement>('.blockpy-toggle-focus')!;
     act(() => void fireEvent.click(focusButton));
     expect(useEditorChromeStore.getState().focusedMode).toBe(true);
     expect(events).toContain('X-Display.Focus.Enter');
@@ -278,19 +259,13 @@ describe('CodingEditor chrome', () => {
     // console + feedback pair.
     expect(container.querySelector('.blockpy-focus-drawer')).not.toBeNull();
     expect(container.querySelector('.blockpy-printer')).toBeNull();
-    const badge = container.querySelector<HTMLElement>(
-      '.blockpy-focus-feedback-badge',
-    )!;
+    const badge = container.querySelector<HTMLElement>('.blockpy-focus-feedback-badge')!;
     expect(badge.textContent).toBe('Ready');
     act(() => void fireEvent.click(badge));
     expect(container.querySelector('.blockpy-printer')).not.toBeNull();
     expect(container.querySelector('.blockpy-feedback')).not.toBeNull();
     // Instructions stay reachable through the overlay toggle.
-    act(() =>
-      void fireEvent.click(
-        container.querySelector('.blockpy-focus-instructions')!,
-      ),
-    );
+    act(() => void fireEvent.click(container.querySelector('.blockpy-focus-instructions')!));
     expect(container.querySelector('.blockpy-dialog')).not.toBeNull();
     // Esc restores the normal chrome and logs the exit.
     act(() => void fireEvent.keyDown(window, { key: 'Escape' }));
@@ -302,13 +277,9 @@ describe('CodingEditor chrome', () => {
 
   it('focused mode: Ctrl+Alt+F enters from the keyboard (M4.2)', () => {
     render(<CodingEditor startingCode="a = 0" />);
-    act(() =>
-      void fireEvent.keyDown(window, { key: 'f', ctrlKey: true, altKey: true }),
-    );
+    act(() => void fireEvent.keyDown(window, { key: 'f', ctrlKey: true, altKey: true }));
     expect(useEditorChromeStore.getState().focusedMode).toBe(true);
-    act(() =>
-      void fireEvent.keyDown(window, { key: 'F', ctrlKey: true, altKey: true }),
-    );
+    act(() => void fireEvent.keyDown(window, { key: 'F', ctrlKey: true, altKey: true }));
     expect(useEditorChromeStore.getState().focusedMode).toBe(false);
   });
 
@@ -328,45 +299,26 @@ describe('CodingEditor chrome', () => {
       cleanup();
 
       const { container } = render(
-        <CodingEditor
-          startingCode="a = 0"
-          docsUrl="https://example.com/ref.md"
-        />,
+        <CodingEditor startingCode="a = 0" docsUrl="https://example.com/ref.md" />,
       );
-      expect(container.querySelector('.blockpy-editor')!.className).toContain(
-        'col-md-12',
-      );
-      await act(async () =>
-        void fireEvent.click(
-          container.querySelector('.blockpy-toggle-docs')!,
-        ),
-      );
+      expect(container.querySelector('.blockpy-editor')!.className).toContain('col-md-12');
+      await act(async () => void fireEvent.click(container.querySelector('.blockpy-toggle-docs')!));
       expect(container.querySelector('.blockpy-docs-rail')).not.toBeNull();
-      expect(container.querySelector('.blockpy-editor')!.className).toContain(
-        'col-md-9',
-      );
-      expect(
-        container.querySelector('.blockpy-docs-body')!.textContent,
-      ).toContain('Useful facts.');
+      expect(container.querySelector('.blockpy-editor')!.className).toContain('col-md-9');
+      expect(container.querySelector('.blockpy-docs-body')!.textContent).toContain('Useful facts.');
       // Collapse from the panel header restores full width.
-      await act(async () =>
-        void fireEvent.click(
-          container.querySelector('[title="Hide docs panel"]')!,
-        ),
+      await act(
+        async () => void fireEvent.click(container.querySelector('[title="Hide docs panel"]')!),
       );
       expect(container.querySelector('.blockpy-docs-rail')).toBeNull();
-      expect(container.querySelector('.blockpy-editor')!.className).toContain(
-        'col-md-12',
-      );
+      expect(container.querySelector('.blockpy-editor')!.className).toContain('col-md-12');
     } finally {
       vi.unstubAllGlobals();
     }
   });
 
   it('hides the view toggle when blocks are disabled (enableBlocks)', () => {
-    const { container } = render(
-      <CodingEditor startingCode="a = 0" enableBlocks={false} />,
-    );
+    const { container } = render(<CodingEditor startingCode="a = 0" enableBlocks={false} />);
     expect(container.querySelector('.blockpy-mode-set-blocks')).toBeNull();
   });
 
@@ -403,11 +355,7 @@ describe('CodingEditor chrome', () => {
       },
     };
     const { container } = render(
-      <CodingEditor
-        startingCode="a = 0"
-        runController={controller}
-        instructor
-      />,
+      <CodingEditor startingCode="a = 0" runController={controller} instructor />,
     );
     await act(async () => {
       screen.getByRole('button', { name: /Run/ }).click();
@@ -416,18 +364,14 @@ describe('CodingEditor chrome', () => {
     // Student console only has program output.
     expect(state.console.map((e) => e.text)).toEqual(['student output']);
     // System message landed in the dev console (newline trimmed)…
-    expect(state.devConsole.map((e) => e.text)).toEqual([
-      'Loading Python engine…',
-    ]);
+    expect(state.devConsole.map((e) => e.text)).toEqual(['Loading Python engine…']);
     // …and the run completed with the Execution badge back to ready.
     expect(state.serverStatus.onExecution).toBe('ready');
     // The console slot still shows the student console; the toggle badges
     // the one unseen dev entry.
     const toggle = container.querySelector('.blockpy-console-toggle')!;
     expect(toggle.textContent).toContain('Dev Console');
-    expect(
-      toggle.querySelector('.blockpy-console-toggle-badge')!.textContent,
-    ).toBe('1');
+    expect(toggle.querySelector('.blockpy-console-toggle-badge')!.textContent).toBe('1');
     // Swapping the slot shows the dev console and clears the badge.
     act(() => (toggle as HTMLButtonElement).click());
     expect(container.querySelector('.blockpy-dev-console')!.textContent).toContain(
@@ -437,15 +381,11 @@ describe('CodingEditor chrome', () => {
     expect(useEditorChromeStore.getState().devUnseen).toBe(0);
     // Student output arriving now badges the Console toggle instead.
     act(() =>
-      useEditorChromeStore
-        .getState()
-        .appendConsole({ kind: 'stdout', text: 'late output' }),
+      useEditorChromeStore.getState().appendConsole({ kind: 'stdout', text: 'late output' }),
     );
     const backToggle = container.querySelector('.blockpy-console-toggle')!;
     expect(backToggle.textContent).toContain('Console');
-    expect(
-      backToggle.querySelector('.blockpy-console-toggle-badge')!.textContent,
-    ).toBe('1');
+    expect(backToggle.querySelector('.blockpy-console-toggle-badge')!.textContent).toBe('1');
     act(() => (backToggle as HTMLButtonElement).click());
     expect(useEditorChromeStore.getState().consoleUnseen).toBe(0);
   });
@@ -455,11 +395,7 @@ describe('CodingEditor chrome', () => {
     const { container, rerender } = render(<CodingEditor startingCode="a = 0" />);
     expect(container.querySelector('.blockpy-console-toggle')).toBeNull();
     rerender(<CodingEditor startingCode="a = 0" instructor />);
-    act(() =>
-      (
-        container.querySelector('.blockpy-console-toggle') as HTMLButtonElement
-      ).click(),
-    );
+    act(() => (container.querySelector('.blockpy-console-toggle') as HTMLButtonElement).click());
     expect(container.querySelector('.blockpy-dev-console')).not.toBeNull();
     // Unchecking "View as instructor" while the dev console is shown swaps
     // back to the student console.
@@ -478,13 +414,7 @@ describe('CodingEditor chrome', () => {
         return { value: '0', error: null };
       },
     };
-    render(
-      <CodingEditor
-        startingCode="a = 0"
-        runController={controller}
-        hideEvaluate
-      />,
-    );
+    render(<CodingEditor startingCode="a = 0" runController={controller} hideEvaluate />);
     await act(async () => {
       screen.getByRole('button', { name: /Run/ }).click();
     });
@@ -504,9 +434,7 @@ describe('CodingEditor chrome', () => {
         return { error: null };
       },
     };
-    render(
-      <CodingEditor vfs={vfs} role="instructor" runController={controller} />,
-    );
+    render(<CodingEditor vfs={vfs} role="instructor" runController={controller} />);
     await act(async () => {
       screen.getByRole('button', { name: /Run/ }).click();
     });
@@ -575,23 +503,19 @@ describe('CodingEditor chrome', () => {
         return { error: null, images: ['AAAA'] };
       },
     };
-    const { container } = render(
-      <CodingEditor startingCode="a = 0" runController={controller} />,
-    );
+    const { container } = render(<CodingEditor startingCode="a = 0" runController={controller} />);
     await act(async () => {
       screen.getByRole('button', { name: /Run/ }).click();
     });
-    const image = container.querySelector<HTMLImageElement>(
-      '.blockpy-console-image-output img',
-    );
+    const image = container.querySelector<HTMLImageElement>('.blockpy-console-image-output img');
     expect(image).not.toBeNull();
     expect(image!.src).toBe('data:image/png;base64,AAAA');
     // Quick-menu Toggle Images: off = image stays as text code (legacy).
     act(() => useEditorChromeStore.getState().toggleRenderImages());
     expect(container.querySelector('.blockpy-console-image-output img')).toBeNull();
-    expect(
-      container.querySelector('.blockpy-console-image-output code')!.textContent,
-    ).toContain('data:image/png;base64,AAAA');
+    expect(container.querySelector('.blockpy-console-image-output code')!.textContent).toContain(
+      'data:image/png;base64,AAAA',
+    );
     act(() => useEditorChromeStore.getState().toggleRenderImages());
   });
 
@@ -642,9 +566,7 @@ describe('CodingEditor chrome', () => {
 
 describe('renderInstructions (A6/D4-A)', () => {
   it('renders markdown with breaks, raw HTML preserved, links targeted', () => {
-    const html = renderInstructions(
-      'Line one\nLine two\n\n<b>raw</b> [link](https://example.com)',
-    );
+    const html = renderInstructions('Line one\nLine two\n\n<b>raw</b> [link](https://example.com)');
     expect(html).toContain('<br');
     expect(html).toContain('<b>raw</b>');
     expect(html).toContain('target="_blank"');

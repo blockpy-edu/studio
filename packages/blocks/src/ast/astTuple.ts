@@ -26,9 +26,7 @@ defineBlock('ast_Tuple', {
     this.itemCount_ = 3;
     this.updateShape_();
     this.setOutput(true, 'Tuple');
-    this.setMutator(
-      new Blockly.icons.MutatorIcon(['ast_Tuple_create_with_item'], this),
-    );
+    this.setMutator(new Blockly.icons.MutatorIcon(['ast_Tuple_create_with_item'], this));
   },
   /**
    * Create XML to represent tuple inputs.
@@ -56,9 +54,7 @@ defineBlock('ast_Tuple', {
    * @this Blockly.Block
    */
   decompose: function (this: TupleBlock, workspace: Blockly.WorkspaceSvg) {
-    const containerBlock = workspace.newBlock(
-      'ast_Tuple_create_with_container',
-    );
+    const containerBlock = workspace.newBlock('ast_Tuple_create_with_container');
     containerBlock.initSvg();
     let connection = containerBlock.getInput('STACK')!.connection;
     for (let i = 0; i < this.itemCount_; i++) {
@@ -75,9 +71,7 @@ defineBlock('ast_Tuple', {
    * @this Blockly.Block
    */
   compose: function (this: TupleBlock, containerBlock: Blockly.Block) {
-    let itemBlock = containerBlock.getInputTargetBlock(
-      'STACK',
-    ) as TupleItemBlock | null;
+    let itemBlock = containerBlock.getInputTargetBlock('STACK') as TupleItemBlock | null;
     // Count number of inputs.
     const connections: (Blockly.Connection | null | undefined)[] = [];
     while (itemBlock) {
@@ -105,9 +99,7 @@ defineBlock('ast_Tuple', {
    * @this Blockly.Block
    */
   saveConnections: function (this: TupleBlock, containerBlock: Blockly.Block) {
-    let itemBlock = containerBlock.getInputTargetBlock(
-      'STACK',
-    ) as TupleItemBlock | null;
+    let itemBlock = containerBlock.getInputTargetBlock('STACK') as TupleItemBlock | null;
     let i = 0;
     while (itemBlock) {
       const input = this.getInput('ADD' + i);
@@ -193,9 +185,7 @@ generator.forBlock['ast_Tuple'] = function (block) {
   const typed = block as TupleBlock;
   const elements = new Array<string>(typed.itemCount_);
   for (let i = 0; i < typed.itemCount_; i++) {
-    elements[i] =
-      generator.valueToCode(block, 'ADD' + i, generator.ORDER_NONE) ||
-      generator.blank;
+    elements[i] = generator.valueToCode(block, 'ADD' + i, generator.ORDER_NONE) || generator.blank;
   }
   let requiredComma = '';
   if (typed.itemCount_ == 1) {

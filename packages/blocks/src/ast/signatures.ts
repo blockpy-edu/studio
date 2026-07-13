@@ -51,9 +51,16 @@ export const astImage: CustomCallConverter = function (node, _parent, bmttb) {
   if (node.args[0]!._astname !== 'Str') {
     throw new Error('First argument for Image constructor must be string literal');
   }
-  return createBlock('ast_Image', node.lineno, {}, {}, {}, {
-    '@src': (node.args[0] as ir.Str).s,
-  });
+  return createBlock(
+    'ast_Image',
+    node.lineno,
+    {},
+    {},
+    {},
+    {
+      '@src': (node.args[0] as ir.Str).s,
+    },
+  );
 };
 
 export const FUNCTION_SIGNATURES: Record<string, FunctionSignature> = {
@@ -273,10 +280,7 @@ export const MODULE_FUNCTION_IMPORTS: Record<string, string> = {
   turtle: 'import turtle',
 };
 
-export const MODULE_FUNCTION_SIGNATURES: Record<
-  string,
-  Record<string, FunctionSignature>
-> = {
+export const MODULE_FUNCTION_SIGNATURES: Record<string, Record<string, FunctionSignature>> = {
   cisc108: {
     assert_equal: {
       returns: false,
@@ -370,8 +374,7 @@ export const MODULE_FUNCTION_SIGNATURES: Record<
 
 // Legacy shared the same signature object between the bare name and the
 // cisc108 module entry (reference identity preserved).
-FUNCTION_SIGNATURES['assert_equal'] =
-  MODULE_FUNCTION_SIGNATURES['cisc108']!['assert_equal']!;
+FUNCTION_SIGNATURES['assert_equal'] = MODULE_FUNCTION_SIGNATURES['cisc108']!['assert_equal']!;
 
 function makeTurtleBlock(
   name: string,
@@ -388,8 +391,7 @@ function makeTurtleBlock(
   };
   if (aliases) {
     aliases.forEach(function (alias) {
-      MODULE_FUNCTION_SIGNATURES['turtle']![alias] =
-        MODULE_FUNCTION_SIGNATURES['turtle']![name]!;
+      MODULE_FUNCTION_SIGNATURES['turtle']![alias] = MODULE_FUNCTION_SIGNATURES['turtle']![name]!;
     });
   }
 }
@@ -436,8 +438,7 @@ makeTurtleBlock('title', false, ['message'], 'set title of drawing area ', []);
 makeTurtleBlock('bye', false, [], 'say goodbye to turtles ', []);
 
 // `matplotlib.pyplot.*` shares the `plt` table (reference identity preserved).
-MODULE_FUNCTION_SIGNATURES['matplotlib.pyplot'] =
-  MODULE_FUNCTION_SIGNATURES['plt']!;
+MODULE_FUNCTION_SIGNATURES['matplotlib.pyplot'] = MODULE_FUNCTION_SIGNATURES['plt']!;
 
 /**
  * Build the toolbox XML for a known function/method/module-function call —
@@ -484,14 +485,7 @@ export function getFunctionBlock(
   for (let i = 0; i < args.length; i += 1) {
     argumentsMutation['UNKNOWN_ARG:' + i] = null;
   }
-  const newBlock = createBlock(
-    'ast_Call',
-    null,
-    {},
-    values,
-    { inline: true },
-    argumentsMutation,
-  );
+  const newBlock = createBlock('ast_Call', null, {}, values, { inline: true }, argumentsMutation);
   // Return as either statement or expression
   return xmlToString(newBlock);
 }

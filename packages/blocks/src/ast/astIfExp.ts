@@ -20,20 +20,12 @@ defineBlocks({
 });
 
 generator.forBlock['ast_IfExp'] = function (block) {
-  const test =
-    generator.valueToCode(block, 'TEST', generator.ORDER_CONDITIONAL) ||
-    generator.blank;
-  const body =
-    generator.valueToCode(block, 'BODY', generator.ORDER_CONDITIONAL) ||
-    generator.blank;
+  const test = generator.valueToCode(block, 'TEST', generator.ORDER_CONDITIONAL) || generator.blank;
+  const body = generator.valueToCode(block, 'BODY', generator.ORDER_CONDITIONAL) || generator.blank;
   const orelse =
-    generator.valueToCode(block, 'ORELSE', generator.ORDER_CONDITIONAL) ||
-    generator.blank;
+    generator.valueToCode(block, 'ORELSE', generator.ORDER_CONDITIONAL) || generator.blank;
   // Legacy quirk preserved: trailing newline inside a value expression.
-  return [
-    body + ' if ' + test + ' else ' + orelse + '\n',
-    generator.ORDER_CONDITIONAL,
-  ];
+  return [body + ' if ' + test + ' else ' + orelse + '\n', generator.ORDER_CONDITIONAL];
 };
 
 registerConverter(
@@ -43,10 +35,15 @@ registerConverter(
     const body = node.body;
     const orelse = node.orelse;
 
-    return createBlock('ast_IfExp', node.lineno, {}, {
-      TEST: this.convert(test, node) as Element,
-      BODY: this.convert(body, node) as Element,
-      ORELSE: this.convert(orelse, node) as Element,
-    });
+    return createBlock(
+      'ast_IfExp',
+      node.lineno,
+      {},
+      {
+        TEST: this.convert(test, node) as Element,
+        BODY: this.convert(body, node) as Element,
+        ORELSE: this.convert(orelse, node) as Element,
+      },
+    );
   },
 );

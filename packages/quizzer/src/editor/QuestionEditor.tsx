@@ -44,8 +44,7 @@ const QUESTION_TEMPLATE_TYPES = [
 
 const lines = (value: unknown): string =>
   Array.isArray(value) ? (value as string[]).join('\n') : '';
-const unlines = (value: string): string[] =>
-  value.split('\n').filter((line) => line.length > 0);
+const unlines = (value: string): string[] => value.split('\n').filter((line) => line.length > 0);
 
 function JsonField({
   label,
@@ -87,8 +86,7 @@ export function QuestionEditor(props: QuestionEditorProps) {
   const [previewFeedback, setPreviewFeedback] = useState<QuizQuestionFeedback | null>(null);
   const [idDraft, setIdDraft] = useState(questionId);
 
-  const setQ = (patch: Partial<QuizQuestion>) =>
-    props.onChangeQuestion({ ...question, ...patch });
+  const setQ = (patch: Partial<QuizQuestion>) => props.onChangeQuestion({ ...question, ...patch });
   const setC = (field: string, value: unknown) => {
     const next = { ...check };
     if (value === undefined || value === '') delete next[field];
@@ -147,9 +145,7 @@ export function QuestionEditor(props: QuestionEditorProps) {
       case 'multiple_answers_question': {
         const options = (question.answers ?? []) as string[];
         const multi = question.type === 'multiple_answers_question';
-        const correct = multi
-          ? ((check['correct'] ?? []) as string[])
-          : check['correct'];
+        const correct = multi ? ((check['correct'] ?? []) as string[]) : check['correct'];
         return (
           <>
             <label style={{ display: 'block' }}>
@@ -271,8 +267,8 @@ export function QuestionEditor(props: QuestionEditorProps) {
                   {Array.isArray(correct[statementIndex]) && (
                     <small className="text-muted">
                       {' '}
-                      (accepts any of: {(correct[statementIndex] as string[]).join(', ')} — edit
-                      in Advanced)
+                      (accepts any of: {(correct[statementIndex] as string[]).join(', ')} — edit in
+                      Advanced)
                     </small>
                   )}
                 </label>
@@ -454,7 +450,12 @@ export function QuestionEditor(props: QuestionEditorProps) {
     <div className="card m-2 quizzer-editor-question" data-question-id={questionId}>
       <div className="card-body">
         <span className="float-right">
-          <button type="button" className="btn btn-sm btn-outline-secondary mr-1" disabled={props.index === 0} onClick={() => props.onMove(-1)}>
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-secondary mr-1"
+            disabled={props.index === 0}
+            onClick={() => props.onMove(-1)}
+          >
             ↑
           </button>
           <button
@@ -465,7 +466,11 @@ export function QuestionEditor(props: QuestionEditorProps) {
           >
             ↓
           </button>
-          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={props.onDelete}>
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-secondary"
+            onClick={props.onDelete}
+          >
             Delete
           </button>
         </span>
@@ -518,7 +523,11 @@ export function QuestionEditor(props: QuestionEditorProps) {
           </label>
         </div>
         <label style={{ display: 'block' }}>
-          Body (Markdown/HTML{question.type.includes('blank') || question.type.includes('dropdown') ? '; [blank_id] markers become inputs' : ''})
+          Body (Markdown/HTML
+          {question.type.includes('blank') || question.type.includes('dropdown')
+            ? '; [blank_id] markers become inputs'
+            : ''}
+          )
           <textarea
             className="form-control quizzer-editor-body"
             style={{ width: '100%', minHeight: '80px' }}

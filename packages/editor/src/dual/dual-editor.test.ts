@@ -19,9 +19,9 @@ describe('DualEditor', () => {
   });
 
   it('throws without a container (legacy message)', () => {
-    expect(
-      () => new DualEditor({} as unknown as { container: HTMLElement }),
-    ).toThrowError('Invalid configuration: Missing "container" property.');
+    expect(() => new DualEditor({} as unknown as { container: HTMLElement })).toThrowError(
+      'Invalid configuration: Missing "container" property.',
+    );
   });
 
   it('applies legacy defaults', () => {
@@ -45,11 +45,9 @@ describe('DualEditor', () => {
     expect(editor.getCode()).toBe('a = 0');
     expect(editor.textEditor.getCode()).toBe('a = 0');
     // Blocks side actually contains the assignment block.
-    expect(
-      editor.blockEditor.workspace
-        .getAllBlocks(false)
-        .map((b) => b.type),
-    ).toContain('ast_Assign');
+    expect(editor.blockEditor.workspace.getAllBlocks(false).map((b) => b.type)).toContain(
+      'ast_Assign',
+    );
     expect(events).toEqual(['a = 0']);
     editor.dispose();
   });
@@ -68,9 +66,9 @@ describe('DualEditor', () => {
       },
     });
     expect(editor.getCode()).toBe('b = 1');
-    expect(
-      editor.blockEditor.workspace.getAllBlocks(false).map((b) => b.type),
-    ).toContain('ast_Assign');
+    expect(editor.blockEditor.workspace.getAllBlocks(false).map((b) => b.type)).toContain(
+      'ast_Assign',
+    );
     expect(events).toEqual(['b = 1']);
     editor.dispose();
   });
@@ -100,18 +98,16 @@ describe('DualEditor', () => {
     // Hidden: workspace untouched.
     expect(editor.blockEditor.workspace.getAllBlocks(false)).toHaveLength(0);
     editor.setMode('split');
-    expect(
-      editor.blockEditor.workspace.getAllBlocks(false).map((b) => b.type),
-    ).toContain('ast_Assign');
+    expect(editor.blockEditor.workspace.getAllBlocks(false).map((b) => b.type)).toContain(
+      'ast_Assign',
+    );
     editor.dispose();
   });
 
   it('setReadOnly toggles the container class and both editors', () => {
     const editor = makeEditor();
     editor.setReadOnly(true);
-    expect(
-      editor.tags.container.classList.contains('block-mirror-read-only'),
-    ).toBe(true);
+    expect(editor.tags.container.classList.contains('block-mirror-read-only')).toBe(true);
     expect(editor.textEditor.view.state.readOnly).toBe(true);
     expect(document.querySelector('.blockly-readonly-layer')).not.toBeNull();
     editor.setReadOnly(false);
@@ -122,9 +118,7 @@ describe('DualEditor', () => {
   it('unparseable text still produces blocks (raw fallback, no lockout)', () => {
     const editor = makeEditor();
     editor.setCode('a = 0\nb = ');
-    const types = editor.blockEditor.workspace
-      .getAllBlocks(false)
-      .map((b) => b.type);
+    const types = editor.blockEditor.workspace.getAllBlocks(false).map((b) => b.type);
     expect(types).toContain('ast_Assign');
     expect(types).toContain('ast_Raw');
     editor.dispose();

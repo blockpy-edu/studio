@@ -92,24 +92,20 @@ generator.forBlock['ast_ClassDef'] = function (block) {
   const decorators = new Array<string>(typed.decorators_);
   for (let i = 0; i < typed.decorators_; i++) {
     const decorator =
-      generator.valueToCode(block, 'DECORATOR' + i, generator.ORDER_NONE) ||
-      generator.blank;
+      generator.valueToCode(block, 'DECORATOR' + i, generator.ORDER_NONE) || generator.blank;
     decorators[i] = '@' + decorator + '\n';
   }
   // Bases
   const bases = new Array<string>(typed.bases_);
   for (let i = 0; i < typed.bases_; i++) {
-    bases[i] =
-      generator.valueToCode(block, 'BASE' + i, generator.ORDER_NONE) ||
-      generator.blank;
+    bases[i] = generator.valueToCode(block, 'BASE' + i, generator.ORDER_NONE) || generator.blank;
   }
   // Keywords
   const keywords = new Array<string>(typed.keywords_);
   for (let i = 0; i < typed.keywords_; i++) {
     const name = block.getFieldValue('KEYWORDNAME' + i);
     const value =
-      generator.valueToCode(block, 'KEYWORDVALUE' + i, generator.ORDER_NONE) ||
-      generator.blank;
+      generator.valueToCode(block, 'KEYWORDVALUE' + i, generator.ORDER_NONE) || generator.blank;
     if (name == '**') {
       keywords[i] = '**' + value;
     } else {
@@ -138,25 +134,19 @@ registerConverter(
 
     if (decorator_list !== null) {
       for (let i = 0; i < decorator_list.length; i++) {
-        values['DECORATOR' + i] = this.convert(
-          decorator_list[i],
-          node,
-        ) as Element;
+        values['DECORATOR' + i] = this.convert(decorator_list[i]!, node) as Element;
       }
     }
 
     if (bases !== null) {
       for (let i = 0; i < bases.length; i++) {
-        values['BASE' + i] = this.convert(bases[i], node) as Element;
+        values['BASE' + i] = this.convert(bases[i]!, node) as Element;
       }
     }
 
     if (keywords !== null) {
       for (let i = 0; i < keywords.length; i++) {
-        values['KEYWORDVALUE' + i] = this.convert(
-          keywords[i]!.value,
-          node,
-        ) as Element;
+        values['KEYWORDVALUE' + i] = this.convert(keywords[i]!.value, node) as Element;
         const arg = keywords[i]!.arg;
         if (arg === null) {
           fields['KEYWORDNAME' + i] = '**';

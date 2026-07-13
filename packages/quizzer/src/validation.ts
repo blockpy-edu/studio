@@ -53,7 +53,7 @@ export const TAG_FIELDS = [
   'tags',
 ] as const;
 
-const VALID_ANSWER_ID = /^[a-zA-Z0-9_\-]+$/;
+const VALID_ANSWER_ID = /^[a-zA-Z0-9_-]+$/;
 
 export interface QuizIssue {
   message: string;
@@ -231,7 +231,6 @@ export class QuizIssueTracker {
     this.checkFeedback(name, question);
   }
 
-  // eslint-disable-next-line complexity
   private checkFeedback(name: string, question: MergedQuestion) {
     const type = question['type'];
     const body = isString(question['body']) ? question['body'] : '';
@@ -392,7 +391,11 @@ export class QuizIssueTracker {
       const answers = (question['answers'] ?? []) as string[];
       const correct = question['correct'];
       if (correct === undefined) {
-        this.add('Missing `correct` field to indicate the list of correct answers.', name, 'correct');
+        this.add(
+          'Missing `correct` field to indicate the list of correct answers.',
+          name,
+          'correct',
+        );
       } else if (!isStringList(correct)) {
         this.add('The `correct` field must be a list of strings.', name, 'correct');
       } else {
@@ -552,7 +555,11 @@ export class QuizIssueTracker {
         }
       }
     } else if (type === 'short_answer_question' || type === 'numerical_question') {
-      if (!('correct' in question) && !('correct_exact' in question) && !('correct_regex' in question)) {
+      if (
+        !('correct' in question) &&
+        !('correct_exact' in question) &&
+        !('correct_regex' in question)
+      ) {
         this.add(
           'Missing `correct`, `correct_exact`, or `correct_regex` field to indicate the correct answer.',
           name,
@@ -574,7 +581,11 @@ export class QuizIssueTracker {
       } else if ('correct_regex' in question) {
         const regexes = question['correct_regex'];
         if (!isStringList(regexes)) {
-          this.add('The `correct_regex` field must be a list of regex strings.', name, 'correct_regex');
+          this.add(
+            'The `correct_regex` field must be a list of regex strings.',
+            name,
+            'correct_regex',
+          );
         } else {
           for (const pattern of regexes) {
             const failure = regexError(pattern);
@@ -613,7 +624,11 @@ export class QuizIssueTracker {
       }
     } else if (type === 'fill_in_multiple_blanks_question') {
       const answerIds = getBracketed(body);
-      if (!('correct' in question) && !('correct_exact' in question) && !('correct_regex' in question)) {
+      if (
+        !('correct' in question) &&
+        !('correct_exact' in question) &&
+        !('correct_regex' in question)
+      ) {
         this.add(
           'Missing `correct`, `correct_exact`, or `correct_regex` field to indicate the correct answers.',
           name,
@@ -745,7 +760,10 @@ export function validateQuiz(
   const tracker = new QuizIssueTracker();
   const checkMap = checks.questions ?? {};
   for (const [questionId, question] of Object.entries(instructions.questions ?? {})) {
-    const merged: MergedQuestion = { ...(question as QuizQuestion), ...(checkMap[questionId] ?? {}) };
+    const merged: MergedQuestion = {
+      ...(question as QuizQuestion),
+      ...(checkMap[questionId] ?? {}),
+    };
     delete merged['id'];
     tracker.checkQuizQuestion(questionId, merged);
   }

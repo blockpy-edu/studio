@@ -50,10 +50,7 @@ export function sourceToAst(source: string): SourceAst {
   const { tree, errors } = parseSource(source);
   if (errors.length > 0) {
     const first = errors[0]!;
-    throw new AstParseError(
-      `bad input on line ${first.line}`,
-      first.line,
-    );
+    throw new AstParseError(`bad input on line ${first.line}`, first.line);
   }
   return new CstConverter(source, tree).convertScript();
 }
@@ -124,10 +121,7 @@ class CstConverter {
       if (c.name === 'Comment') continue;
       if (c.type.isError && isTolerableYieldError(c)) continue;
       if (c.type.isError) {
-        throw new AstParseError(
-          `bad input on line ${this.lineOf(c)}`,
-          this.lineOf(c),
-        );
+        throw new AstParseError(`bad input on line ${this.lineOf(c)}`, this.lineOf(c));
       }
       out.push(c);
     }
@@ -135,10 +129,7 @@ class CstConverter {
   }
 
   private fail(node: SyntaxNode, why: string): never {
-    throw new AstParseError(
-      `${why} (line ${this.lineOf(node)})`,
-      this.lineOf(node),
-    );
+    throw new AstParseError(`${why} (line ${this.lineOf(node)})`, this.lineOf(node));
   }
 
   // -- entry ----------------------------------------------------------------
@@ -214,8 +205,8 @@ class CstConverter {
         ];
       }
       case 'DeleteStatement': {
-        const targets = this.commaSeparated(this.childrenOf(node).slice(1)).map(
-          (group) => this.expressionSequence(group, node, DEL),
+        const targets = this.commaSeparated(this.childrenOf(node).slice(1)).map((group) =>
+          this.expressionSequence(group, node, DEL),
         );
         return [{ _astname: 'Delete', targets, ...loc }];
       }
@@ -251,9 +242,7 @@ class CstConverter {
           {
             _astname: 'Raise',
             exc: excNodes.length ? this.expressionSequence(excNodes, node) : null,
-            cause: causeNodes.length
-              ? this.expressionSequence(causeNodes, node)
-              : null,
+            cause: causeNodes.length ? this.expressionSequence(causeNodes, node) : null,
             ...loc,
           },
         ];
@@ -293,10 +282,7 @@ class CstConverter {
     };
   }
 
-  private assignStatement(
-    node: SyntaxNode,
-    loc: { lineno: number; col_offset: number },
-  ): ir.Stmt {
+  private assignStatement(node: SyntaxNode, loc: { lineno: number; col_offset: number }): ir.Stmt {
     const children = this.childrenOf(node);
     const typeDef = children.find((c) => c.name === 'TypeDef');
     const structural = children.filter((c) => c.name !== 'TypeDef');
@@ -313,8 +299,7 @@ class CstConverter {
       // Annotated assignment: `target : annotation [= value]`
       const target = this.expressionSequence(segments[0]!, node, STORE);
       const annotation = this.typeDefExpression(typeDef);
-      const value =
-        segments.length > 1 ? this.expressionSequence(segments[1]!, node) : null;
+      const value = segments.length > 1 ? this.expressionSequence(segments[1]!, node) : null;
       return {
         _astname: 'AnnAssign',
         target,
@@ -336,9 +321,7 @@ class CstConverter {
 
   private typeDefExpression(typeDef: SyntaxNode): ir.Expr {
     // TypeDef wraps `: expr` (annotations) or `-> expr` (returns).
-    const inner = this.childrenOf(typeDef).filter(
-      (c) => c.name !== ':',
-    );
+    const inner = this.childrenOf(typeDef).filter((c) => c.name !== ':');
     return this.expressionSequence(inner, typeDef);
   }
 
@@ -440,10 +423,7 @@ class CstConverter {
    * body, guards included — patterns are not expressions and BlockMirror
    * has no precedent (plan M3.6 design decision).
    */
-  private matchStatement(
-    node: SyntaxNode,
-    loc: { lineno: number; col_offset: number },
-  ): ir.Match {
+  private matchStatement(node: SyntaxNode, loc: { lineno: number; col_offset: number }): ir.Match {
     const children = this.childrenOf(node);
     const bodyIdx = children.findIndex((c) => c.name === 'MatchBody');
     if (bodyIdx <= 1) this.fail(node, 'malformed match statement');
@@ -471,10 +451,7 @@ class CstConverter {
     return { _astname: 'Match', subject, cases, ...loc };
   }
 
-  private whileStatement(
-    node: SyntaxNode,
-    loc: { lineno: number; col_offset: number },
-  ): ir.While {
+  private whileStatement(node: SyntaxNode, loc: { lineno: number; col_offset: number }): ir.While {
     const children = this.childrenOf(node);
     const bodies = children.filter((c) => c.name === 'Body');
     const testNodes = children.filter(
@@ -489,20 +466,14 @@ class CstConverter {
     };
   }
 
-  private forStatement(
-    node: SyntaxNode,
-    loc: { lineno: number; col_offset: number },
-  ): ir.For {
+  private forStatement(node: SyntaxNode, loc: { lineno: number; col_offset: number }): ir.For {
     const rawChildren = this.childrenOf(node);
     const isAsync = rawChildren[0]?.name === 'async';
     const children = isAsync ? rawChildren.slice(1) : rawChildren;
     const inIdx = children.findIndex((c) => c.name === 'in');
     const bodyIdx = children.findIndex((c) => c.name === 'Body');
     const target = this.expressionSequence(children.slice(1, inIdx), node, STORE);
-    const iter = this.expressionSequence(
-      children.slice(inIdx + 1, bodyIdx),
-      node,
-    );
+    const iter = this.expressionSequence(children.slice(inIdx + 1, bodyIdx), node);
     const bodies = children.filter((c) => c.name === 'Body');
     return {
       _astname: 'For',
@@ -515,10 +486,7 @@ class CstConverter {
     };
   }
 
-  private tryStatement(
-    node: SyntaxNode,
-    loc: { lineno: number; col_offset: number },
-  ): ir.Try {
+  private tryStatement(node: SyntaxNode, loc: { lineno: number; col_offset: number }): ir.Try {
     const children = this.childrenOf(node);
     const body = this.body(children[1]!);
     const handlers: ir.ExceptHandler[] = [];
@@ -543,9 +511,7 @@ class CstConverter {
         }
         handlers.push({
           _astname: 'ExceptHandler',
-          type: typeNodes.length
-            ? this.expressionSequence(typeNodes, node)
-            : null,
+          type: typeNodes.length ? this.expressionSequence(typeNodes, node) : null,
           name,
           body: this.body(children[j]!),
           ...handlerLoc,
@@ -564,10 +530,7 @@ class CstConverter {
     return { _astname: 'Try', body, handlers, orelse, finalbody, ...loc };
   }
 
-  private withStatement(
-    node: SyntaxNode,
-    loc: { lineno: number; col_offset: number },
-  ): ir.With {
+  private withStatement(node: SyntaxNode, loc: { lineno: number; col_offset: number }): ir.With {
     const rawChildren = this.childrenOf(node);
     const isAsync = rawChildren[0]?.name === 'async';
     const children = isAsync ? rawChildren.slice(1) : rawChildren;
@@ -586,11 +549,7 @@ class CstConverter {
         items.push({
           _astname: 'withitem',
           context_expr: this.expressionSequence(group.slice(0, asIdx), node),
-          optional_vars: this.expressionSequence(
-            group.slice(asIdx + 1),
-            node,
-            STORE,
-          ),
+          optional_vars: this.expressionSequence(group.slice(asIdx + 1), node, STORE),
         });
       }
     }
@@ -761,9 +720,7 @@ class CstConverter {
   // -- parameters -----------------------------------------------------------
 
   private parameters(paramList: SyntaxNode): ir.Arguments {
-    const children = this.childrenOf(paramList).filter(
-      (c) => c.name !== '(' && c.name !== ')',
-    );
+    const children = this.childrenOf(paramList).filter((c) => c.name !== '(' && c.name !== ')');
     const result: ir.Arguments = {
       _astname: 'arguments',
       args: [],
@@ -800,9 +757,7 @@ class CstConverter {
         col_offset: this.colOf(nameNode),
       };
       const defaultExpr =
-        assignIdx === -1
-          ? null
-          : this.expressionSequence(group.slice(assignIdx + 1), paramList);
+        assignIdx === -1 ? null : this.expressionSequence(group.slice(assignIdx + 1), paramList);
       if (kind === 'vararg') {
         result.vararg = arg;
         seenStar = true;
@@ -849,8 +804,7 @@ class CstConverter {
     ctx: ir.ExprContext = LOAD,
   ): ir.Expr {
     const groups = this.commaSeparated(nodes);
-    const hadComma =
-      nodes.some((n) => n.name === ',') || groups.length > 1;
+    const hadComma = nodes.some((n) => n.name === ',') || groups.length > 1;
     const exprs = groups.map((group) => this.expressionGroup(group, ctx));
     if (!hadComma && exprs.length === 1) {
       return exprs[0]!;
@@ -866,10 +820,7 @@ class CstConverter {
   }
 
   /** One comma-free expression group: `expr` or `*expr`. */
-  private expressionGroup(
-    group: SyntaxNode[],
-    ctx: ir.ExprContext,
-  ): ir.Expr {
+  private expressionGroup(group: SyntaxNode[], ctx: ir.ExprContext): ir.Expr {
     if (group.length === 0) {
       this.fail(this.tree.topNode, 'empty expression');
     }
@@ -913,36 +864,22 @@ class CstConverter {
       case 'Ellipsis':
         return { _astname: 'Ellipsis', ...loc };
       case 'ParenthesizedExpression': {
-        const inner = this.childrenOf(node).filter(
-          (c) => c.name !== '(' && c.name !== ')',
-        );
+        const inner = this.childrenOf(node).filter((c) => c.name !== '(' && c.name !== ')');
         return this.expressionSequence(inner, node, ctx);
       }
       case 'TupleExpression': {
-        const inner = this.childrenOf(node).filter(
-          (c) => c.name !== '(' && c.name !== ')',
-        );
-        const elts = this.commaSeparated(inner).map((g) =>
-          this.expressionGroup(g, ctx),
-        );
+        const inner = this.childrenOf(node).filter((c) => c.name !== '(' && c.name !== ')');
+        const elts = this.commaSeparated(inner).map((g) => this.expressionGroup(g, ctx));
         return { _astname: 'Tuple', elts, ctx, ...loc };
       }
       case 'ArrayExpression': {
-        const inner = this.childrenOf(node).filter(
-          (c) => c.name !== '[' && c.name !== ']',
-        );
-        const elts = this.commaSeparated(inner).map((g) =>
-          this.expressionGroup(g, ctx),
-        );
+        const inner = this.childrenOf(node).filter((c) => c.name !== '[' && c.name !== ']');
+        const elts = this.commaSeparated(inner).map((g) => this.expressionGroup(g, ctx));
         return { _astname: 'List', elts, ctx, ...loc };
       }
       case 'SetExpression': {
-        const inner = this.childrenOf(node).filter(
-          (c) => c.name !== '{' && c.name !== '}',
-        );
-        const elts = this.commaSeparated(inner).map((g) =>
-          this.expressionGroup(g, ctx),
-        );
+        const inner = this.childrenOf(node).filter((c) => c.name !== '{' && c.name !== '}');
+        const elts = this.commaSeparated(inner).map((g) => this.expressionGroup(g, ctx));
         return { _astname: 'Set', elts, ...loc };
       }
       case 'DictionaryExpression':
@@ -1050,10 +987,7 @@ class CstConverter {
     }
   }
 
-  private binaryExpression(
-    node: SyntaxNode,
-    loc: { lineno: number; col_offset: number },
-  ): ir.Expr {
+  private binaryExpression(node: SyntaxNode, loc: { lineno: number; col_offset: number }): ir.Expr {
     const children = this.childrenOf(node);
     // Find the operator: ArithOp/BitOp/CompareOp node, or keyword tokens
     // (and / or / in / is / not / is not / not in).
@@ -1193,17 +1127,12 @@ class CstConverter {
       };
     }
     // Subscript: parse the bracket contents into Index/Slice/ExtSlice.
-    const inner = children.filter(
-      (c, i) => i > 0 && c.name !== '[' && c.name !== ']',
-    );
+    const inner = children.filter((c, i) => i > 0 && c.name !== '[' && c.name !== ']');
     const slice = this.subscriptSlice(inner, node);
     return { _astname: 'Subscript', value, slice, ctx, ...loc };
   }
 
-  private subscriptSlice(
-    inner: SyntaxNode[],
-    parent: SyntaxNode,
-  ): ir.SliceKind {
+  private subscriptSlice(inner: SyntaxNode[], parent: SyntaxNode): ir.SliceKind {
     interface Segment {
       parts: SyntaxNode[][]; // split on `:`
       isSlice: boolean;
@@ -1243,9 +1172,7 @@ class CstConverter {
     args: ir.Expr[];
     keywords: ir.Keyword[];
   } {
-    const inner = this.childrenOf(argList).filter(
-      (c) => c.name !== '(' && c.name !== ')',
-    );
+    const inner = this.childrenOf(argList).filter((c) => c.name !== '(' && c.name !== ')');
     const args: ir.Expr[] = [];
     const keywords: ir.Keyword[] = [];
     for (const group of this.commaSeparated(inner)) {
@@ -1288,13 +1215,8 @@ class CstConverter {
     return { args, keywords };
   }
 
-  private dictionary(
-    node: SyntaxNode,
-    loc: { lineno: number; col_offset: number },
-  ): ir.Dict {
-    const inner = this.childrenOf(node).filter(
-      (c) => c.name !== '{' && c.name !== '}',
-    );
+  private dictionary(node: SyntaxNode, loc: { lineno: number; col_offset: number }): ir.Dict {
+    const inner = this.childrenOf(node).filter((c) => c.name !== '{' && c.name !== '}');
     const keys: (ir.Expr | null)[] = [];
     const values: ir.Expr[] = [];
     for (const group of this.commaSeparated(inner)) {
@@ -1315,10 +1237,7 @@ class CstConverter {
    * Parse the `for target in iter [if cond]* …` tail shared by all four
    * comprehension forms. `nodes` starts at the first `for`.
    */
-  private comprehensionClauses(
-    nodes: SyntaxNode[],
-    parent: SyntaxNode,
-  ): ir.Comprehension[] {
+  private comprehensionClauses(nodes: SyntaxNode[], parent: SyntaxNode): ir.Comprehension[] {
     const generators: ir.Comprehension[] = [];
     let i = 0;
     while (i < nodes.length) {
@@ -1333,11 +1252,7 @@ class CstConverter {
         }
         generators.push({
           _astname: 'comprehension',
-          target: this.expressionSequence(
-            nodes.slice(i + 1, inIdx),
-            parent,
-            STORE,
-          ),
+          target: this.expressionSequence(nodes.slice(i + 1, inIdx), parent, STORE),
           iter: this.expressionSequence(nodes.slice(inIdx + 1, end), parent),
           ifs: [],
           is_async: 0,
@@ -1380,9 +1295,7 @@ class CstConverter {
     node: SyntaxNode,
     loc: { lineno: number; col_offset: number },
   ): ir.DictComp {
-    const inner = this.childrenOf(node).filter(
-      (c) => c.name !== '{' && c.name !== '}',
-    );
+    const inner = this.childrenOf(node).filter((c) => c.name !== '{' && c.name !== '}');
     const forIdx = inner.findIndex((c) => c.name === 'for');
     const head = inner.slice(0, forIdx);
     const parts = splitOn(head, ':');
@@ -1397,10 +1310,7 @@ class CstConverter {
 
   // -- literals ---------------------------------------------------------------
 
-  private number(
-    node: SyntaxNode,
-    loc: { lineno: number; col_offset: number },
-  ): ir.Num {
+  private number(node: SyntaxNode, loc: { lineno: number; col_offset: number }): ir.Num {
     const source = this.text(node);
     let numeric = source.replace(/_/g, '');
     if (/[jJ]$/.test(numeric)) {
@@ -1417,10 +1327,7 @@ class CstConverter {
     return { _astname: 'Num', n, source, ...loc };
   }
 
-  private string(
-    node: SyntaxNode,
-    loc: { lineno: number; col_offset: number },
-  ): ir.Str | ir.Bytes {
+  private string(node: SyntaxNode, loc: { lineno: number; col_offset: number }): ir.Str | ir.Bytes {
     const source = this.text(node);
     const { value, isBytes } = decodePythonString(source);
     if (isBytes) {

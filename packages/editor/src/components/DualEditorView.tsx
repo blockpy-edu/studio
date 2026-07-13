@@ -7,15 +7,13 @@
  * BlockPy rebuilt BlockMirror. `mode`, `code`, and `readOnly` are live props.
  */
 import { useEffect, useRef } from 'react';
-import {
-  DualEditor,
-  type DualEditorConfiguration,
-  type DualEditorMode,
-} from '../dual/dual-editor';
+import { DualEditor, type DualEditorConfiguration, type DualEditorMode } from '../dual/dual-editor';
 import { useEditorChromeStore } from '../chrome/store';
 
-export interface DualEditorViewProps
-  extends Omit<DualEditorConfiguration, 'container' | 'viewMode' | 'readOnly'> {
+export interface DualEditorViewProps extends Omit<
+  DualEditorConfiguration,
+  'container' | 'viewMode' | 'readOnly'
+> {
   /** Current code; pushed into the editor quietly when it differs. */
   code?: string;
   /** Fired on every code change (user edit in either half, or programmatic). */
@@ -64,11 +62,7 @@ export function DualEditorView(props: DualEditorViewProps) {
   }, []);
 
   useEffect(() => {
-    if (
-      editor.current &&
-      props.code !== undefined &&
-      props.code !== editor.current.getCode()
-    ) {
+    if (editor.current && props.code !== undefined && props.code !== editor.current.getCode()) {
       editor.current.setCode(props.code);
     }
   }, [props.code]);

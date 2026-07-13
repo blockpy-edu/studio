@@ -25,18 +25,14 @@ generator.forBlock['ast_Num'] = function (block) {
     code = '-float("inf")';
     order = generator.ORDER_UNARY_SIGN;
   } else {
-    order =
-      code < 0 ? generator.ORDER_UNARY_SIGN : generator.ORDER_ATOMIC;
+    order = code < 0 ? generator.ORDER_UNARY_SIGN : generator.ORDER_ATOMIC;
   }
   return [String(code), order];
 };
 
-registerConverter(
-  'Num',
-  function (this: TextToBlocksConverter, node: ir.Num) {
-    const n = node.n;
-    return createBlock('ast_Num', node.lineno, {
-      NUM: n,
-    });
-  },
-);
+registerConverter('Num', function (this: TextToBlocksConverter, node: ir.Num) {
+  const n = node.n;
+  return createBlock('ast_Num', node.lineno, {
+    NUM: n,
+  });
+});

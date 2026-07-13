@@ -49,7 +49,10 @@ const READY_FEEDBACK: FeedbackState = {
 };
 
 export function MinifiedEditor(props: MinifiedEditorProps) {
-  const [code, setCode] = useState(props.initialCode);
+  // Destructured props (M5.1): hook deps stay exact without depending
+  // on the whole `props` object.
+  const { runController, initialCode, onCodeChange } = props;
+  const [code, setCode] = useState(initialCode);
   const [runState, setRunState] = useState<MinifiedRunState>('idle');
   const [output, setOutput] = useState<ConsoleEntry[]>([]);
   const [feedback, setFeedback] = useState<FeedbackState>(READY_FEEDBACK);
@@ -59,18 +62,15 @@ export function MinifiedEditor(props: MinifiedEditorProps) {
   codeRef.current = code;
 
   const handleRun = useCallback(async () => {
-    const controller = props.runController;
+    const controller = runController;
     setOutput([]);
     setFeedback(READY_FEEDBACK);
     if (!controller) {
-      setOutput([
-        { kind: 'stderr', text: 'No execution engine attached to this editor.' },
-      ]);
+      setOutput([{ kind: 'stderr', text: 'No execution engine attached to this editor.' }]);
       return;
     }
     setRunState('running');
-    const append = (entry: ConsoleEntry) =>
-      setOutput((existing) => [...existing, entry]);
+    const append = (entry: ConsoleEntry) => setOutput((existing) => [...existing, entry]);
     try {
       const outcome = await controller.run(codeRef.current, {
         stdout: (text) => append({ kind: 'stdout', text }),
@@ -96,18 +96,18 @@ export function MinifiedEditor(props: MinifiedEditorProps) {
       setRunState('error');
       append({ kind: 'stderr', text: String(error) });
     }
-  }, [props.runController]);
+  }, [runController]);
 
   const handleStop = useCallback(() => {
-    props.runController?.stop?.();
+    runController?.stop?.();
     setRunState('idle');
-  }, [props.runController]);
+  }, [runController]);
 
   const handleReset = useCallback(() => {
-    setCode(props.initialCode);
-    editorRef.current?.setCode(props.initialCode);
-    props.onCodeChange?.(props.initialCode);
-  }, [props.initialCode, props.onCodeChange]);
+    setCode(initialCode);
+    editorRef.current?.setCode(initialCode);
+    onCodeChange?.(initialCode);
+  }, [initialCode, onCodeChange]);
 
   const running = runState === 'running';
   const presentation = categoryPresentation(feedback.category);
@@ -140,20 +140,14 @@ export function MinifiedEditor(props: MinifiedEditorProps) {
             </div>
           ))}
         </div>
-        <div
-          className="blockpy-minified-feedback"
-          aria-live="polite"
-          aria-label="Feedback"
-        >
+        <div className="blockpy-minified-feedback" aria-live="polite" aria-label="Feedback">
           <strong className="feedback-header">Feedback: </strong>
           <span
             className={`badge blockpy-feedback-category feedback-badge ${presentation.badgeClass}`}
           >
             {presentation.displayText}
           </span>
-          {feedback.label && (
-            <strong className="blockpy-feedback-label"> {feedback.label}</strong>
-          )}
+          {feedback.label && <strong className="blockpy-feedback-label"> {feedback.label}</strong>}
           <div
             ref={feedbackRef}
             className="blockpy-feedback-message"
@@ -196,7 +190,7 @@ export function MinifiedEditor(props: MinifiedEditorProps) {
           code={code}
           onCodeChange={(newCode) => {
             setCode(newCode);
-            props.onCodeChange?.(newCode);
+            onCodeChange?.(newCode);
           }}
           readOnly={props.readOnly}
           blocklyMediaPath={props.blocklyMediaPath}

@@ -164,8 +164,7 @@ export function Textbook(props: TextbookProps) {
         // Boot page: ?page= (by url then id, assignments.py:100-112),
         // falling back to the first reading (default_first_page).
         const requested = pageParam();
-        const initial =
-          (requested ? findReadingByPage(doc, requested) : null) ?? firstReading(doc);
+        const initial = (requested ? findReadingByPage(doc, requested) : null) ?? firstReading(doc);
         setPage(initial);
       })
       .catch((error) => {
@@ -307,15 +306,13 @@ export function Textbook(props: TextbookProps) {
               onClick={() => {
                 const save = propsRef.current.saveTextbookAssignment;
                 if (!save) return;
-                void save(loaded.assignment.id, draftInstructions, draftSettings).then(
-                  (result) => {
-                    if (result.success) {
-                      setReloadNonce((nonce) => nonce + 1);
-                    } else {
-                      setErrorMessage('Failed to save the textbook.');
-                    }
-                  },
-                );
+                void save(loaded.assignment.id, draftInstructions, draftSettings).then((result) => {
+                  if (result.success) {
+                    setReloadNonce((nonce) => nonce + 1);
+                  } else {
+                    setErrorMessage('Failed to save the textbook.');
+                  }
+                });
               }}
             >
               Save Assignment
@@ -341,9 +338,7 @@ export function Textbook(props: TextbookProps) {
           <div className="row" id="textbook">
             <div className="col-md-4 col-lg-3 textbook-navigation">
               <div className="list-group">
-                {loaded.document.content.map((item, index) =>
-                  renderItem(item, 0, `item-${index}`),
-                )}
+                {loaded.document.content.map((item, index) => renderItem(item, 0, `item-${index}`))}
               </div>
             </div>
             <div className="col-md-8 col-lg-9 textbook-page">

@@ -26,11 +26,7 @@ export interface ConsoleProps {
  * Header button that swaps the console slot, with a count badge for entries
  * the other console received while hidden.
  */
-export function ConsoleToggleButton(props: {
-  label: string;
-  unseen: number;
-  onClick(): void;
-}) {
+export function ConsoleToggleButton(props: { label: string; unseen: number; onClick(): void }) {
   return (
     <button
       type="button"
@@ -39,9 +35,7 @@ export function ConsoleToggleButton(props: {
     >
       {props.label}
       {props.unseen > 0 && (
-        <span className="badge badge-pill blockpy-console-toggle-badge">
-          {props.unseen}
-        </span>
+        <span className="badge badge-pill blockpy-console-toggle-badge">{props.unseen}</span>
       )}
     </button>
   );
@@ -127,26 +121,14 @@ export function Console({ size = 'col-md-6', onEvaluate, onShowDev }: ConsolePro
   };
 
   return (
-    <div
-      className={`blockpy-panel blockpy-console ${size}`}
-      role="region"
-      aria-label="Console"
-    >
+    <div className={`blockpy-panel blockpy-console ${size}`} role="region" aria-label="Console">
       <div className="blockpy-panel-header">
         <strong>Console:</strong>
         {onShowDev && (
-          <ConsoleToggleButton
-            label="Dev Console"
-            unseen={devUnseen}
-            onClick={onShowDev}
-          />
+          <ConsoleToggleButton label="Dev Console" unseen={devUnseen} onClick={onShowDev} />
         )}
       </div>
-      <div
-        ref={printerRef}
-        className="blockpy-printer blockpy-printer-default"
-        role="log"
-      >
+      <div ref={printerRef} className="blockpy-printer blockpy-printer-default" role="log">
         {entries.map((entry, i) => (
           <div key={i}>{entryBody(entry, renderImages)}</div>
         ))}

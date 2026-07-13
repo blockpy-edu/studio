@@ -17,8 +17,17 @@
  * expressions carry a 1-based `lineno` like Skulpt's AST did.
  */
 
+/**
+ * Traversal backlink — `TextToBlocksConverter.convert` stamps the enclosing
+ * node on every node it visits (legacy `node._parent = parent`); `astStr`'s
+ * `isDocString` reads it.
+ */
+export interface Parented {
+  _parent?: AnyNode;
+}
+
 /** Operator / context marker nodes — no position, just an `_astname` tag. */
-export interface OpNode<Name extends string = string> {
+export interface OpNode<Name extends string = string> extends Parented {
   _astname: Name;
 }
 
@@ -40,20 +49,11 @@ export type BinOperator = OpNode<
 export type BoolOperator = OpNode<'And' | 'Or'>;
 export type UnaryOperator = OpNode<'Invert' | 'Not' | 'UAdd' | 'USub'>;
 export type CmpOperator = OpNode<
-  | 'Eq'
-  | 'NotEq'
-  | 'Lt'
-  | 'LtE'
-  | 'Gt'
-  | 'GtE'
-  | 'Is'
-  | 'IsNot'
-  | 'In'
-  | 'NotIn'
+  'Eq' | 'NotEq' | 'Lt' | 'LtE' | 'Gt' | 'GtE' | 'Is' | 'IsNot' | 'In' | 'NotIn'
 >;
 export type ExprContext = OpNode<'Load' | 'Store' | 'Del'>;
 
-interface Located {
+interface Located extends Parented {
   /** 1-based line number, like Skulpt/CPython `lineno`. */
   lineno: number;
   col_offset: number;
@@ -63,7 +63,7 @@ interface Located {
 // Modules
 // ---------------------------------------------------------------------------
 
-export interface Module {
+export interface Module extends Parented {
   _astname: 'Module';
   body: Stmt[];
 }
@@ -174,7 +174,7 @@ export interface With extends Located {
   is_async?: boolean;
 }
 
-export interface WithItem {
+export interface WithItem extends Parented {
   _astname: 'withitem';
   context_expr: Expr;
   optional_vars: Expr | null;
@@ -219,7 +219,7 @@ export interface ImportFrom extends Located {
   level: number;
 }
 
-export interface Alias {
+export interface Alias extends Parented {
   _astname: 'alias';
   name: string;
   asname: string | null;
@@ -350,7 +350,7 @@ export interface GeneratorExp extends Located {
   generators: Comprehension[];
 }
 
-export interface Comprehension {
+export interface Comprehension extends Parented {
   _astname: 'comprehension';
   target: Expr;
   iter: Expr;
@@ -394,7 +394,7 @@ export interface Call extends Located {
   keywords: Keyword[];
 }
 
-export interface Keyword {
+export interface Keyword extends Parented {
   _astname: 'keyword';
   /** `null` for `**kwargs`. */
   arg: string | null;
@@ -520,19 +520,19 @@ export type Expr =
 // Subscript slices (pre-3.9 style, matching Skulpt)
 // ---------------------------------------------------------------------------
 
-export interface Index {
+export interface Index extends Parented {
   _astname: 'Index';
   value: Expr;
 }
 
-export interface Slice {
+export interface Slice extends Parented {
   _astname: 'Slice';
   lower: Expr | null;
   upper: Expr | null;
   step: Expr | null;
 }
 
-export interface ExtSlice {
+export interface ExtSlice extends Parented {
   _astname: 'ExtSlice';
   dims: (Index | Slice)[];
 }
@@ -543,7 +543,7 @@ export type SliceKind = Index | Slice | ExtSlice;
 // Function signatures
 // ---------------------------------------------------------------------------
 
-export interface Arguments {
+export interface Arguments extends Parented {
   _astname: 'arguments';
   args: Arg[];
   vararg: Arg | null;

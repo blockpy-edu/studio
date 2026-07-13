@@ -43,26 +43,23 @@ generator.forBlock['ast_NameConstantNone'] = function () {
   return [code, generator.ORDER_ATOMIC];
 };
 
-registerConverter(
-  'NameConstant',
-  function (this: TextToBlocksConverter, node: ir.NameConstant) {
-    const value = node.value;
+registerConverter('NameConstant', function (this: TextToBlocksConverter, node: ir.NameConstant) {
+  const value = node.value;
 
-    // Legacy compared against the Sk.builtin singletons; the IR delivers the
-    // plain values null / true / false.
-    if (value === null) {
-      return createBlock('ast_NameConstantNone', node.lineno, {});
-    } else if (value === true) {
-      return createBlock('ast_NameConstantBoolean', node.lineno, {
-        BOOL: 'TRUE',
-      });
-    } else if (value === false) {
-      return createBlock('ast_NameConstantBoolean', node.lineno, {
-        BOOL: 'FALSE',
-      });
-    }
-    // Unreachable (value is exhaustively null | true | false); legacy fell
-    // off the end returning undefined here.
-    return null;
-  },
-);
+  // Legacy compared against the Sk.builtin singletons; the IR delivers the
+  // plain values null / true / false.
+  if (value === null) {
+    return createBlock('ast_NameConstantNone', node.lineno, {});
+  } else if (value === true) {
+    return createBlock('ast_NameConstantBoolean', node.lineno, {
+      BOOL: 'TRUE',
+    });
+  } else if (value === false) {
+    return createBlock('ast_NameConstantBoolean', node.lineno, {
+      BOOL: 'FALSE',
+    });
+  }
+  // Unreachable (value is exhaustively null | true | false); legacy fell
+  // off the end returning undefined here.
+  return null;
+});

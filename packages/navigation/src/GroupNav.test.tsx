@@ -11,8 +11,22 @@ beforeEach(() => {
 
 const BOOT: GroupNavBootData = {
   assignments: [
-    { id: 101, name: 'Hello World', url: '/a/101', subordinate: false, hidden: false, correct: false },
-    { id: 102, name: 'Quiz: Vars', url: '/a/102', subordinate: true, hidden: false, correct: false },
+    {
+      id: 101,
+      name: 'Hello World',
+      url: '/a/101',
+      subordinate: false,
+      hidden: false,
+      correct: false,
+    },
+    {
+      id: 102,
+      name: 'Quiz: Vars',
+      url: '/a/102',
+      subordinate: true,
+      hidden: false,
+      correct: false,
+    },
     { id: 103, name: 'Reading', url: '/a/103', subordinate: false, hidden: false, correct: true },
     { id: 104, name: 'Finale', url: '/a/104', subordinate: false, hidden: false, correct: false },
   ],

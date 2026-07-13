@@ -4,6 +4,7 @@ import { registerFieldMultilineInput } from '@blockly/field-multilineinput';
 import { COLOR } from '../colors';
 import { generator } from '../generator';
 import { defineBlock, defineBlocks, registerConverter } from '../registry';
+import type { ConverterParent } from '../registry';
 import { createBlock } from '../xml';
 import type { TextToBlocksConverter } from '../text-to-blocks';
 import type * as ir from '../ir/types';
@@ -38,9 +39,7 @@ defineBlocks({
 {
   const multiline_input_type = 'field_multilinetext';
 
-  if (
-    !Blockly.registry.hasItem(Blockly.registry.Type.FIELD, multiline_input_type)
-  ) {
+  if (!Blockly.registry.hasItem(Blockly.registry.Type.FIELD, multiline_input_type)) {
     // Register if the field-multilineinput plugin is available.
     // (Legacy probed for a global `registerFieldMultilineInput` and fell back
     // to "field_input" when the plugin was missing; here the plugin is a
@@ -60,10 +59,7 @@ defineBlocks({
   defineBlocks({
     type: 'ast_StrDocstring',
     message0: 'Docstring: %1 %2',
-    args0: [
-      { type: 'input_dummy' },
-      { type: multiline_input_type, name: 'TEXT', value: '' },
-    ],
+    args0: [{ type: 'input_dummy' }, { type: multiline_input_type, name: 'TEXT', value: '' }],
     previousStatement: null,
     nextStatement: null,
     colour: COLOR.TEXT,
@@ -184,12 +180,13 @@ export function isSingleChar(text: string): boolean {
   return text === '\n' || text === '\t';
 }
 
-export function isDocString(_node: unknown, parent: any): boolean {
+export function isDocString(_node: unknown, parent: ir.AnyNode): boolean {
   return (
     parent._astname === 'Expr' &&
-    parent._parent &&
+    parent._parent !== undefined &&
     ['FunctionDef', 'ClassDef'].indexOf(parent._parent._astname) !== -1 &&
-    parent._parent.body[0] === parent
+    // The `indexOf` probe above guarantees a body-carrying definition node.
+    (parent._parent as ir.FunctionDef | ir.ClassDef).body[0] === parent
   );
 }
 
@@ -197,11 +194,7 @@ export function isSimpleString(text: string): boolean {
   return text.split('\n').length <= 2 && text.length <= 40;
 }
 
-export function dedent(
-  text: string,
-  levels: number,
-  isDocString: boolean,
-): string {
+export function dedent(text: string, levels: number, isDocString: boolean): string {
   // console.log(text, levels, isDocString);
   if (!isDocString && text.charAt(0) === '\n') {
     return text;
@@ -237,8 +230,14 @@ export function dedent(
 // (`BlockMirrorTextEditor.REGEX_PATTERNS`) — the converter shared the text
 // editor's table. NOTE for the future text editor port: these regexes (and
 // the 'constructor'/'string'/'none' keys) belong to it as well.
+// The dangling `\2` (its quote group lives in the FIRST alternative only)
+// and the redundant escapes are legacy quirks: an unset backreference
+// matches empty, which is what lets the blob:/data: alternatives match at
+// all. Ported byte-for-byte — do not "fix".
+/* eslint-disable no-useless-backreference, no-useless-escape */
 const STRING_IMAGE_URL =
   /((["'])(?:https?:\/\/[-a-zA-Z0-9@:%._\/\+~#=]+(?:png|jpg|jpeg|gif|svg)+)|(?:blob:null\/[A-Fa-f0-9-]+)|(?:data:image\/(?:png|jpg|jpeg|gif|svg\+xml|webp|bmp)(?:;charset=utf-8)?;base64,(?:[A-Za-z0-9]|[+/])+={0,2})\2)/g;
+/* eslint-enable no-useless-backreference, no-useless-escape */
 const CONSTRUCTOR_IMAGE_URL = /(?:^|\W)(Image\((["'])(.+?)\2\))/g;
 const REGEX_PATTERNS: Record<string, RegExp | false> = {
   constructor: CONSTRUCTOR_IMAGE_URL,
@@ -249,7 +248,7 @@ const REGEX_PATTERNS: Record<string, RegExp | false> = {
 // TODO: Handle indentation intelligently
 registerConverter(
   'Str',
-  function (this: TextToBlocksConverter, node: ir.Str, parent: any) {
+  function (this: TextToBlocksConverter, node: ir.Str, parent: ConverterParent) {
     const s = node.s;
     const text = s; // legacy: Sk.ffi.remapToJs(s)
     // Legacy read `this.blockMirror.configuration.imageDetection`, which
@@ -257,8 +256,7 @@ registerConverter(
     // (With 'none' the table yields `false` and `.test` throws a TypeError,
     // exactly as legacy did — the statement then falls back to a raw block.)
     const imageDetection =
-      (this.configuration as { imageDetection?: string }).imageDetection ||
-      'string';
+      (this.configuration as { imageDetection?: string }).imageDetection || 'string';
     const regex = REGEX_PATTERNS[imageDetection] as RegExp;
     //console.log(text, regex.test(JSON.stringify(text)));
     if (regex.test(JSON.stringify(text))) {
@@ -266,7 +264,7 @@ registerConverter(
       return createBlock('ast_Image', node.lineno, {}, {}, {}, { '@src': text });
     } else if (isSingleChar(text)) {
       return createBlock('ast_StrChar', node.lineno, { TEXT: text });
-    } else if (isDocString(node, parent)) {
+    } else if (isDocString(node, parent!)) {
       const dedented = dedent(text, this.levelIndex - 1, true);
       return [createBlock('ast_StrDocstring', node.lineno, { TEXT: dedented })];
     } else if (text.indexOf('\n') === -1) {

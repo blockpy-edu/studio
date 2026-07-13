@@ -82,9 +82,7 @@ describe('answers (questions.ts:41-108)', () => {
   });
 
   it('defaultAnswer shapes per type and restores previous values', () => {
-    expect(defaultAnswer({ type: 'true_false_question', body: '', points: 1 }, undefined)).toBe(
-      '',
-    );
+    expect(defaultAnswer({ type: 'true_false_question', body: '', points: 1 }, undefined)).toBe('');
     expect(
       defaultAnswer({ type: 'multiple_answers_question', body: '', points: 1 }, ['x']),
     ).toEqual(['x']);

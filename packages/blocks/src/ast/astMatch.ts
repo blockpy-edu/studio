@@ -64,20 +64,14 @@ generator.forBlock['ast_Match'] = function (block) {
   const typed = block as MatchBlock;
   let code =
     'match ' +
-    (generator.valueToCode(block, 'SUBJECT', generator.ORDER_NONE) ||
-      generator.blank) +
+    (generator.valueToCode(block, 'SUBJECT', generator.ORDER_NONE) || generator.blank) +
     ':\n';
   for (let i = 0; i < typed.cases_; i++) {
     const pattern = block.getFieldValue('CASEPATTERN' + i) || '_';
-    const body =
-      generator.statementToCode(block, 'CASEBODY' + i) || generator.PASS;
+    const body = generator.statementToCode(block, 'CASEBODY' + i) || generator.PASS;
     // statementToCode indents one level; case bodies sit one deeper.
     code +=
-      generator.INDENT +
-      'case ' +
-      pattern +
-      ':\n' +
-      generator.prefixLines(body, generator.INDENT);
+      generator.INDENT + 'case ' + pattern + ':\n' + generator.prefixLines(body, generator.INDENT);
   }
   return code;
 };

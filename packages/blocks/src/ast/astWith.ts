@@ -4,6 +4,7 @@ import { COLOR } from '../colors';
 import { generator } from '../generator';
 import { defineBlock, defineBlocks, registerConverter } from '../registry';
 import { createBlock } from '../xml';
+import type { MutationValue } from '../xml';
 import type { TextToBlocksConverter } from '../text-to-blocks';
 import type * as ir from '../ir/types';
 
@@ -17,9 +18,7 @@ defineBlocks({
   inputsInline: false,
 });
 generator.forBlock['ast_WithItem'] = function (block) {
-  const context =
-    generator.valueToCode(block, 'CONTEXT', generator.ORDER_NONE) ||
-    generator.blank;
+  const context = generator.valueToCode(block, 'CONTEXT', generator.ORDER_NONE) || generator.blank;
   return [context, generator.ORDER_NONE];
 };
 
@@ -36,11 +35,8 @@ defineBlocks({
   inputsInline: true,
 });
 generator.forBlock['ast_WithItemAs'] = function (block) {
-  const context =
-    generator.valueToCode(block, 'CONTEXT', generator.ORDER_NONE) ||
-    generator.blank;
-  const as =
-    generator.valueToCode(block, 'AS', generator.ORDER_NONE) || generator.blank;
+  const context = generator.valueToCode(block, 'CONTEXT', generator.ORDER_NONE) || generator.blank;
+  const as = generator.valueToCode(block, 'AS', generator.ORDER_NONE) || generator.blank;
   return [context + ' as ' + as, generator.ORDER_NONE];
 };
 
@@ -85,7 +81,11 @@ defineBlock('ast_With', {
   domToMutation: function (this: WithBlock, xmlElement: Element) {
     this.itemCount_ = parseInt(xmlElement.getAttribute('items')!, 10);
     this.renames_ = [];
-    for (let i = 0, childNode: any; (childNode = xmlElement.childNodes[i]); i++) {
+    for (
+      let i = 0, childNode: Element | undefined;
+      (childNode = xmlElement.childNodes[i] as Element | undefined);
+      i++
+    ) {
       if (childNode.nodeName.toLowerCase() === 'as') {
         this.renames_.push('true' === childNode.getAttribute('name'));
       }
@@ -118,71 +118,65 @@ generator.forBlock['ast_With'] = function (block) {
   // Contexts
   const items = new Array<string>(typed.itemCount_);
   for (let i = 0; i < typed.itemCount_; i++) {
-    items[i] =
-      generator.valueToCode(block, 'ITEM' + i, generator.ORDER_NONE) ||
-      generator.blank;
+    items[i] = generator.valueToCode(block, 'ITEM' + i, generator.ORDER_NONE) || generator.blank;
   }
   // Body
   const body = generator.statementToCode(block, 'BODY') || generator.PASS;
   return 'with ' + items.join(', ') + ':\n' + body;
 };
 
-registerConverter(
-  'With',
-  function (this: TextToBlocksConverter, node: ir.With, _parent: unknown) {
-    if (node.is_async) {
-      // M3.6: per-statement ast_Raw fallback (see astFunctionDef).
-      throw new Error('async with has no block form (raw fallback)');
+registerConverter('With', function (this: TextToBlocksConverter, node: ir.With, _parent: unknown) {
+  if (node.is_async) {
+    // M3.6: per-statement ast_Raw fallback (see astFunctionDef).
+    throw new Error('async with has no block form (raw fallback)');
+  }
+  const items = node.items;
+  const body = node.body;
+
+  const values: Record<string, Element | null> = {};
+  const mutations: Record<string, MutationValue> = { '@items': items.length };
+
+  const renamedItems: (ir.Expr | null)[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const hasRename = items[i]!.optional_vars;
+    renamedItems.push(hasRename);
+    const innerValues: Record<string, Element | null> = {
+      CONTEXT: this.convert(items[i]!.context_expr, node) as Element,
+    };
+    if (hasRename) {
+      innerValues['AS'] = this.convert(items[i]!.optional_vars!, node) as Element;
+      values['ITEM' + i] = createBlock(
+        'ast_WithItemAs',
+        node.lineno,
+        {},
+        innerValues,
+        this.LOCKED_BLOCK,
+      );
+    } else {
+      values['ITEM' + i] = createBlock(
+        'ast_WithItem',
+        node.lineno,
+        {},
+        innerValues,
+        this.LOCKED_BLOCK,
+      );
     }
-    const items = node.items;
-    const body = node.body;
+  }
+  // Legacy stored the raw `optional_vars` nodes; `createBlock` only
+  // stringifies them per-entry, so the array shape is what matters.
+  mutations['as'] = renamedItems as unknown as (string | number)[];
 
-    const values: Record<string, Element | null> = {};
-    const mutations: Record<string, any> = { '@items': items.length };
-
-    const renamedItems: any[] = [];
-    for (let i = 0; i < items.length; i++) {
-      const hasRename = items[i]!.optional_vars;
-      renamedItems.push(hasRename);
-      const innerValues: Record<string, Element | null> = {
-        CONTEXT: this.convert(items[i]!.context_expr, node) as Element,
-      };
-      if (hasRename) {
-        innerValues['AS'] = this.convert(
-          items[i]!.optional_vars,
-          node,
-        ) as Element;
-        values['ITEM' + i] = createBlock(
-          'ast_WithItemAs',
-          node.lineno,
-          {},
-          innerValues,
-          this.LOCKED_BLOCK,
-        );
-      } else {
-        values['ITEM' + i] = createBlock(
-          'ast_WithItem',
-          node.lineno,
-          {},
-          innerValues,
-          this.LOCKED_BLOCK,
-        );
-      }
-    }
-    mutations['as'] = renamedItems;
-
-    return createBlock(
-      'ast_With',
-      node.lineno,
-      {},
-      values,
-      {
-        inline: 'false',
-      },
-      mutations,
-      {
-        BODY: this.convertBody(body, node),
-      },
-    );
-  },
-);
+  return createBlock(
+    'ast_With',
+    node.lineno,
+    {},
+    values,
+    {
+      inline: 'false',
+    },
+    mutations,
+    {
+      BODY: this.convertBody(body, node),
+    },
+  );
+});

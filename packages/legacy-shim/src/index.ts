@@ -9,12 +9,7 @@
  * unmodified templates the assignment_groups.html macro still defines them
  * itself, so the shim never re-emits them.
  */
-export {
-  BlockPy,
-  asLegacyDeferred,
-  installLegacyShim,
-  optionsToBootConfig,
-} from './facade';
+export { BlockPy, asLegacyDeferred, installLegacyShim, optionsToBootConfig } from './facade';
 export type { BlockPyFacadeDeps, BlockPyOptions, LegacyDeferred } from './facade';
 export { Server, installFrontendStub } from './frontend-stub';
 

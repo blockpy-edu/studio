@@ -4,6 +4,7 @@
 
 **Status:** Draft for review
 **Audience:** BlockPy maintainers and contributors implementing the rewrite
+**Contributing:** code style, lint policy, and the PR checklist live in [docs/CODE_STANDARDS.md](docs/CODE_STANDARDS.md); behavior deltas need a [ledger entry](docs/approved-differences.md) first.
 
 ---
 

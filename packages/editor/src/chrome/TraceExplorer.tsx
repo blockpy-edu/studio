@@ -102,9 +102,7 @@ export function TraceExplorer({ onStepLine }: TraceExplorerProps) {
               >
                 <Icon name="stepLast" />
               </button>
-              <span className="input-group-text">
-                Line {step?.studentLine ?? '—'}
-              </span>
+              <span className="input-group-text">Line {step?.studentLine ?? '—'}</span>
             </div>
           </div>
           <p>Variables after this step:</p>

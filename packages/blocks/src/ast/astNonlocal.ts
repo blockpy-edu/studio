@@ -19,10 +19,7 @@ defineBlock('ast_Nonlocal', {
     this.setNextStatement(true, null);
     this.setColour(COLOR.VARIABLES);
     this.nameCount_ = 1;
-    this.appendDummyInput('NONLOCAL').appendField(
-      'make nonlocal',
-      'START_NONLOCALS',
-    );
+    this.appendDummyInput('NONLOCAL').appendField('make nonlocal', 'START_NONLOCALS');
     this.updateShape_();
   },
   updateShape_: function (this: NonlocalBlock) {

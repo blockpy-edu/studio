@@ -65,8 +65,7 @@ export function AddNewMenu({ vfs, instructor, onAdd }: AddNewMenuProps) {
 
   const createFromDialog = () => {
     if (filename) {
-      const prefix =
-        dialogKind === 'instructor' ? namespace : dialogKind === 'starting' ? '^' : '';
+      const prefix = dialogKind === 'instructor' ? namespace : dialogKind === 'starting' ? '^' : '';
       add(prefix + filename);
     }
     setDialogKind(null);
@@ -83,9 +82,7 @@ export function AddNewMenu({ vfs, instructor, onAdd }: AddNewMenuProps) {
     options.hidden ? null : (
       <a
         key={label}
-        className={
-          'dropdown-item' + (options.instructorItem ? ' blockpy-file-instructor' : '')
-        }
+        className={'dropdown-item' + (options.instructorItem ? ' blockpy-file-instructor' : '')}
         href="#"
         onClick={(event) => {
           event.preventDefault();
@@ -112,9 +109,7 @@ export function AddNewMenu({ vfs, instructor, onAdd }: AddNewMenuProps) {
       >
         Add New
       </a>
-      <div
-        className={'dropdown-menu dropdown-menu-right' + (open ? ' show' : '')}
-      >
+      <div className={'dropdown-menu dropdown-menu-right' + (open ? ' show' : '')}>
         {instructor ? (
           <>
             {item('URL Data', '?mock_urls.blockpy', {
@@ -213,22 +208,18 @@ export function AddNewMenu({ vfs, instructor, onAdd }: AddNewMenuProps) {
             {dialogKind === 'instructor' && (
               <div className="col-sm-12">
                 <p>
-                  This dialog box is for creating text files (e.g., Python
-                  code, Markdown, etc.) that will be accessible from Python.
-                  If you want to upload a binary file (e.g., an image, a
-                  sqlite database), then you should use the "Images" or "URL
-                  Data" options.
+                  This dialog box is for creating text files (e.g., Python code, Markdown, etc.)
+                  that will be accessible from Python. If you want to upload a binary file (e.g., an
+                  image, a sqlite database), then you should use the "Images" or "URL Data" options.
                 </p>
                 <p>
-                  Students will not be able to see file tabs unless you
-                  change the "Hide Files" setting to be unchecked.
+                  Students will not be able to see file tabs unless you change the "Hide Files"
+                  setting to be unchecked.
                 </p>
               </div>
             )}
             <div className="col-sm-2 text-right">
-              <label htmlFor="blockpy-instructor-file-dialog-filename">
-                Filename:
-              </label>
+              <label htmlFor="blockpy-instructor-file-dialog-filename">Filename:</label>
             </div>
             <div className="col-sm-10">
               <input
@@ -240,9 +231,7 @@ export function AddNewMenu({ vfs, instructor, onAdd }: AddNewMenuProps) {
               />
             </div>
             <div className="col-sm-2 text-right mt-2">
-              <label htmlFor="blockpy-instructor-file-dialog-filetype">
-                Filetype:{' '}
-              </label>
+              <label htmlFor="blockpy-instructor-file-dialog-filetype">Filetype: </label>
             </div>
             <div className="col-sm-10">
               <span
@@ -255,9 +244,7 @@ export function AddNewMenu({ vfs, instructor, onAdd }: AddNewMenuProps) {
             {dialogKind === 'instructor' && (
               <>
                 <div className="col-sm-2 text-right mt-2">
-                  <label htmlFor="blockpy-instructor-file-dialog-namespace">
-                    Namespace:{' '}
-                  </label>
+                  <label htmlFor="blockpy-instructor-file-dialog-namespace">Namespace: </label>
                 </div>
                 <div className="col-sm-4">
                   <select
@@ -267,9 +254,7 @@ export function AddNewMenu({ vfs, instructor, onAdd }: AddNewMenuProps) {
                     onChange={(event) => setNamespace(event.target.value)}
                   >
                     <option value="!">Completely inaccessible</option>
-                    <option value="?">
-                      Hidden from student, accessible programatically
-                    </option>
+                    <option value="?">Hidden from student, accessible programatically</option>
                     <option value="&">Visible to student, but not editable</option>
                   </select>
                 </div>

@@ -24,9 +24,7 @@ describe('MinifiedEditor (§8.4)', () => {
     // Left column: printer first, feedback second.
     expect(left.children[0]!.className).toContain('blockpy-minified-printer');
     expect(left.children[1]!.className).toContain('blockpy-minified-feedback');
-    expect(left.querySelector('.blockpy-minified-feedback')!.textContent).toContain(
-      'Ready',
-    );
+    expect(left.querySelector('.blockpy-minified-feedback')!.textContent).toContain('Ready');
     // Right column: toolbar first, then the editor.
     expect(right.children[0]!.className).toContain('blockpy-minified-toolbar');
     expect(right.querySelector('.cm-editor')).not.toBeNull();
@@ -35,9 +33,7 @@ describe('MinifiedEditor (§8.4)', () => {
     expect(container.querySelector('.blockpy-files')).toBeNull();
     expect(container.querySelector('.blockpy-feedback')).toBeNull();
     // Empty console box renders (but holds no entries yet).
-    expect(
-      container.querySelector('.blockpy-minified-printer')!.textContent,
-    ).toBe('');
+    expect(container.querySelector('.blockpy-minified-printer')!.textContent).toBe('');
   });
 
   it('Run streams output inline and presents feedback in the left column', async () => {
@@ -60,9 +56,9 @@ describe('MinifiedEditor (§8.4)', () => {
     await act(async () => {
       runButton(container).click();
     });
-    expect(
-      container.querySelector('.blockpy-minified-printer')!.textContent,
-    ).toContain('from print(1)');
+    expect(container.querySelector('.blockpy-minified-printer')!.textContent).toContain(
+      'from print(1)',
+    );
     const feedback = container.querySelector('.blockpy-minified-feedback')!;
     expect(feedback.textContent).toContain('Complete');
     expect(feedback.textContent).toContain('Great!');
@@ -89,12 +85,8 @@ describe('MinifiedEditor (§8.4)', () => {
     });
     // Only the first instance shows output; the global chrome console
     // untouched.
-    expect(
-      editors[0]!.querySelector('.blockpy-minified-printer')!.textContent,
-    ).toContain('alpha');
-    expect(
-      editors[1]!.querySelector('.blockpy-minified-printer')!.textContent,
-    ).toBe('');
+    expect(editors[0]!.querySelector('.blockpy-minified-printer')!.textContent).toContain('alpha');
+    expect(editors[1]!.querySelector('.blockpy-minified-printer')!.textContent).toBe('');
     expect(useEditorChromeStore.getState().console).toEqual([]);
   });
 

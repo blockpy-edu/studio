@@ -8,9 +8,7 @@ describe('renderFeedbackMessage (feedback.js:213 markdown pass)', () => {
   it('renders markdown like legacy utilities.markdown', () => {
     // Inline code backticks become <code> at PRESENTATION time — Pedal
     // sends raw markdown; the legacy env relied on this exact client pass.
-    expect(renderFeedbackMessage('Check your `total` variable')).toContain(
-      '<code>total</code>',
-    );
+    expect(renderFeedbackMessage('Check your `total` variable')).toContain('<code>total</code>');
     // Inline HTML passes through (D4-A unsanitized).
     expect(renderFeedbackMessage('a <b>bold</b> claim')).toContain('<b>bold</b>');
     // The legacy <pre>\n doubling quirk (feedback.js:213) fires on literal
@@ -46,9 +44,7 @@ describe('Feedback rating region (feedback.js:46-74, blockpy.js:789-817)', () =>
     fireEvent.click(thumbsUp);
     expect(onRate).toHaveBeenCalledWith('thumbs-up');
     expect((thumbsUp as HTMLElement).style.opacity).toBe('0.5');
-    expect(
-      container.querySelector('.blockpy-feedback-thank-you')!.className,
-    ).toContain('show');
+    expect(container.querySelector('.blockpy-feedback-thank-you')!.className).toContain('show');
     // Ledger LD-18: the legacy quirk (ANY rating → prompted share after 1 s,
     // blockpy.js:801-813) is fixed — positive ratings just say thanks.
     act(() => vi.advanceTimersByTime(1000));
@@ -86,9 +82,7 @@ describe('Feedback rating region (feedback.js:46-74, blockpy.js:789-817)', () =>
 
   it('instructor header shows the score % and reset only when scored', () => {
     const onResetScore = vi.fn();
-    const { container } = render(
-      <Feedback instructor score={0.5} onResetScore={onResetScore} />,
-    );
+    const { container } = render(<Feedback instructor score={0.5} onResetScore={onResetScore} />);
     expect(container.textContent).toContain('50%');
     fireEvent.click(container.querySelector('.blockpy-feedback-reset')!);
     expect(onResetScore).toHaveBeenCalled();

@@ -24,21 +24,22 @@ defineBlocks({
 });
 
 generator.forBlock['ast_NamedExpr'] = function (block) {
-  const target =
-    generator.valueToCode(block, 'TARGET', generator.ORDER_ATOMIC) ||
-    generator.blank;
-  const value =
-    generator.valueToCode(block, 'VALUE', generator.ORDER_LAMBDA) ||
-    generator.blank;
+  const target = generator.valueToCode(block, 'TARGET', generator.ORDER_ATOMIC) || generator.blank;
+  const value = generator.valueToCode(block, 'VALUE', generator.ORDER_LAMBDA) || generator.blank;
   return [target + ' := ' + value, generator.ORDER_LAMBDA];
 };
 
 registerConverter(
   'NamedExpr',
   function (this: TextToBlocksConverter, node: ir.NamedExpr, _parent: unknown) {
-    return createBlock('ast_NamedExpr', node.lineno, {}, {
-      TARGET: this.convert(node.target, node) as Element,
-      VALUE: this.convert(node.value, node) as Element,
-    });
+    return createBlock(
+      'ast_NamedExpr',
+      node.lineno,
+      {},
+      {
+        TARGET: this.convert(node.target, node) as Element,
+        VALUE: this.convert(node.value, node) as Element,
+      },
+    );
   },
 );

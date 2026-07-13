@@ -61,10 +61,7 @@ export class LineIndex {
 export function isTolerableYieldError(node: SyntaxNode): boolean {
   if (node.from !== node.to) return false;
   const parent = node.parent;
-  if (
-    parent === null ||
-    (parent.name !== 'YieldStatement' && parent.name !== 'YieldExpression')
-  ) {
+  if (parent === null || (parent.name !== 'YieldStatement' && parent.name !== 'YieldExpression')) {
     return false;
   }
   const prev = node.prevSibling;

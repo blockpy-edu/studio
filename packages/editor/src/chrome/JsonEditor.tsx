@@ -95,9 +95,7 @@ export function JsonEditor({ value, readOnly, onChange, onRawView }: JsonEditorP
           json(),
           linter(jsonParseLinter()),
           syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
-          readOnlyCompartment.current.of(
-            EditorState.readOnly.of(readOnly ?? false),
-          ),
+          readOnlyCompartment.current.of(EditorState.readOnly.of(readOnly ?? false)),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           EditorView.updateListener.of((update) => {
             if (update.docChanged) {
@@ -128,9 +126,7 @@ export function JsonEditor({ value, readOnly, onChange, onRawView }: JsonEditorP
 
   useEffect(() => {
     viewRef.current?.dispatch({
-      effects: readOnlyCompartment.current.reconfigure(
-        EditorState.readOnly.of(readOnly ?? false),
-      ),
+      effects: readOnlyCompartment.current.reconfigure(EditorState.readOnly.of(readOnly ?? false)),
     });
   }, [readOnly]);
 
@@ -139,15 +135,12 @@ export function JsonEditor({ value, readOnly, onChange, onRawView }: JsonEditorP
       <div className="blockpy-json-toolbar">
         <span
           className={
-            'blockpy-json-status badge ' +
-            (status.ok ? 'label-no-errors' : 'label-syntax-error')
+            'blockpy-json-status badge ' + (status.ok ? 'label-no-errors' : 'label-syntax-error')
           }
         >
           {status.ok ? 'Valid JSON' : 'Invalid JSON'}
         </span>
-        {!status.ok && (
-          <span className="blockpy-json-status-detail">{status.message}</span>
-        )}
+        {!status.ok && <span className="blockpy-json-status-detail">{status.message}</span>}
         <button
           type="button"
           className={

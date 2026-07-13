@@ -66,11 +66,9 @@ describe('checkQuizQuestion (process_quiz port, quizzes.py:108-228)', () => {
       ['y'],
     );
     expect(listForm?.message).toBe('y is wrong');
-    const dictForm = checkQuizQuestion(
-      question,
-      { correct: ['x'], feedback: { s1: 'check s1' } },
-      ['y'],
-    );
+    const dictForm = checkQuizQuestion(question, { correct: ['x'], feedback: { s1: 'check s1' } }, [
+      'y',
+    ]);
     expect(dictForm?.message).toBe('check s1');
   });
 
@@ -208,9 +206,7 @@ describe('validateQuiz (bakery quiz_check port)', () => {
       },
     );
     expect(issues.some((issue) => issue.message.includes('Invalid regex'))).toBe(true);
-    expect(
-      issues.some((issue) => issue.message.includes('not in the list of answers')),
-    ).toBe(true);
+    expect(issues.some((issue) => issue.message.includes('not in the list of answers'))).toBe(true);
   });
 
   it('accepts a clean quiz and warns on orphaned checks + starving pools', () => {

@@ -60,8 +60,8 @@ export interface DualEditorChangeEvent {
 export type DualEditorListener = (event: DualEditorChangeEvent) => void;
 
 interface ResolvedConfiguration extends Required<
-    Omit<DualEditorConfiguration, 'imageDetection' | 'imageMode'>
-  > {
+  Omit<DualEditorConfiguration, 'imageDetection' | 'imageMode'>
+> {
   imageMode: boolean;
   imageDetection: ConverterConfiguration['imageDetection'];
 }
@@ -246,10 +246,7 @@ export class DualEditor {
   setReadOnly(isReadOnly: boolean): void {
     this.textEditor.setReadOnly(isReadOnly);
     this.blockEditor.setReadOnly(isReadOnly);
-    this.configuration.container.classList.toggle(
-      'block-mirror-read-only',
-      isReadOnly,
-    );
+    this.configuration.container.classList.toggle('block-mirror-read-only', isReadOnly);
   }
 
   /** Live-toggle text-editor autocomplete (M3.3; default off). */

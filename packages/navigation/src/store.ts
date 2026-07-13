@@ -188,9 +188,12 @@ export class GroupNavStore {
     // in the header rows while the browser tears the page down.
     const entry = this.snapshot.entries.find((candidate) => candidate.id === assignmentId);
     if (entry) {
-      (this.options.navigate ?? ((url: string) => {
-        document.location.href = url;
-      }))(entry.url);
+      (
+        this.options.navigate ??
+        ((url: string) => {
+          document.location.href = url;
+        })
+      )(entry.url);
     }
     this.setState({ notice: NOTICE_TEXT });
   }
@@ -244,9 +247,7 @@ export class GroupNavStore {
       return;
     }
     this.setState({
-      entries: this.snapshot.entries.filter(
-        (entry) => entry.id !== assignmentId,
-      ),
+      entries: this.snapshot.entries.filter((entry) => entry.id !== assignmentId),
     });
   }
 
@@ -297,9 +298,7 @@ export class GroupNavStore {
 
   refreshClock(): void {
     if (this.clockMode !== 'loading') {
-      const duration = Math.floor(
-        (Date.now() - this.pageStartTime) / 1000 + this.activityDuration,
-      );
+      const duration = Math.floor((Date.now() - this.pageStartTime) / 1000 + this.activityDuration);
       this.setState({ clockText: formatClockDuration(duration) });
     } else {
       this.setState({ clockText: '(Getting Total)' });
@@ -316,8 +315,7 @@ export class GroupNavStore {
       const fetcher =
         this.options.getGroupDuration ??
         ((globalThis as Record<string, unknown>)['ACTIVITY_GET_DURATION'] as
-          | (() => Promise<number>)
-          | undefined);
+          (() => Promise<number>) | undefined);
       if (typeof fetcher === 'function') {
         this.clockMode = 'loading';
         void Promise.resolve(fetcher())

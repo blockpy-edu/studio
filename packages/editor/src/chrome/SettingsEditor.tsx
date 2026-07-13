@@ -42,49 +42,141 @@ export interface SettingsEditorProps {
  * legacy). `allow_real_requests` is the M3.5 Studio addition.
  */
 const BOOLEAN_SETTINGS: [key: string, def: boolean, doc: string][] = [
-  ['disable_timeout', false, 'If checked, then students code is allowed to run without timeouts (potentially allowing infinite loops).'],
+  [
+    'disable_timeout',
+    false,
+    'If checked, then students code is allowed to run without timeouts (potentially allowing infinite loops).',
+  ],
   ['is_parsons', false, "If checked, then this is a parson's style question (jumbled)."],
-  ['save_turtle_output', false, 'If checked, then turtle (and pygame) output is saved whenever the program uses it.'],
-  ['disable_feedback', false, 'If checked, then no instructor scripts are run (e.g., on_run and on_eval).'],
-  ['disable_instructor_run', false, "If checked, then the instructor on_run will not automatically run the students' code. This still runs the students' code once beforehand, but the output/data will not be available to the instructor's on_run.py script."],
-  ['disable_student_run', false, "If checked, then the run button no longer run the students' code. This still runs the instructor's feedback on_run script."],
+  [
+    'save_turtle_output',
+    false,
+    'If checked, then turtle (and pygame) output is saved whenever the program uses it.',
+  ],
+  [
+    'disable_feedback',
+    false,
+    'If checked, then no instructor scripts are run (e.g., on_run and on_eval).',
+  ],
+  [
+    'disable_instructor_run',
+    false,
+    "If checked, then the instructor on_run will not automatically run the students' code. This still runs the students' code once beforehand, but the output/data will not be available to the instructor's on_run.py script.",
+  ],
+  [
+    'disable_student_run',
+    false,
+    "If checked, then the run button no longer run the students' code. This still runs the instructor's feedback on_run script.",
+  ],
   ['disable_tifa', false, 'If checked, then do not automatically run Tifa (which can be slow).'],
-  ['disable_trace', false, 'If checked, then the students code will not have its execution traced (no variables recorded, no coverage tracked).'],
+  [
+    'disable_trace',
+    false,
+    'If checked, then the students code will not have its execution traced (no variables recorded, no coverage tracked).',
+  ],
   ['disable_edit', false, "If checked, then the students' file will not be editable."],
-  ['preload_all_files', false, 'If checked, then the students can upload and use images and other files. This preloads all available files and images. You can filter them using the Preloaded Files setting.'],
-  ['can_image', false, 'If checked, then users can copy/paste images directly into the text editor.'],
-  ['can_blocks', true, 'If checked, then the student can edit the block interface (if not, then it is visible but not editable).'],
-  ['can_close', false, 'If checked, then the student should mark their submission closed when they are done. There is no way to force a student to do so. Unlike Reviewed, this still submits the correctness.'],
-  ['only_interactive', false, 'If checked, the editors are hidden, the program is automatically run, and then the console enters Eval mode (interactive).'],
-  ['only_uploads', false, "If checked, then the students' file will not be directly editable (they will have to upload submissions)."],
-  ['hide_submission', false, "If checked, then students will not be able to see their submission's code or history on Canvas."],
+  [
+    'preload_all_files',
+    false,
+    'If checked, then the students can upload and use images and other files. This preloads all available files and images. You can filter them using the Preloaded Files setting.',
+  ],
+  [
+    'can_image',
+    false,
+    'If checked, then users can copy/paste images directly into the text editor.',
+  ],
+  [
+    'can_blocks',
+    true,
+    'If checked, then the student can edit the block interface (if not, then it is visible but not editable).',
+  ],
+  [
+    'can_close',
+    false,
+    'If checked, then the student should mark their submission closed when they are done. There is no way to force a student to do so. Unlike Reviewed, this still submits the correctness.',
+  ],
+  [
+    'only_interactive',
+    false,
+    'If checked, the editors are hidden, the program is automatically run, and then the console enters Eval mode (interactive).',
+  ],
+  [
+    'only_uploads',
+    false,
+    "If checked, then the students' file will not be directly editable (they will have to upload submissions).",
+  ],
+  [
+    'hide_submission',
+    false,
+    "If checked, then students will not be able to see their submission's code or history on Canvas.",
+  ],
   ['hide_files', true, 'If checked, then students will not see the View Files toolbar.'],
-  ['hide_queued_inputs', false, 'If checked, then the students cannot access the queued inputs box (makes repeated debugging easier for the input function).'],
+  [
+    'hide_queued_inputs',
+    false,
+    'If checked, then the students cannot access the queued inputs box (makes repeated debugging easier for the input function).',
+  ],
   ['hide_editors', false, 'If checked, then all of the editors are hidden.'],
   ['hide_middle_panel', false, 'If checked, then the console and feedback areas is hidden.'],
   ['hide_all', false, 'INCOMPLETE: If checked, then the entire interface is hidden.'],
   ['hide_evaluate', false, 'If checked, then the Evaluate button is not shown on the console.'],
-  ['hide_import_datasets_button', false, 'If checked, then students cannot see the import datasets button.'],
-  ['hide_import_statements', false, 'INCOMPLETE: If checked, certain kinds of import statements (matplotlib, turtle, datasets) are not shown in the block interface.'],
+  [
+    'hide_import_datasets_button',
+    false,
+    'If checked, then students cannot see the import datasets button.',
+  ],
+  [
+    'hide_import_statements',
+    false,
+    'INCOMPLETE: If checked, certain kinds of import statements (matplotlib, turtle, datasets) are not shown in the block interface.',
+  ],
   ['hide_coverage_button', false, 'INCOMPLETE: If checked, the coverage button is not shown.'],
   ['hide_trace_button', false, 'If checked, then the Trace button is not shown.'],
   ['small_layout', false, 'If checked, then the interface fits into a smaller region.'],
   ['has_clock', false, 'If checked, then a clock is shown in the top right corner.'],
-  ['instructions_pool', false, 'If checked, then the instructions will be interpreted as being from a pool. One of the prompts will be chosen from the pool based on the random seed.'],
+  [
+    'instructions_pool',
+    false,
+    'If checked, then the instructions will be interpreted as being from a pool. One of the prompts will be chosen from the pool based on the random seed.',
+  ],
   // Studio addition (M3.5): opt-in real network for `requests`.
-  ['allow_real_requests', false, 'STUDIO: If checked, the `requests` module performs REAL network calls through the browser (subject to CORS) instead of resolving against the ?mock_urls.blockpy table. Default off preserves the legacy mock behavior.'],
+  [
+    'allow_real_requests',
+    false,
+    'STUDIO: If checked, the `requests` module performs REAL network calls through the browser (subject to CORS) instead of resolving against the ?mock_urls.blockpy table. Default off preserves the legacy mock behavior.',
+  ],
 ];
 
 /** Legacy string settings rows (wire key, label, doc). */
 const STRING_SETTINGS: [key: string, label: string, doc: string][] = [
-  ['passcode', 'Passcode', 'A string that the user must enter to access the problem. If blank, then no passcode is prompted.'],
-  ['datasets', 'Preloaded Datasets', 'The current list of datasets available on load as a comma-separated string.'],
-  ['preload_files', 'Preloaded Files', 'A JSON structure representing the files that should be loaded on start from the remote, as if they were local.'],
-  ['part_id', 'Part ID', 'The Part ID of an Assignment that this editor is responsible for. Assignments can have regions ("Parts") that behave independently to the user but all correspond to the same assignment on the backend. Blank corresponds to the full document.'],
+  [
+    'passcode',
+    'Passcode',
+    'A string that the user must enter to access the problem. If blank, then no passcode is prompted.',
+  ],
+  [
+    'datasets',
+    'Preloaded Datasets',
+    'The current list of datasets available on load as a comma-separated string.',
+  ],
+  [
+    'preload_files',
+    'Preloaded Files',
+    'A JSON structure representing the files that should be loaded on start from the remote, as if they were local.',
+  ],
+  [
+    'part_id',
+    'Part ID',
+    'The Part ID of an Assignment that this editor is responsible for. Assignments can have regions ("Parts") that behave independently to the user but all correspond to the same assignment on the backend. Blank corresponds to the full document.',
+  ],
   // Studio extension (M4.3, LD-25): course reference document for the
   // right-hand docs panel. No legacy analog; legacy clients drop the key
   // on instructor saves (the LD-5 legacy bug).
-  ['docs_url', 'Docs URL', 'A URL to a markdown reference document shown in the collapsible Docs panel beside the editor. Blank hides the panel. (Studio extension.)'],
+  [
+    'docs_url',
+    'Docs URL',
+    'A URL to a markdown reference document shown in the collapsible Docs panel beside the editor. Blank hides the panel. (Studio extension.)',
+  ],
 ];
 
 const TOOLBOXES = ['normal', 'ct', 'ct2', 'minimal', 'full', 'empty', 'custom'];
@@ -129,8 +221,7 @@ export function SettingsEditor({ blob, assignment, onSave }: SettingsEditorProps
   const [rawError, setRawError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  const current = (key: string): unknown =>
-    key in edits ? edits[key] : original[key];
+  const current = (key: string): unknown => (key in edits ? edits[key] : original[key]);
   const setSetting = (key: string, value: unknown) => {
     setSaved(false);
     setEdits((prev) => ({ ...prev, [key]: value }));
@@ -234,14 +325,9 @@ export function SettingsEditor({ blob, assignment, onSave }: SettingsEditorProps
             {textRow('blockpy-settings-name', 'Name', fields.name ?? '', (v) =>
               setField('name', v),
             )}
-            {textRow('blockpy-settings-url', 'URL', fields.url ?? '', (v) =>
-              setField('url', v),
-            )}
-            {textRow(
-              'blockpy-settings-points',
-              'Points',
-              fields.points ?? '',
-              (v) => setField('points', v),
+            {textRow('blockpy-settings-url', 'URL', fields.url ?? '', (v) => setField('url', v))}
+            {textRow('blockpy-settings-points', 'Points', fields.points ?? '', (v) =>
+              setField('points', v),
             )}
             {textRow(
               'blockpy-settings-ip-ranges',
@@ -259,10 +345,7 @@ export function SettingsEditor({ blob, assignment, onSave }: SettingsEditorProps
             ).map(([key, label]) => (
               <div className="form-group row" key={key}>
                 <div className="col-sm-2 text-right">
-                  <label
-                    className="form-check-label"
-                    htmlFor={`blockpy-settings-${key}`}
-                  >
+                  <label className="form-check-label" htmlFor={`blockpy-settings-${key}`}>
                     {label}
                   </label>
                 </div>
@@ -284,10 +367,7 @@ export function SettingsEditor({ blob, assignment, onSave }: SettingsEditorProps
         )}
 
         <div className="form-group row">
-          <label
-            htmlFor="blockpy-settings-toolbox"
-            className="col-sm-2 col-form-label text-right"
-          >
+          <label htmlFor="blockpy-settings-toolbox" className="col-sm-2 col-form-label text-right">
             Block Toolbox:
           </label>
           <div className="col-sm-10">
@@ -310,10 +390,7 @@ export function SettingsEditor({ blob, assignment, onSave }: SettingsEditorProps
         </div>
 
         <div className="form-group row">
-          <label
-            htmlFor="blockpy-settings-type"
-            className="col-sm-2 col-form-label text-right"
-          >
+          <label htmlFor="blockpy-settings-type" className="col-sm-2 col-form-label text-right">
             Problem Type:
           </label>
           <div className="col-sm-10">
@@ -343,9 +420,7 @@ export function SettingsEditor({ blob, assignment, onSave }: SettingsEditorProps
                   key={mode}
                   className={
                     'btn btn-outline-secondary' +
-                    ((asString(current('start_view')) || 'text') === mode
-                      ? ' active'
-                      : '')
+                    ((asString(current('start_view')) || 'text') === mode ? ' active' : '')
                   }
                 >
                   <input
@@ -360,8 +435,7 @@ export function SettingsEditor({ blob, assignment, onSave }: SettingsEditorProps
               ))}
             </div>
             <small className="form-text text-muted">
-              The Python editor mode to start in when the student starts the
-              problem.
+              The Python editor mode to start in when the student starts the problem.
             </small>
           </div>
         </div>
@@ -405,8 +479,8 @@ export function SettingsEditor({ blob, assignment, onSave }: SettingsEditorProps
                 />
                 {rawError && <small className="text-danger">{rawError}</small>}
                 <small className="form-text text-muted">
-                  Raw contents of !assignment_settings.blockpy — overrides the
-                  form on Save. Unknown keys always round-trip (LD-5).
+                  Raw contents of !assignment_settings.blockpy — overrides the form on Save. Unknown
+                  keys always round-trip (LD-5).
                 </small>
               </>
             )}

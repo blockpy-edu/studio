@@ -15,9 +15,7 @@ import * as Blockly from 'blockly/core';
 
 function hideGettersSetters(): boolean {
   return Boolean(
-    (Blockly.Variables as unknown as Record<string, unknown>)[
-      '_HIDE_GETTERS_SETTERS'
-    ],
+    (Blockly.Variables as unknown as Record<string, unknown>)['_HIDE_GETTERS_SETTERS'],
   );
 }
 
@@ -47,11 +45,7 @@ export function variablesFlyoutBlocks(workspace: Blockly.Workspace): Element[] {
   if (!hide && Blockly.Blocks['ast_Assign']) {
     const gap = Blockly.Blocks['ast_AugAssign'] ? 8 : 24;
     const blockText =
-      '<xml>' +
-      `<block type="ast_Assign" gap="${gap}">` +
-      mostRecentField +
-      '</block>' +
-      '</xml>';
+      '<xml>' + `<block type="ast_Assign" gap="${gap}">` + mostRecentField + '</block>' + '</xml>';
     const block = Blockly.utils.xml.textToDom(blockText).firstChild;
     xmlList.push(block as Element);
   }
@@ -103,20 +97,15 @@ export function variablesFlyoutBlocks(workspace: Blockly.Workspace): Element[] {
  * Blockly's own create-variable dialog flow) followed by the AST block list.
  */
 export function installVariablesFlyout(workspace: Blockly.WorkspaceSvg): void {
-  workspace.registerToolboxCategoryCallback(
-    Blockly.VARIABLE_CATEGORY_NAME,
-    (ws) => {
-      const xmlList: Element[] = [];
-      const button = document.createElement('button');
-      button.setAttribute('text', '%{BKY_NEW_VARIABLE}');
-      button.setAttribute('callbackKey', 'CREATE_VARIABLE');
-      ws.registerButtonCallback('CREATE_VARIABLE', (flyoutButton) => {
-        Blockly.Variables.createVariableButtonHandler(
-          flyoutButton.getTargetWorkspace(),
-        );
-      });
-      xmlList.push(button as unknown as Element);
-      return xmlList.concat(variablesFlyoutBlocks(ws));
-    },
-  );
+  workspace.registerToolboxCategoryCallback(Blockly.VARIABLE_CATEGORY_NAME, (ws) => {
+    const xmlList: Element[] = [];
+    const button = document.createElement('button');
+    button.setAttribute('text', '%{BKY_NEW_VARIABLE}');
+    button.setAttribute('callbackKey', 'CREATE_VARIABLE');
+    ws.registerButtonCallback('CREATE_VARIABLE', (flyoutButton) => {
+      Blockly.Variables.createVariableButtonHandler(flyoutButton.getTargetWorkspace());
+    });
+    xmlList.push(button as unknown as Element);
+    return xmlList.concat(variablesFlyoutBlocks(ws));
+  });
 }

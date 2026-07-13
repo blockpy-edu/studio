@@ -97,11 +97,7 @@ describe('AssignmentHost dispatch (loadAssignmentWrapper port)', () => {
   });
 
   it('updates assignment_id in the URL preserving other params (§5.3)', async () => {
-    history.replaceState(
-      null,
-      '',
-      '/?assignment_id=101&assignment_group_id=11&embed=false',
-    );
+    history.replaceState(null, '', '/?assignment_id=101&assignment_group_id=11&embed=false');
     const { dispatch } = mountHost();
     await act(() => dispatch(102));
     const params = new URLSearchParams(location.search);

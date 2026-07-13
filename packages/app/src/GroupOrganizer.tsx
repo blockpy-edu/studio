@@ -62,9 +62,7 @@ export function GroupOrganizer(props: GroupOrganizerProps) {
     setEdits((current) => ({ ...current, [id]: { ...current[id], ...patch } }));
 
   const report = (outcome: { success?: unknown }, action: string) => {
-    setStatus(
-      outcome.success === true ? `${action}: saved.` : `${action}: FAILED.`,
-    );
+    setStatus(outcome.success === true ? `${action}: saved.` : `${action}: FAILED.`);
     return outcome.success === true;
   };
 
@@ -88,23 +86,15 @@ export function GroupOrganizer(props: GroupOrganizerProps) {
       ...(rowEdits.points !== undefined && rowEdits.points !== ''
         ? { points: rowEdits.points }
         : {}),
-      ...(rowEdits.public !== undefined
-        ? { public: String(rowEdits.public) }
-        : {}),
-      ...(rowEdits.hidden !== undefined
-        ? { hidden: String(rowEdits.hidden) }
-        : {}),
-      ...(rowEdits.reviewed !== undefined
-        ? { reviewed: String(rowEdits.reviewed) }
-        : {}),
+      ...(rowEdits.public !== undefined ? { public: String(rowEdits.public) } : {}),
+      ...(rowEdits.hidden !== undefined ? { hidden: String(rowEdits.hidden) } : {}),
+      ...(rowEdits.reviewed !== undefined ? { reviewed: String(rowEdits.reviewed) } : {}),
     });
     if (report(outcome, `Assignment ${id}`)) {
       if (rowEdits.name !== undefined) {
         props.navStore?.renameEntry(id, rowEdits.name);
         setRows((current) =>
-          current.map((row) =>
-            row.id === id ? { ...row, name: rowEdits.name! } : row,
-          ),
+          current.map((row) => (row.id === id ? { ...row, name: rowEdits.name! } : row)),
         );
       }
       setEdits((current) => ({ ...current, [id]: {} }));
@@ -150,9 +140,7 @@ export function GroupOrganizer(props: GroupOrganizerProps) {
             ],
       );
       setAddId('');
-      setStatus(
-        `Add ${id}: saved. Reload the page to refresh the navigation header.`,
-      );
+      setStatus(`Add ${id}: saved. Reload the page to refresh the navigation header.`);
     }
   };
 
@@ -201,12 +189,8 @@ export function GroupOrganizer(props: GroupOrganizerProps) {
               <th>ID</th>
               <th>Name</th>
               <th>URL</th>
-              <th title="Only touched fields are saved — blank means unchanged.">
-                Points
-              </th>
-              <th title="Unknown until changed — checking/unchecking sends it.">
-                Pub/Hid/Rev
-              </th>
+              <th title="Only touched fields are saved — blank means unchanged.">Points</th>
+              <th title="Unknown until changed — checking/unchecking sends it.">Pub/Hid/Rev</th>
               <th />
             </tr>
           </thead>
@@ -222,9 +206,7 @@ export function GroupOrganizer(props: GroupOrganizerProps) {
                       className="form-control form-control-sm"
                       value={rowEdits.name ?? row.name}
                       disabled={!canSave}
-                      onChange={(event) =>
-                        edit(row.id, { name: event.target.value })
-                      }
+                      onChange={(event) => edit(row.id, { name: event.target.value })}
                     />
                   </td>
                   <td>
@@ -234,9 +216,7 @@ export function GroupOrganizer(props: GroupOrganizerProps) {
                       value={rowEdits.url ?? ''}
                       placeholder="(unchanged)"
                       disabled={!canSave}
-                      onChange={(event) =>
-                        edit(row.id, { url: event.target.value })
-                      }
+                      onChange={(event) => edit(row.id, { url: event.target.value })}
                     />
                   </td>
                   <td>
@@ -246,9 +226,7 @@ export function GroupOrganizer(props: GroupOrganizerProps) {
                       value={rowEdits.points ?? ''}
                       placeholder="?"
                       disabled={!canSave}
-                      onChange={(event) =>
-                        edit(row.id, { points: event.target.value })
-                      }
+                      onChange={(event) => edit(row.id, { points: event.target.value })}
                     />
                   </td>
                   <td className="blockpy-organizer-flags">
@@ -257,14 +235,9 @@ export function GroupOrganizer(props: GroupOrganizerProps) {
                         <input
                           type="checkbox"
                           aria-label={`${flag} for assignment ${row.id}`}
-                          checked={
-                            rowEdits[flag] ??
-                            (flag === 'hidden' ? row.hidden : false)
-                          }
+                          checked={rowEdits[flag] ?? (flag === 'hidden' ? row.hidden : false)}
                           disabled={!canSave}
-                          onChange={(event) =>
-                            edit(row.id, { [flag]: event.target.checked })
-                          }
+                          onChange={(event) => edit(row.id, { [flag]: event.target.checked })}
                         />
                         {flag[0]!.toUpperCase()}
                       </label>
@@ -318,10 +291,9 @@ export function GroupOrganizer(props: GroupOrganizerProps) {
         )}
         {!canEditGroup && !canMove && (
           <p>
-            This server page has not published the group-management
-            endpoints (<code>editAssignmentGroup</code>,{' '}
-            <code>moveMembership</code>) — only per-assignment saves are
-            available.
+            This server page has not published the group-management endpoints (
+            <code>editAssignmentGroup</code>, <code>moveMembership</code>) — only per-assignment
+            saves are available.
           </p>
         )}
       </div>

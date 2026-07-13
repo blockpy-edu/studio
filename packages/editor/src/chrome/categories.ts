@@ -54,9 +54,7 @@ const MAPPING: Record<string, CategoryPresentation> = {
   uncategorized: { badgeClass: 'label-instructions', displayText: 'Feedback' },
 };
 
-export function categoryPresentation(
-  category: string | null | undefined,
-): CategoryPresentation {
+export function categoryPresentation(category: string | null | undefined): CategoryPresentation {
   if (!category) return MAPPING['none']!;
   return MAPPING[category.toLowerCase()] ?? MAPPING['none']!;
 }

@@ -79,17 +79,24 @@ export function bootConfigFromLegacyGlobals(source: LegacyGlobalsSource): BootCo
 
   const assignmentIdParam = params.get('assignment_id');
   const groupIdParam = params.get('assignment_group_id');
-  const role = typeof userData['user.role'] === 'string' ? (userData['user.role'] as string) : 'anonymous';
-  const blocklyMedia = typeof globals['$blocklyMediaPath'] === 'string' ? (globals['$blocklyMediaPath'] as string) : '';
+  const role =
+    typeof userData['user.role'] === 'string' ? (userData['user.role'] as string) : 'anonymous';
+  const blocklyMedia =
+    typeof globals['$blocklyMediaPath'] === 'string'
+      ? (globals['$blocklyMediaPath'] as string)
+      : '';
 
   return {
     urls,
     user: {
       id: typeof userData['user.id'] === 'number' ? (userData['user.id'] as number) : null,
-      name: typeof userData['user.name'] === 'string' ? (userData['user.name'] as string) : undefined,
+      name:
+        typeof userData['user.name'] === 'string' ? (userData['user.name'] as string) : undefined,
       role,
       courseId:
-        typeof userData['user.course_id'] === 'number' ? (userData['user.course_id'] as number) : null,
+        typeof userData['user.course_id'] === 'number'
+          ? (userData['user.course_id'] as number)
+          : null,
     },
     accessToken:
       typeof userData['access_token'] === 'string'

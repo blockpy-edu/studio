@@ -345,7 +345,12 @@ const DEV_QUIZ_FULL = {
           type: 'multiple_answers_question',
           body: 'Check every <strong>number</strong> type:',
           points: 2,
-          answers: ['<code>int</code>', '<code>float</code>', '<code>str</code>', '<code>bool</code>'],
+          answers: [
+            '<code>int</code>',
+            '<code>float</code>',
+            '<code>str</code>',
+            '<code>bool</code>',
+          ],
         },
         match1: {
           type: 'matching_question',
@@ -367,12 +372,36 @@ const DEV_QUIZ_FULL = {
           body: 'A [container] holds items; you index it with [brackets].',
           points: 2,
         },
-        essay1: { type: 'essay_question', body: 'Explain, in a sentence, why names matter.', points: 0 },
-        note1: { type: 'text_only_question', body: '<em>The pool below shows 2 of 3 questions, seeded by your submission.</em>', points: 0 },
-        legacy1: { type: 'calculated_question', body: 'A legacy Canvas import lands here.', points: 0 },
-        pool_a: { type: 'short_answer_question', body: 'Name a **mutable** built-in type.', points: 1 },
-        pool_b: { type: 'short_answer_question', body: 'Name an **immutable** built-in type.', points: 1 },
-        pool_c: { type: 'short_answer_question', body: 'Name a type you can iterate over.', points: 1 },
+        essay1: {
+          type: 'essay_question',
+          body: 'Explain, in a sentence, why names matter.',
+          points: 0,
+        },
+        note1: {
+          type: 'text_only_question',
+          body: '<em>The pool below shows 2 of 3 questions, seeded by your submission.</em>',
+          points: 0,
+        },
+        legacy1: {
+          type: 'calculated_question',
+          body: 'A legacy Canvas import lands here.',
+          points: 0,
+        },
+        pool_a: {
+          type: 'short_answer_question',
+          body: 'Name a **mutable** built-in type.',
+          points: 1,
+        },
+        pool_b: {
+          type: 'short_answer_question',
+          body: 'Name an **immutable** built-in type.',
+          points: 1,
+        },
+        pool_c: {
+          type: 'short_answer_question',
+          body: 'Name a type you can iterate over.',
+          points: 1,
+        },
       },
       settings: { attemptLimit: -1, feedbackType: 'IMMEDIATE', poolRandomness: 'ATTEMPT' },
       pools: [{ name: 'Types', amount: 2, questions: ['pool_a', 'pool_b', 'pool_c'] }],
@@ -381,13 +410,34 @@ const DEV_QUIZ_FULL = {
     on_run: JSON.stringify({
       questions: {
         tf1: { correct: true, wrong: 'Lists are heterogeneous in Python.' },
-        mc1: { correct: '`print`', feedback: { '`echo`': 'That is shell, not Python.', '`console.log`': 'That is JavaScript.' } },
-        ma1: { correct: ['<code>int</code>', '<code>float</code>'], wrong_any: 'bool is a number subtype; str is not a number.' },
+        mc1: {
+          correct: '`print`',
+          feedback: {
+            '`echo`': 'That is shell, not Python.',
+            '`console.log`': 'That is JavaScript.',
+          },
+        },
+        ma1: {
+          correct: ['<code>int</code>', '<code>float</code>'],
+          wrong_any: 'bool is a number subtype; str is not a number.',
+        },
         match1: { correct: ['int', 'str', 'float'] },
-        drop1: { correct: { quotient: '2.5', floor: '2' }, wrong_any: 'True division vs floor division.' },
-        sa1: { correct: ['def'], feedback: { lambda: 'lambda makes anonymous functions; we wanted def.' } },
+        drop1: {
+          correct: { quotient: '2.5', floor: '2' },
+          wrong_any: 'True division vs floor division.',
+        },
+        sa1: {
+          correct: ['def'],
+          feedback: { lambda: 'lambda makes anonymous functions; we wanted def.' },
+        },
         num1: { correct_regex: ['^32(\\.0)?$'], wrong_any: 'Two to the fifth power.' },
-        fimb1: { correct: { container: ['list', 'tuple', 'dict'], brackets: ['brackets', 'square brackets', '[]'] }, wrong_any: 'Think of lists and [square] brackets.' },
+        fimb1: {
+          correct: {
+            container: ['list', 'tuple', 'dict'],
+            brackets: ['brackets', 'square brackets', '[]'],
+          },
+          wrong_any: 'Think of lists and [square] brackets.',
+        },
         pool_a: { correct: ['list', 'dict', 'set'] },
         pool_b: { correct: ['tuple', 'str', 'int', 'frozenset'] },
         pool_c: { correct_regex: ['^(list|tuple|str|dict|set|range)$'] },
@@ -419,15 +469,30 @@ const DEV_QUIZ_FULL = {
 const QUIZ_FULL_FEEDBACKS = {
   tf1: { message: 'Right -- lists hold anything.', correct: true, score: 1, status: 'graded' },
   mc1: { message: 'That is JavaScript.', correct: false, score: 0, status: 'graded' },
-  ma1: { message: 'bool is a number subtype; str is not a number.', correct: false, score: 0.5, status: 'graded' },
+  ma1: {
+    message: 'bool is a number subtype; str is not a number.',
+    correct: false,
+    score: 0.5,
+    status: 'graded',
+  },
   match1: { message: 'Correct', correct: true, score: 1, status: 'graded' },
-  drop1: { message: 'True division vs floor division.', correct: false, score: 0.5, status: 'graded' },
+  drop1: {
+    message: 'True division vs floor division.',
+    correct: false,
+    score: 0.5,
+    status: 'graded',
+  },
   sa1: { message: 'Correct', correct: true, score: 1, status: 'graded' },
   num1: { message: 'Two to the fifth power.', correct: false, score: 0, status: 'graded' },
   fimb1: { message: 'Correct', correct: true, score: 1, status: 'graded' },
   essay1: { message: 'Correct', correct: true, score: 1, status: 'graded' },
   note1: { message: 'Correct', correct: true, score: 1, status: 'graded' },
-  legacy1: { message: 'Unknown Type: calculated_question', correct: null, score: 0, status: 'error' },
+  legacy1: {
+    message: 'Unknown Type: calculated_question',
+    correct: null,
+    score: 0,
+    status: 'error',
+  },
   pool_a: { message: 'Correct', correct: true, score: 1, status: 'graded' },
   pool_b: { message: 'Correct', correct: true, score: 1, status: 'graded' },
   pool_c: { message: 'Correct', correct: true, score: 1, status: 'graded' },
@@ -438,7 +503,12 @@ const devHistory = () => {
   return {
     success: true,
     history: [
-      { event_type: 'Session.Start', file_path: '', client_timestamp: String(hourAgo), message: '' },
+      {
+        event_type: 'Session.Start',
+        file_path: '',
+        client_timestamp: String(hourAgo),
+        message: '',
+      },
       {
         event_type: 'File.Create',
         file_path: 'answer.py',
@@ -485,12 +555,18 @@ function devApi(): Plugin {
   const routes: Record<string, (params: URLSearchParams) => unknown> = {
     '/api/load_assignment': (params) => {
       switch (params.get('assignment_id')) {
-        case '103': return DEV_READING;
-        case '102': return DEV_QUIZ;
-        case '104': return DEV_QUIZ_FULL;
-        case '105': return DEV_TEXTBOOK;
-        case '107': return DEV_ASSIGNMENT_2;
-        default: return DEV_ASSIGNMENT;
+        case '103':
+          return DEV_READING;
+        case '102':
+          return DEV_QUIZ;
+        case '104':
+          return DEV_QUIZ_FULL;
+        case '105':
+          return DEV_TEXTBOOK;
+        case '107':
+          return DEV_ASSIGNMENT_2;
+        default:
+          return DEV_ASSIGNMENT;
       }
     },
     '/api/load_history': devHistory,
@@ -507,17 +583,17 @@ function devApi(): Plugin {
             submission_status: 'Completed',
           }
         : params.get('assignment_id') === '104'
-        ? {
-            success: true,
-            correct: false,
-            feedbacks: QUIZ_FULL_FEEDBACKS,
-            submission_status: 'inProgress',
-          }
-        : {
-            success: true,
-            correct: params.get('correct') === 'true',
-            submission_status: 'Completed',
-          },
+          ? {
+              success: true,
+              correct: false,
+              feedbacks: QUIZ_FULL_FEEDBACKS,
+              submission_status: 'inProgress',
+            }
+          : {
+              success: true,
+              correct: params.get('correct') === 'true',
+              submission_status: 'Completed',
+            },
     '/api/update_submission_status': () => ({ success: true }),
     '/api/list_files': () => uploaded,
     '/api/upload_file': () => ({ success: true }),

@@ -26,9 +26,7 @@ export interface DevConsoleProps {
 export function DevConsole({ size = 'col-md-6', onShowStudent }: DevConsoleProps) {
   const entries = useEditorChromeStore((state) => state.devConsole);
   const consoleUnseen = useEditorChromeStore((state) => state.consoleUnseen);
-  const clearDevConsole = useEditorChromeStore(
-    (state) => state.clearDevConsole,
-  );
+  const clearDevConsole = useEditorChromeStore((state) => state.clearDevConsole);
   const printerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,11 +43,7 @@ export function DevConsole({ size = 'col-md-6', onShowStudent }: DevConsoleProps
       <div className="blockpy-panel-header">
         <strong>Dev Console:</strong>
         {onShowStudent && (
-          <ConsoleToggleButton
-            label="Console"
-            unseen={consoleUnseen}
-            onClick={onShowStudent}
-          />
+          <ConsoleToggleButton label="Console" unseen={consoleUnseen} onClick={onShowStudent} />
         )}
         <button
           type="button"
@@ -61,10 +55,7 @@ export function DevConsole({ size = 'col-md-6', onShowStudent }: DevConsoleProps
       </div>
       <div ref={printerRef} className="blockpy-printer blockpy-dev-printer" role="log">
         {entries.map((entry, i) => (
-          <div
-            key={i}
-            className={`blockpy-printer-output blockpy-printer-${entry.kind}`}
-          >
+          <div key={i} className={`blockpy-printer-output blockpy-printer-${entry.kind}`}>
             {entry.kind === 'stderr' ? (
               // Grader tracebacks land here — same <pre> treatment as the
               // student console (M3.2).

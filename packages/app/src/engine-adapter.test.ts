@@ -72,10 +72,7 @@ describe('engine adapter grading resilience (M3.2)', () => {
     const outcome = await controller.run('1/0', handlers(), {
       onRun: 'from pedal import *',
     });
-    expect(runCalls.map((job) => job.phase)).toEqual([
-      'student.run',
-      'instructor.on_run',
-    ]);
+    expect(runCalls.map((job) => job.phase)).toEqual(['student.run', 'instructor.on_run']);
     // Pedal's resolved feedback drives the pane...
     expect(outcome.feedback?.category).toBe('runtime');
     expect(outcome.feedback?.label).toBe('Division By Zero');
@@ -103,10 +100,7 @@ describe('engine adapter grading resilience (M3.2)', () => {
     const outcome = await controller.run('x = 1', handlers(), {
       onRun: 'from pedal import *',
     });
-    expect(runCalls.map((job) => job.phase)).toEqual([
-      'student.run',
-      'instructor.on_run',
-    ]);
+    expect(runCalls.map((job) => job.phase)).toEqual(['student.run', 'instructor.on_run']);
     expect(outcome.error).toBeNull();
     expect(outcome.grade).toBeDefined();
   });

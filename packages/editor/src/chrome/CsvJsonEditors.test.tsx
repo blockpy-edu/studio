@@ -20,10 +20,7 @@ describe('CsvEditor (M4.4, LD-26)', () => {
     );
     // Header row renders as <th> inputs, data as <td>.
     const header = container.querySelectorAll('thead input');
-    expect([...header].map((i) => (i as HTMLInputElement).value)).toEqual([
-      'name',
-      'age',
-    ]);
+    expect([...header].map((i) => (i as HTMLInputElement).value)).toEqual(['name', 'age']);
     const cell = container.querySelector<HTMLInputElement>('tbody input')!;
     expect(cell.value).toBe('Ada');
     fireEvent.change(cell, { target: { value: 'Grace' } });
@@ -33,11 +30,7 @@ describe('CsvEditor (M4.4, LD-26)', () => {
   it('adds/removes rows and columns through the toolbar', () => {
     const changes: string[] = [];
     const { container } = render(
-      <CsvEditor
-        value={'a,b\n1,2'}
-        onChange={(next) => changes.push(next)}
-        onRawView={() => {}}
-      />,
+      <CsvEditor value={'a,b\n1,2'} onChange={(next) => changes.push(next)} onRawView={() => {}} />,
     );
     fireEvent.click(container.querySelector('.blockpy-csv-add-row')!);
     expect(changes.at(-1)).toBe('a,b\n1,2\n,');
@@ -53,9 +46,7 @@ describe('CsvEditor (M4.4, LD-26)', () => {
     const { container } = render(
       <CsvEditor value={'a,b\n1,2'} readOnly onChange={() => {}} onRawView={() => {}} />,
     );
-    expect(
-      container.querySelector<HTMLInputElement>('tbody input')!.disabled,
-    ).toBe(true);
+    expect(container.querySelector<HTMLInputElement>('tbody input')!.disabled).toBe(true);
     expect(container.querySelector('.blockpy-csv-add-row')).toBeNull();
     expect(container.querySelector('.blockpy-csv-delete-row')).toBeNull();
     // The raw-text escape stays available for viewing.
@@ -81,9 +72,7 @@ describe('JsonEditor (M4.4, LD-26)', () => {
       <JsonEditor value={'{"a": 1}'} onChange={() => {}} onRawView={() => {}} />,
     );
     expect(container.querySelector('.cm-editor')).not.toBeNull();
-    expect(container.querySelector('.blockpy-json-status')!.textContent).toBe(
-      'Valid JSON',
-    );
+    expect(container.querySelector('.blockpy-json-status')!.textContent).toBe('Valid JSON');
     expect(container.querySelector('.blockpy-json-status-detail')).toBeNull();
   });
 
@@ -91,14 +80,11 @@ describe('JsonEditor (M4.4, LD-26)', () => {
     const { container } = render(
       <JsonEditor value={'{"a": '} onChange={() => {}} onRawView={() => {}} />,
     );
-    expect(container.querySelector('.blockpy-json-status')!.textContent).toBe(
-      'Invalid JSON',
-    );
+    expect(container.querySelector('.blockpy-json-status')!.textContent).toBe('Invalid JSON');
     expect(container.querySelector('.blockpy-json-status-detail')).not.toBeNull();
-    expect(
-      container.querySelector<HTMLButtonElement>('.blockpy-json-tree-toggle')!
-        .disabled,
-    ).toBe(true);
+    expect(container.querySelector<HTMLButtonElement>('.blockpy-json-tree-toggle')!.disabled).toBe(
+      true,
+    );
   });
 
   it('tree view renders the collapsible structure', () => {
@@ -129,19 +115,15 @@ describe('CodingEditor extension dispatch (M4.4)', () => {
       <CodingEditor startingCode="a = 0" vfs={vfs} instructor hideFiles={false} />,
     );
     const tab = (label: string) =>
-      [...container.querySelectorAll('.nav-link')].find(
-        (link) => link.textContent === label,
-      )!;
+      [...container.querySelectorAll('.nav-link')].find((link) => link.textContent === label)!;
     await act(async () => void fireEvent.click(tab('data.csv')));
     expect(container.querySelector('.blockpy-csv-editor')).not.toBeNull();
     // Raw escape → text editor + a way back.
-    await act(async () =>
-      void fireEvent.click(container.querySelector('.blockpy-csv-raw')!),
-    );
+    await act(async () => void fireEvent.click(container.querySelector('.blockpy-csv-raw')!));
     expect(container.querySelector('.blockpy-csv-editor')).toBeNull();
     expect(container.querySelector('.blockpy-structured-return')).not.toBeNull();
-    await act(async () =>
-      void fireEvent.click(container.querySelector('.blockpy-structured-return')!),
+    await act(
+      async () => void fireEvent.click(container.querySelector('.blockpy-structured-return')!),
     );
     expect(container.querySelector('.blockpy-csv-editor')).not.toBeNull();
     // JSON tab.
@@ -149,12 +131,8 @@ describe('CodingEditor extension dispatch (M4.4)', () => {
     expect(container.querySelector('.blockpy-json-editor')).not.toBeNull();
     // Grid edits persist into the VFS through the normal write path.
     await act(async () => void fireEvent.click(tab('data.csv')));
-    const cell = container.querySelector<HTMLInputElement>(
-      '.blockpy-csv-grid tbody input',
-    )!;
-    await act(async () =>
-      void fireEvent.change(cell, { target: { value: '9' } }),
-    );
+    const cell = container.querySelector<HTMLInputElement>('.blockpy-csv-grid tbody input')!;
+    await act(async () => void fireEvent.change(cell, { target: { value: '9' } }));
     expect(vfs.read('data.csv')).toBe('a,b\n9,2');
   });
 
@@ -173,4 +151,3 @@ describe('CodingEditor extension dispatch (M4.4)', () => {
     expect(container.querySelector('.blockpy-python-blockmirror')).not.toBeNull();
   });
 });
-

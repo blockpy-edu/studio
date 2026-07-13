@@ -6,11 +6,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
-import {
-  LegacyIsland,
-  createLegacyServerBridge,
-  ensureEditorBridge,
-} from './LegacyIsland';
+import { LegacyIsland, createLegacyServerBridge, ensureEditorBridge } from './LegacyIsland';
 
 afterEach(cleanup);
 
@@ -104,9 +100,7 @@ describe('LegacyIsland', () => {
         globals={{ ko, frontend: { Server: FakeServer } }}
       />,
     );
-    expect(
-      await screen.findByText(/needs the legacy BlockPy frontend bundle/),
-    ).toBeTruthy();
+    expect(await screen.findByText(/needs the legacy BlockPy frontend bundle/)).toBeTruthy();
   });
 
   it('grafts the server bridge onto $MAIN_BLOCKPY_EDITOR before binding', () => {
@@ -136,9 +130,7 @@ describe('LegacyIsland', () => {
     );
     const owner = globals['$MAIN_BLOCKPY_EDITOR'] as Record<string, Record<string, unknown>>;
     expect(owner['components']!['server']).toBe(bridge);
-    expect(
-      (owner['model']!['display'] as { passcode: () => string }).passcode(),
-    ).toBe('pass');
+    expect((owner['model']!['display'] as { passcode: () => string }).passcode()).toBe('pass');
   });
 
   it('never clobbers a REAL editor surface', () => {

@@ -85,9 +85,9 @@ export function ImagesManager(props: ImagesManagerProps) {
 
   const handleDelete = (name: string, url: string) => {
     const where = urlParams(url);
-    void uploads.remove(where.placement, where.directory, name).then(reload, (failure) =>
-      setError(String(failure)),
-    );
+    void uploads
+      .remove(where.placement, where.directory, name)
+      .then(reload, (failure) => setError(String(failure)));
   };
 
   const handleRename = (name: string, url: string) => {
@@ -105,13 +105,8 @@ export function ImagesManager(props: ImagesManagerProps) {
       <div>
         <strong>Available Files</strong>
         <br />
-        All the files available to open with <code>PIL</code> for this
-        assignment:
-        <button
-          type="button"
-          className="btn btn-outline-secondary float-right"
-          onClick={reload}
-        >
+        All the files available to open with <code>PIL</code> for this assignment:
+        <button type="button" className="btn btn-outline-secondary float-right" onClick={reload}>
           Reload Available Images
         </button>
         {error !== '' && <div className="alert alert-warning">{error}</div>}
@@ -171,7 +166,6 @@ export function ImagesManager(props: ImagesManagerProps) {
           </ul>
         )}
       </div>
-
       <strong>Add more files</strong>
       <br />
       Upload more files using the forms below:
@@ -194,9 +188,7 @@ export function ImagesManager(props: ImagesManagerProps) {
               if (file) setFilename(file.name);
             }}
           />
-          <small className="form-text text-muted">
-            The file to make available in your code
-          </small>
+          <small className="form-text text-muted">The file to make available in your code</small>
         </div>
       </div>
       {/* Legacy canChoosePlacement = instructor (blockpy.js:1118); students
@@ -204,10 +196,7 @@ export function ImagesManager(props: ImagesManagerProps) {
       {instructor && (
         <div className="form-group row">
           <div className="col-sm-2 text-right">
-            <label
-              className="form-label"
-              htmlFor="blockpy-editor-images-upload-placement"
-            >
+            <label className="form-label" htmlFor="blockpy-editor-images-upload-placement">
               Placement:
             </label>
           </div>
@@ -224,13 +213,11 @@ export function ImagesManager(props: ImagesManagerProps) {
               <option value="user">For just your user account</option>
             </select>
             <small className="form-text text-muted">
-              The placement of the file in the system. This controls whether
-              other users can see the file. If you want to provide a file to
-              all students for just this specific problem, then you should use{' '}
-              <code>For all submissions of this assignment</code>. If you want
-              to use this same image across other assignments (including
-              assignments within this assignment group), then you should use{' '}
-              <code>Across the entire course</code>.
+              The placement of the file in the system. This controls whether other users can see the
+              file. If you want to provide a file to all students for just this specific problem,
+              then you should use <code>For all submissions of this assignment</code>. If you want
+              to use this same image across other assignments (including assignments within this
+              assignment group), then you should use <code>Across the entire course</code>.
             </small>
           </div>
         </div>
@@ -250,10 +237,9 @@ export function ImagesManager(props: ImagesManagerProps) {
             onChange={(event) => setFilename(event.target.value)}
           />
           <small className="form-text text-muted">
-            The filename that will be made available in the code. This should
-            be a valid filename for the system, and should not contain spaces
-            or special characters. It should also have a valid file extension
-            (e.g., <code>.png</code>, <code>.jpg</code>, <code>.txt</code>).
+            The filename that will be made available in the code. This should be a valid filename
+            for the system, and should not contain spaces or special characters. It should also have
+            a valid file extension (e.g., <code>.png</code>, <code>.jpg</code>, <code>.txt</code>).
           </small>
         </div>
       </div>

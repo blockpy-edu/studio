@@ -5,24 +5,14 @@
 import './ast';
 
 export { TextToBlocksConverter } from './text-to-blocks';
-export type {
-  ConverterConfiguration,
-  ConvertSourceResult,
-} from './text-to-blocks';
-export {
-  workspaceToPython,
-  xmlToWorkspace,
-  xmlToPython,
-} from './blocks-to-text';
+export type { ConverterConfiguration, ConvertSourceResult } from './text-to-blocks';
+export { workspaceToPython, xmlToWorkspace, xmlToPython } from './blocks-to-text';
 export { parseSource, LineIndex } from './cst/parse';
 export type { ParseOutcome, ParseDiagnostic } from './cst/parse';
 export { sourceToAst, AstParseError, decodePythonString } from './cst/to-ast';
 export type { SourceAst, SourceComment } from './cst/to-ast';
 export { generator, Order, installGeneratorShims } from './generator';
-export {
-  installVariablesFlyout,
-  variablesFlyoutBlocks,
-} from './variables-flyout';
+export { installVariablesFlyout, variablesFlyoutBlocks } from './variables-flyout';
 export { COLOR } from './colors';
 export { createBlock, rawBlock, xmlToString } from './xml';
 export {

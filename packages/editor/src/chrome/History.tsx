@@ -35,8 +35,18 @@ const REMAP_EVENT_TYPES: Record<string, string> = {
 };
 
 const MONTH_NAMES = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'July',
-  'Aug', 'Sept', 'Oct', 'Nov', 'Dec',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'June',
+  'July',
+  'Aug',
+  'Sept',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -61,11 +71,7 @@ export function prettyPrintDateTime(
     return 'Today at ' + past.toLocaleTimeString();
   }
   const date =
-    WEEK_DAYS[past.getDay()] +
-    ', ' +
-    MONTH_NAMES[past.getMonth()] +
-    ' ' +
-    past.getDate();
+    WEEK_DAYS[past.getDay()] + ', ' + MONTH_NAMES[past.getMonth()] + ' ' + past.getDate();
   if (now.getFullYear() === past.getFullYear()) {
     return date + ' at ' + past.toLocaleTimeString();
   }
@@ -73,10 +79,7 @@ export function prettyPrintDateTime(
 }
 
 /** Legacy load() filter (history.js:57-62). */
-export function filterHistory(
-  entries: HistoryEntry[],
-  assignmentHidden = false,
-): HistoryEntry[] {
+export function filterHistory(entries: HistoryEntry[], assignmentHidden = false): HistoryEntry[] {
   return entries.filter(
     (entry) =>
       !entry.file_path.startsWith('_instructor.') &&
@@ -100,9 +103,7 @@ export function editEvents(
   filename: string,
   assignmentHidden = false,
 ): HistoryEntry[] {
-  return filterHistory(entries, assignmentHidden).filter((entry) =>
-    isEditEvent(entry, filename),
-  );
+  return filterHistory(entries, assignmentHidden).filter((entry) => isEditEvent(entry, filename));
 }
 
 export interface HistoryToolbarProps {
@@ -119,9 +120,7 @@ export interface HistoryToolbarProps {
 
 export function HistoryToolbar(props: HistoryToolbarProps) {
   const visible = filterHistory(props.entries, props.assignmentHidden);
-  const edits = visible.filter((entry) =>
-    isEditEvent(entry, props.filename),
-  );
+  const edits = visible.filter((entry) => isEditEvent(entry, props.filename));
   const last = edits.length - 1;
   const clamp = (index: number) => Math.max(0, Math.min(last, index));
   const select = (index: number) => props.onSelect(clamp(index));
@@ -169,11 +168,7 @@ export function HistoryToolbar(props: HistoryToolbarProps) {
             );
           })}
         </select>
-        <button
-          className="btn btn-outline-secondary mr-2"
-          type="button"
-          onClick={props.onUse}
-        >
+        <button className="btn btn-outline-secondary mr-2" type="button" onClick={props.onUse}>
           <Icon name="historyUse" /> Use
         </button>
         <button
@@ -183,11 +178,7 @@ export function HistoryToolbar(props: HistoryToolbarProps) {
         >
           <Icon name="historyNext" /> Next
         </button>
-        <button
-          className="btn btn-outline-secondary"
-          type="button"
-          onClick={() => select(last)}
-        >
+        <button className="btn btn-outline-secondary" type="button" onClick={() => select(last)}>
           <Icon name="stepLast" /> Most Recent
         </button>
       </form>

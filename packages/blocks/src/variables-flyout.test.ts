@@ -11,9 +11,7 @@ import './ast';
 import { variablesFlyoutBlocks } from './variables-flyout';
 
 function setHide(value: boolean | undefined): void {
-  (Blockly.Variables as unknown as Record<string, unknown>)[
-    '_HIDE_GETTERS_SETTERS'
-  ] = value;
+  (Blockly.Variables as unknown as Record<string, unknown>)['_HIDE_GETTERS_SETTERS'] = value;
 }
 
 afterEach(() => setHide(false));
@@ -52,9 +50,7 @@ describe('variables flyout (BlockMirror port)', () => {
     expect(assignField?.textContent).toBe('apple');
     // AugAssign keeps the legacy shadow + simple mutation.
     expect(blocks[1]!.querySelector('shadow[type="ast_Num"]')).toBeTruthy();
-    expect(
-      blocks[1]!.querySelector('mutation')?.getAttribute('simple'),
-    ).toBe('true');
+    expect(blocks[1]!.querySelector('mutation')?.getAttribute('simple')).toBe('true');
     ws.dispose();
   });
 
@@ -77,9 +73,7 @@ describe('variables flyout (BlockMirror port)', () => {
     const entries = variablesFlyoutBlocks(ws);
     expect(entries.map((el) => el.tagName.toLowerCase())).toEqual(['label']);
     expect(entries[0]!.getAttribute('text')).toBe('speed');
-    expect(entries[0]!.getAttribute('web-class')).toBe(
-      'blockmirror-toolbox-variable',
-    );
+    expect(entries[0]!.getAttribute('web-class')).toBe('blockmirror-toolbox-variable');
     ws.dispose();
   });
 });

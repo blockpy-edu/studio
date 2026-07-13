@@ -63,14 +63,9 @@ describe('GroupOrganizer (M4.6 slice 1)', () => {
     )!;
     fireEvent.change(nameInput, { target: { value: 'Hello v2' } });
     const row = container.querySelector('[data-assignment-id="101"]')!;
-    fireEvent.click(
-      [...row.querySelectorAll('button')].find((b) => b.textContent === 'Save')!,
-    );
+    fireEvent.click([...row.querySelectorAll('button')].find((b) => b.textContent === 'Save')!);
     await waitFor(() => expect(postRetry).toHaveBeenCalledTimes(1));
-    const [url, payload] = postRetry.mock.calls[0] as unknown as [
-      string,
-      Record<string, unknown>,
-    ];
+    const [url, payload] = postRetry.mock.calls[0] as unknown as [string, Record<string, unknown>];
     expect(url).toBe('/save');
     expect(payload['assignment_id']).toBe(101);
     expect(payload['name']).toBe('Hello v2');
@@ -80,9 +75,9 @@ describe('GroupOrganizer (M4.6 slice 1)', () => {
     expect('hidden' in payload).toBe(false);
     // Nav header refreshed in place.
     await waitFor(() =>
-      expect(
-        navStore.getSnapshot().entries.find((entry) => entry.id === 101)!.name,
-      ).toBe('Hello v2'),
+      expect(navStore.getSnapshot().entries.find((entry) => entry.id === 101)!.name).toBe(
+        'Hello v2',
+      ),
     );
   });
 
@@ -102,20 +97,13 @@ describe('GroupOrganizer (M4.6 slice 1)', () => {
     const row = container.querySelector('[data-assignment-id="103"]')!;
     fireEvent.click(row.querySelector('.blockpy-organizer-remove')!);
     await waitFor(() => expect(postRetry).toHaveBeenCalledTimes(1));
-    const [url, payload] = postRetry.mock.calls[0] as unknown as [
-      string,
-      Record<string, unknown>,
-    ];
+    const [url, payload] = postRetry.mock.calls[0] as unknown as [string, Record<string, unknown>];
     expect(url).toBe('/group/move');
     expect(payload['assignment_id']).toBe(103);
     expect(payload['old_group_id']).toBe(3);
     expect(payload['new_group_id']).toBe(-1);
-    await waitFor(() =>
-      expect(container.querySelector('[data-assignment-id="103"]')).toBeNull(),
-    );
-    expect(navStore.getSnapshot().entries.map((entry) => entry.id)).toEqual([
-      101,
-    ]);
+    await waitFor(() => expect(container.querySelector('[data-assignment-id="103"]')).toBeNull());
+    expect(navStore.getSnapshot().entries.map((entry) => entry.id)).toEqual([101]);
   });
 
   it('group rename posts assignment_group_id + new_name', async () => {
@@ -130,20 +118,14 @@ describe('GroupOrganizer (M4.6 slice 1)', () => {
         onClose={() => {}}
       />,
     );
-    fireEvent.change(
-      container.querySelector('.blockpy-organizer-group-name')!,
-      { target: { value: 'Week 2' } },
-    );
+    fireEvent.change(container.querySelector('.blockpy-organizer-group-name')!, {
+      target: { value: 'Week 2' },
+    });
     fireEvent.click(
-      [...container.querySelectorAll('button')].find(
-        (b) => b.textContent === 'Rename Group',
-      )!,
+      [...container.querySelectorAll('button')].find((b) => b.textContent === 'Rename Group')!,
     );
     await waitFor(() => expect(postRetry).toHaveBeenCalledTimes(1));
-    const [url, payload] = postRetry.mock.calls[0] as unknown as [
-      string,
-      Record<string, unknown>,
-    ];
+    const [url, payload] = postRetry.mock.calls[0] as unknown as [string, Record<string, unknown>];
     expect(url).toBe('/group/edit');
     expect(payload['assignment_group_id']).toBe(3);
     expect(payload['new_name']).toBe('Week 2');
@@ -166,8 +148,6 @@ describe('GroupOrganizer (M4.6 slice 1)', () => {
     expect(container.querySelector('.blockpy-organizer-add-id')).toBeNull();
     expect(container.textContent).toContain('has not published');
     // Per-assignment saves still work.
-    expect(
-      container.querySelector('[aria-label="Name of assignment 101"]'),
-    ).not.toBeNull();
+    expect(container.querySelector('[aria-label="Name of assignment 101"]')).not.toBeNull();
   });
 });

@@ -26,23 +26,20 @@ type AugAssignBlock = Blockly.Block & {
 
 defineBlock('ast_AugAssign', {
   init: function (this: AugAssignBlock) {
-    const block = this;
     this.simpleTarget_ = true;
     this.allOptions_ = false;
     this.initialPreposition_ = 'by';
     this.appendDummyInput('OP')
       .appendField(
         new Blockly.FieldDropdown(
-          function () {
-            return block.allOptions_
-              ? BINOPS_AUGASSIGN_DISPLAY_FULL
-              : BINOPS_AUGASSIGN_DISPLAY;
-          },
+          // Arrow: captures the block lexically (menu generators are
+          // otherwise invoked with the FIELD as `this`).
+          () => (this.allOptions_ ? BINOPS_AUGASSIGN_DISPLAY_FULL : BINOPS_AUGASSIGN_DISPLAY),
           function (this: Blockly.Field, value: string) {
-            const block = (this as any).sourceBlock_ as AugAssignBlock;
+            const block = this.getSourceBlock() as AugAssignBlock;
             block.updatePreposition_(value);
             return undefined;
-          } as any,
+          },
         ),
         'OP_NAME',
       )
@@ -116,16 +113,12 @@ generator.forBlock['ast_AugAssign'] = function (block) {
   if (typed.simpleTarget_) {
     target = generator.getVariableName(block.getFieldValue('VAR'));
   } else {
-    target =
-      generator.valueToCode(block, 'TARGET', generator.ORDER_NONE) ||
-      generator.blank;
+    target = generator.valueToCode(block, 'TARGET', generator.ORDER_NONE) || generator.blank;
   }
 
   const operator = BINOPS_BLOCKLY_GENERATE[block.getFieldValue('OP_NAME')]![0];
 
-  const value =
-    generator.valueToCode(block, 'VALUE', generator.ORDER_NONE) ||
-    generator.blank;
+  const value = generator.valueToCode(block, 'VALUE', generator.ORDER_NONE) || generator.blank;
   return target + operator + '= ' + value + '\n';
 };
 

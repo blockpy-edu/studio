@@ -24,32 +24,16 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { AssignmentTypeIndex } from './boot-config';
 
 export type AssignmentType =
-  | 'quiz'
-  | 'reading'
-  | 'textbook'
-  | 'java'
-  | 'typescript'
-  | 'explain'
-  | 'blockpy';
+  'quiz' | 'reading' | 'textbook' | 'java' | 'typescript' | 'explain' | 'blockpy';
 
-const NON_BLOCKPY_TYPES = [
-  'quiz',
-  'reading',
-  'textbook',
-  'java',
-  'typescript',
-  'explain',
-] as const;
+const NON_BLOCKPY_TYPES = ['quiz', 'reading', 'textbook', 'java', 'typescript', 'explain'] as const;
 
 /**
  * Membership classification in the legacy priority order
  * (editor.html:305-320). Unknown ids classify as 'blockpy' — the editor is
  * the fallback renderer and surfaces its own load errors.
  */
-export function classifyAssignment(
-  id: number,
-  typeIndex: AssignmentTypeIndex,
-): AssignmentType {
+export function classifyAssignment(id: number, typeIndex: AssignmentTypeIndex): AssignmentType {
   if (typeIndex.quiz.includes(id)) return 'quiz';
   if (typeIndex.reading.includes(id)) return 'reading';
   if (typeIndex.textbook.includes(id)) return 'textbook';
@@ -106,8 +90,7 @@ function typeBody(type: AssignmentType, id: number): ReactNode {
   if (type === 'java') {
     return 'Java assignments are no longer supported in BlockPy.';
   }
-  const milestone =
-    type === 'quiz' ? '2.4' : type === 'reading' ? '2.3' : '2.2+';
+  const milestone = type === 'quiz' ? '2.4' : type === 'reading' ? '2.3' : '2.2+';
   return `${type} assignment ${id} loads here (Milestone ${milestone}).`;
 }
 
@@ -126,12 +109,13 @@ export function AssignmentHost(props: AssignmentHostProps) {
     const isBlockPy = typeIndex.blockpy.includes(id);
     // The six non-blockpy slots reset on EVERY dispatch
     // (editor.html:332-337) — the per-type remount semantics.
-    setCurrentIds((previous) => ({
-      ...Object.fromEntries(
-        NON_BLOCKPY_TYPES.map((slot) => [slot, slot === type ? id : null]),
-      ),
-      blockpy: previous.blockpy, // untouched here (legacy)
-    }) as CurrentIds);
+    setCurrentIds(
+      (previous) =>
+        ({
+          ...Object.fromEntries(NON_BLOCKPY_TYPES.map((slot) => [slot, slot === type ? id : null])),
+          blockpy: previous.blockpy, // untouched here (legacy)
+        }) as CurrentIds,
+    );
     if (type !== 'blockpy') {
       setEditorVisible(false); // editor.hide() — stays mounted
       setAssignmentType(type);
@@ -162,10 +146,7 @@ export function AssignmentHost(props: AssignmentHostProps) {
   const activeId = activeType !== null ? currentIds[activeType] : null;
   return (
     <>
-      <div
-        className="blockpy-host-editor"
-        style={editorVisible ? undefined : { display: 'none' }}
-      >
+      <div className="blockpy-host-editor" style={editorVisible ? undefined : { display: 'none' }}>
         {props.children}
       </div>
       {activeType !== null && activeId !== null && (

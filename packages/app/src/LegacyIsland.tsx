@@ -46,9 +46,7 @@ export interface LegacyServerBridgeOptions {
   failDelay?: number;
 }
 
-export function createLegacyServerBridge(
-  options: LegacyServerBridgeOptions,
-): LegacyServerBridge {
+export function createLegacyServerBridge(options: LegacyServerBridgeOptions): LegacyServerBridge {
   const failDelay = options.failDelay ?? 1000;
   const bridge: LegacyServerBridge = {
     altLogEntry: null,
@@ -126,8 +124,7 @@ export function LegacyIsland(props: LegacyIslandProps) {
 
   useEffect(() => {
     const current = propsRef.current;
-    const globals =
-      current.globals ?? (window as unknown as Record<string, unknown>);
+    const globals = current.globals ?? (window as unknown as Record<string, unknown>);
     const host = hostRef.current;
     if (!host) return;
     const ko = globals['ko'] as KnockoutLike | undefined;
@@ -184,9 +181,9 @@ export function LegacyIsland(props: LegacyIslandProps) {
       <div ref={hostRef} />
       {unavailable && (
         <div className="alert alert-warning blockpy-legacy-island-missing">
-          This {props.component === 'kettle' ? 'Kettle (TypeScript)' : 'Explain'} assignment
-          needs the legacy BlockPy frontend bundle, which is not loaded on this page. Please
-          contact your instructor if you believe this is an error.
+          This {props.component === 'kettle' ? 'Kettle (TypeScript)' : 'Explain'} assignment needs
+          the legacy BlockPy frontend bundle, which is not loaded on this page. Please contact your
+          instructor if you believe this is an error.
         </div>
       )}
     </div>

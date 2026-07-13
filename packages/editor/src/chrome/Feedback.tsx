@@ -100,10 +100,7 @@ export function Feedback({ size = 'col-md-6', ...props }: FeedbackProps) {
   const score = props.score ?? 0;
   const ratable = Boolean(props.onRate && feedback.label);
   return (
-    <div
-      className={`blockpy-feedback blockpy-panel ${size}`}
-      aria-live="polite"
-    >
+    <div className={`blockpy-feedback blockpy-panel ${size}`} aria-live="polite">
       {/* One header row. Flex (not clearfix/float): a floated button inside
           the flex-column panel forced the row to button height while the
           inline title sat on the top baseline — the "View Trace gap"
@@ -150,33 +147,18 @@ export function Feedback({ size = 'col-md-6', ...props }: FeedbackProps) {
       {(feedback.positives ?? []).length > 0 && (
         <div className="blockpy-feedback-positives">
           {feedback.positives!.map((positive, i) => (
-            <div
-              key={i}
-              className="blockpy-feedback-positive"
-              title={positive.title}
-            >
+            <div key={i} className="blockpy-feedback-positive" title={positive.title}>
               <Icon name="star" /> {positive.message}
             </div>
           ))}
         </div>
       )}
       <div style={{ position: 'relative' }}>
-        <span
-          className={`blockpy-feedback-thank-you${thankYou ? ' show' : ''}`}
-        >
-          Thank you!
-        </span>
+        <span className={`blockpy-feedback-thank-you${thankYou ? ' show' : ''}`}>Thank you!</span>
       </div>
       {ratable && showRating && (
-        <small
-          className="blockpy-feedback-response-full"
-          style={{ textAlign: 'right' }}
-        >
-          <span
-            style={{ cursor: 'pointer' }}
-            onClick={flipRating}
-            title="Hide rating"
-          >
+        <small className="blockpy-feedback-response-full" style={{ textAlign: 'right' }}>
+          <span style={{ cursor: 'pointer' }} onClick={flipRating} title="Hide rating">
             <Icon name="rateCollapse" />
           </span>{' '}
           Rate this Feedback:{' '}

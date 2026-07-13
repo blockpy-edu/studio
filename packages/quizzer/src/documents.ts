@@ -57,9 +57,7 @@ export function parseQuizInstructions(raw: string): QuizInstructions {
 export function parseQuizSubmission(raw: string): QuizSubmission {
   let doc: QuizSubmission;
   try {
-    doc = JSON.parse(
-      raw || JSON.stringify(EMPTY_QUIZ_SUBMISSION),
-    ) as QuizSubmission;
+    doc = JSON.parse(raw || JSON.stringify(EMPTY_QUIZ_SUBMISSION)) as QuizSubmission;
   } catch {
     doc = { ...EMPTY_QUIZ_SUBMISSION };
   }

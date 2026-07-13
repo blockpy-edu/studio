@@ -60,9 +60,7 @@ function renderQuizzer(props: Partial<QuizzerProps> = {}, result = loadResult())
 // Two attempt bars (below + above the questions, quiz_ui.ts:211/248) mean
 // every bar control appears twice.
 const start = async () => {
-  await waitFor(() =>
-    expect(screen.getAllByRole('button', { name: 'Start Quiz' }).length).toBe(2),
-  );
+  await waitFor(() => expect(screen.getAllByRole('button', { name: 'Start Quiz' }).length).toBe(2));
   fireEvent.click(screen.getAllByRole('button', { name: 'Start Quiz' })[0]!);
 };
 
@@ -122,7 +120,9 @@ describe('Quizzer (quizzer.ts port, §11.3)', () => {
       target: { value: 'mat' },
     });
     await waitFor(() => {
-      const inputs = view.container.querySelectorAll<HTMLInputElement>('input[id^="question-fimb"]');
+      const inputs = view.container.querySelectorAll<HTMLInputElement>(
+        'input[id^="question-fimb"]',
+      );
       expect(Array.from(inputs).map((input) => input.value)).toEqual(['cat', 'mat']);
     });
   });

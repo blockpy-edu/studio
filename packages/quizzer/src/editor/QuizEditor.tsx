@@ -18,11 +18,7 @@ import { processQuiz, type QuizChecksDocument } from '../grading';
 import { validateQuiz, type QuizIssue } from '../validation';
 import { QuestionEditor } from './QuestionEditor';
 import { Quizzer } from '../Quizzer';
-import type {
-  QuizInstructions,
-  QuizQuestion,
-  QuizSubmitResponse,
-} from '../types';
+import type { QuizInstructions, QuizQuestion, QuizSubmitResponse } from '../types';
 
 export type QuizEditorMode = 'VISUAL' | 'RAW' | 'JSON' | 'TRY';
 
@@ -59,6 +55,8 @@ function parseChecks(raw: string): QuizChecksDocument {
 }
 
 export function QuizEditor(props: QuizEditorProps) {
+  // Destructured (M5.1): exact hook deps without the whole `props`.
+  const { downloadUrl } = props;
   const [mode, setMode] = useState<QuizEditorMode>('VISUAL');
   // Canonical draft state: the two raw document strings.
   const [instructionsText, setInstructionsText] = useState(props.instructions);
@@ -85,9 +83,9 @@ export function QuizEditor(props: QuizEditorProps) {
   const renderMarkdown = useCallback(
     (text: string) =>
       renderReadingMarkdown(text, {
-        downloadUrl: (link) => props.downloadUrl?.(link) ?? link,
+        downloadUrl: (link) => downloadUrl?.(link) ?? link,
       }),
-    [props.downloadUrl],
+    [downloadUrl],
   );
 
   const updateDocuments = useCallback(
@@ -216,9 +214,7 @@ export function QuizEditor(props: QuizEditorProps) {
           {saveState === 'saving' ? 'Saving…' : 'Save Quiz'}
         </button>
         {saveState === 'saved' && <small className="text-muted">Saved.</small>}
-        {saveState === 'failed' && (
-          <small className="text-danger">Save failed — try again.</small>
-        )}
+        {saveState === 'failed' && <small className="text-danger">Save failed — try again.</small>}
         <span className="float-right quizzer-editor-issue-count">
           {issues.length === 0
             ? 'No issues found'
@@ -239,9 +235,7 @@ export function QuizEditor(props: QuizEditorProps) {
                   className="form-control"
                   style={{ width: '6em', display: 'inline-block' }}
                   value={settings.attemptLimit ?? -1}
-                  onChange={(event) =>
-                    setSetting('attemptLimit', parseInt(event.target.value, 10))
-                  }
+                  onChange={(event) => setSetting('attemptLimit', parseInt(event.target.value, 10))}
                 />
               </label>
               <label className="mr-2">
@@ -336,7 +330,11 @@ export function QuizEditor(props: QuizEditorProps) {
                       ...instructions,
                       pools: [
                         ...(instructions.pools ?? []),
-                        { name: `pool_${(instructions.pools ?? []).length + 1}`, amount: 1, questions: [] },
+                        {
+                          name: `pool_${(instructions.pools ?? []).length + 1}`,
+                          amount: 1,
+                          questions: [],
+                        },
                       ],
                     },
                     checks,
@@ -358,16 +356,18 @@ export function QuizEditor(props: QuizEditorProps) {
               count={questionEntries.length}
               renderMarkdown={renderMarkdown}
               onChangeQuestion={(next) => mutateQuestion(questionId, next)}
-              onChangeCheck={(next) =>
-                mutateQuestion(questionId, question, next)
-              }
+              onChangeCheck={(next) => mutateQuestion(questionId, question, next)}
               onRename={(newId) => mutateQuestion(questionId, question, undefined, newId)}
               onDelete={() => mutateQuestion(questionId, null)}
               onMove={(delta) => moveQuestion(questionId, delta)}
             />
           ))}
           <div className="text-center mb-4">
-            <button type="button" className="btn btn-success quizzer-editor-add" onClick={addQuestion}>
+            <button
+              type="button"
+              className="btn btn-success quizzer-editor-add"
+              onClick={addQuestion}
+            >
               Add Question
             </button>
           </div>
@@ -397,9 +397,7 @@ export function QuizEditor(props: QuizEditorProps) {
             onBlur={() => {
               if (mode === 'JSON') {
                 try {
-                  setInstructionsText(
-                    JSON.stringify(JSON.parse(instructionsText), null, 2),
-                  );
+                  setInstructionsText(JSON.stringify(JSON.parse(instructionsText), null, 2));
                 } catch {
                   // Leave unformatted; the error banner is already up.
                 }
@@ -445,7 +443,7 @@ export function QuizEditor(props: QuizEditorProps) {
           checks={checks}
           dirty={dirty}
           remoteTryOut={props.remoteTryOut}
-          downloadUrl={props.downloadUrl}
+          downloadUrl={downloadUrl}
         />
       )}
     </div>

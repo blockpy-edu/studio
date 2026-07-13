@@ -10,9 +10,7 @@ test('coding editor chrome renders per A8 with a working dual editor', async ({ 
   await page.goto('/');
   // A8 rows: instructions header, console, feedback badge, toolbar, editor.
   await expect(page.locator('.blockpy-content')).toBeVisible();
-  await expect(page.locator('.blockpy-instructions')).toContainText(
-    'Print the value of',
-  );
+  await expect(page.locator('.blockpy-instructions')).toContainText('Print the value of');
   await expect(page.locator('.blockpy-printer')).toBeVisible();
   await expect(page.locator('.blockpy-feedback')).toBeVisible();
   await expect(page.locator('button.blockpy-run')).toBeVisible();
@@ -26,9 +24,7 @@ test('coding editor chrome renders per A8 with a working dual editor', async ({ 
   const readonlyTab = page.locator('.nav-link.uneditable');
   await expect(readonlyTab).toHaveText('&sample_data.txt');
   await readonlyTab.click();
-  await expect(page.locator('.cm-editor .cm-content').first()).toContainText(
-    'temperature',
-  );
+  await expect(page.locator('.cm-editor .cm-content').first()).toContainText('temperature');
   await expect(page.locator('.blocklySvg').first()).toBeHidden();
   await expect(page.locator('.blockpy-mode-set-blocks')).toHaveCount(0);
   await page.locator('.nav-link', { hasText: 'answer.py' }).click();
@@ -57,9 +53,7 @@ test('quick menu, footer, and highlighted instructions render per A8', async ({ 
   await expect(menu.locator('[title="Full Screen"]')).toBeVisible();
   await expect(menu.locator('[title="Edit Inputs"]')).toBeVisible();
   await expect(menu.locator('[title="Toggle Images"]')).toBeVisible();
-  await expect(menu.locator('.blockpy-menu-clock')).toHaveText(
-    /^\d{1,2}:\d{2}(am|pm)$/,
-  );
+  await expect(menu.locator('.blockpy-menu-clock')).toHaveText(/^\d{1,2}:\d{2}(am|pm)$/);
   // Pink bug icon stays dead (display:none) — legacy parity.
   await expect(menu.locator('.blockpy-student-error')).toBeHidden();
   // Footer (Row 5): the boot load marks Assignment ready (legacy
@@ -76,9 +70,7 @@ test('quick menu, footer, and highlighted instructions render per A8', async ({ 
   await dialog.locator('.modal-okay').click();
   await expect(dialog).toHaveCount(0);
   // Instructions code fence highlighted by hljs (LD-10) after the debounce.
-  await expect(
-    page.locator('.blockpy-instructions pre code.hljs'),
-  ).toBeVisible();
+  await expect(page.locator('.blockpy-instructions pre code.hljs')).toBeVisible();
 });
 
 test('view-swap button toggles full and minified editors, code round-trips', async ({ page }) => {
@@ -95,38 +87,26 @@ test('view-swap button toggles full and minified editors, code round-trips', asy
   await expect(page.locator('.blockpy-files')).toHaveCount(0);
   // Same parchment frame colors as the regular editor.
   const frame = page.locator('.blockpy-minified');
-  expect(
-    await frame.evaluate((el) => getComputedStyle(el).backgroundColor),
-  ).toBe('rgb(252, 248, 227)');
-  expect(
-    await frame.evaluate((el) => getComputedStyle(el).borderTopColor),
-  ).toBe('rgb(250, 235, 204)');
-  await expect(page.locator('.blockpy-minified button.blockpy-run')).toBeVisible();
-  await expect(page.locator('.blockpy-minified .cm-content')).toContainText(
-    'print(a)',
+  expect(await frame.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(
+    'rgb(252, 248, 227)',
   );
+  expect(await frame.evaluate((el) => getComputedStyle(el).borderTopColor)).toBe(
+    'rgb(250, 235, 204)',
+  );
+  await expect(page.locator('.blockpy-minified button.blockpy-run')).toBeVisible();
+  await expect(page.locator('.blockpy-minified .cm-content')).toContainText('print(a)');
   // Blocks side is collapsed in the minified text-only mode.
   await expect(page.locator('.blocklySvg').first()).toBeHidden();
   // Layout: editor column on the RIGHT of the console/feedback column;
   // console above feedback; toolbar above the editor.
-  const consoleBox = (await page
-    .locator('.blockpy-minified-printer')
-    .boundingBox())!;
-  const feedbackBox = (await page
-    .locator('.blockpy-minified-feedback')
-    .boundingBox())!;
-  const toolbarBox = (await page
-    .locator('.blockpy-minified-toolbar')
-    .boundingBox())!;
-  const editorBox = (await page
-    .locator('.blockpy-minified-right .cm-editor')
-    .boundingBox())!;
+  const consoleBox = (await page.locator('.blockpy-minified-printer').boundingBox())!;
+  const feedbackBox = (await page.locator('.blockpy-minified-feedback').boundingBox())!;
+  const toolbarBox = (await page.locator('.blockpy-minified-toolbar').boundingBox())!;
+  const editorBox = (await page.locator('.blockpy-minified-right .cm-editor').boundingBox())!;
   expect(editorBox.x).toBeGreaterThanOrEqual(consoleBox.x + consoleBox.width - 1);
   expect(feedbackBox.y).toBeGreaterThanOrEqual(consoleBox.y + consoleBox.height - 1);
   expect(editorBox.y).toBeGreaterThanOrEqual(toolbarBox.y + toolbarBox.height - 1);
-  await expect(page.locator('.blockpy-minified-feedback')).toContainText(
-    'Ready',
-  );
+  await expect(page.locator('.blockpy-minified-feedback')).toContainText('Ready');
   // Edit in minified, swap back — the full editor picks the change up from
   // the VFS.
   const miniContent = page.locator('.blockpy-minified .cm-content');
@@ -135,9 +115,9 @@ test('view-swap button toggles full and minified editors, code round-trips', asy
   await page.keyboard.type('a = 7\nprint(a)');
   await page.getByRole('button', { name: 'Switch to full editor' }).click();
   await expect(page.locator('.blockpy-content.container-fluid')).toBeVisible();
-  await expect(
-    page.locator('.blockpy-python-blockmirror .cm-content').first(),
-  ).toContainText('a = 7');
+  await expect(page.locator('.blockpy-python-blockmirror .cm-content').first()).toContainText(
+    'a = 7',
+  );
   await expect(page.locator('.blocklySvg').first()).toBeVisible();
 });
 
@@ -150,15 +130,9 @@ test('Add New menu creates and opens files (instructor view)', async ({ page }) 
   await page.getByRole('button', { name: 'Add New' }).click();
   // Create an instructor file through the dialog with the & namespace.
   await page.getByRole('link', { name: 'Instructor File' }).click();
-  await page
-    .locator('.blockpy-instructor-file-dialog-filename')
-    .fill('data.csv');
-  await expect(
-    page.locator('.blockpy-instructor-file-dialog-filetype'),
-  ).toHaveText('csv');
-  await page
-    .locator('.blockpy-instructor-file-dialog-namespace')
-    .selectOption('&');
+  await page.locator('.blockpy-instructor-file-dialog-filename').fill('data.csv');
+  await expect(page.locator('.blockpy-instructor-file-dialog-filetype')).toHaveText('csv');
+  await page.locator('.blockpy-instructor-file-dialog-namespace').selectOption('&');
   await page.getByRole('button', { name: 'Create' }).click();
   // The new file opened as the active tab (read-only & space, text mode).
   await expect(page.locator('.nav-link.active')).toHaveText('&data.csv');
@@ -190,14 +164,17 @@ test('images.blockpy tab opens the uploaded-files manager (§14.2 uploads)', asy
   await expect(page.locator('.cm-editor .cm-content').first()).toBeVisible();
 });
 
-test('AssignmentHost dispatches types via altAssignmentChangingFunction (§5.3/§15.3)', async ({ page }) => {
+test('AssignmentHost dispatches types via altAssignmentChangingFunction (§5.3/§15.3)', async ({
+  page,
+}) => {
   await page.goto('/');
   await page.locator('.blocklySvg').first().waitFor();
   // The harness typeIndex marks 102 as a quiz: dispatching hides (does not
   // unmount) the editor and mounts the quiz slot; the URL follows.
   await page.evaluate(() =>
-    (window as never as { altAssignmentChangingFunction(id: number): Promise<void> })
-      .altAssignmentChangingFunction(102),
+    (
+      window as never as { altAssignmentChangingFunction(id: number): Promise<void> }
+    ).altAssignmentChangingFunction(102),
   );
   await expect(page.locator('.blockpy-host-quiz')).toBeVisible();
   await expect(page.locator('.blockpy-host-editor')).toBeHidden();
@@ -205,15 +182,18 @@ test('AssignmentHost dispatches types via altAssignmentChangingFunction (§5.3/�
   expect(new URL(page.url()).searchParams.get('assignment_id')).toBe('102');
   // Back to the blockpy assignment: the editor returns, the quiz unmounts.
   await page.evaluate(() =>
-    (window as never as { altAssignmentChangingFunction(id: number): Promise<void> })
-      .altAssignmentChangingFunction(101),
+    (
+      window as never as { altAssignmentChangingFunction(id: number): Promise<void> }
+    ).altAssignmentChangingFunction(101),
   );
   await expect(page.locator('.blockpy-host-editor')).toBeVisible();
   await expect(page.locator('.blockpy-host-quiz')).toHaveCount(0);
   await expect(page.locator('.blocklySvg').first()).toBeVisible();
 });
 
-test('group navigation: dual headers, boundaries, markCorrect, clock (§9/§16.1.4)', async ({ page }) => {
+test('group navigation: dual headers, boundaries, markCorrect, clock (§9/§16.1.4)', async ({
+  page,
+}) => {
   await page.goto('/');
   await page.locator('.blocklySvg').first().waitFor();
   // Dual-rendered header/footer from one store (editor.html includes the
@@ -329,7 +309,9 @@ test('reading assignment: content, load⇒correct, runnable block (§11.2)', asy
   // Only the launched block's pre hides; the second stays visible.
   await expect(reading.locator('.reader-launch-blockpy').first()).toBeHidden();
   await expect(reading.locator('.reader-launch-blockpy').nth(1)).toBeVisible();
-  await expect(reading.locator('pre:not(.reader-launch-blockpy) code.language-python')).toBeVisible();
+  await expect(
+    reading.locator('pre:not(.reader-launch-blockpy) code.language-python'),
+  ).toBeVisible();
   // Back to the coding assignment: the editor returns intact.
   await page
     .locator('.assignment-selector-div')
@@ -346,8 +328,9 @@ test('quiz assignment: attempt lifecycle, autosave, server grading (§11.3)', as
   // Quiz 102 is subordinate (not in the nav selector) — dispatch through
   // the host global, like the legacy loadAssignmentWrapper path.
   await page.evaluate(() =>
-    (window as never as { altAssignmentChangingFunction(id: number): Promise<void> })
-      .altAssignmentChangingFunction(102),
+    (
+      window as never as { altAssignmentChangingFunction(id: number): Promise<void> }
+    ).altAssignmentChangingFunction(102),
   );
   const quiz = page.locator('.blockpy-host-quiz');
   await expect(quiz).toBeVisible();
@@ -399,8 +382,9 @@ test('quiz assignment: attempt lifecycle, autosave, server grading (§11.3)', as
   await expect(header.locator('.assignment-selector-next')).toHaveClass(/btn-success/);
   // Back to the editor.
   await page.evaluate(() =>
-    (window as never as { altAssignmentChangingFunction(id: number): Promise<void> })
-      .altAssignmentChangingFunction(101),
+    (
+      window as never as { altAssignmentChangingFunction(id: number): Promise<void> }
+    ).altAssignmentChangingFunction(101),
   );
   await expect(page.locator('.blockpy-host-editor')).toBeVisible();
 });
@@ -413,8 +397,9 @@ test('persistent instructor mode reaches the quiz editor from any surface', asyn
   const toggle = page.locator('#blockpy-instructor-mode');
   await expect(toggle).toBeVisible();
   await page.evaluate(() =>
-    (window as never as { altAssignmentChangingFunction(id: number): Promise<void> })
-      .altAssignmentChangingFunction(104),
+    (
+      window as never as { altAssignmentChangingFunction(id: number): Promise<void> }
+    ).altAssignmentChangingFunction(104),
   );
   await expect(page.locator('.blockpy-host-quiz')).toBeVisible();
   await expect(toggle).toBeVisible(); // still there on the quiz surface
@@ -426,9 +411,9 @@ test('persistent instructor mode reaches the quiz editor from any surface', asyn
   // Live validation flags the calculated_question demo — the latest engine
   // (bakery quiz_check) dropped it from the valid type list.
   await expect(page.locator('.quizzer-editor-issue-count')).toContainText('1 issue (1 error)');
-  await expect(
-    editor.locator('[data-question-id="legacy1"] .quizzer-editor-issues'),
-  ).toContainText('Invalid question type');
+  await expect(editor.locator('[data-question-id="legacy1"] .quizzer-editor-issues')).toContainText(
+    'Invalid question type',
+  );
   // All-types quiz: one editor card per question (14 in assignment 104).
   await expect(editor.locator('.quizzer-editor-question')).toHaveCount(14);
   // Fallback modes + Try It are a click away.
@@ -444,7 +429,9 @@ test('persistent instructor mode reaches the quiz editor from any surface', asyn
   await expect(page.locator('.quizzer-quiz-editor')).toHaveCount(0);
 });
 
-test('textbook: sidebar composition opens readings through the reader (§11.4)', async ({ page }) => {
+test('textbook: sidebar composition opens readings through the reader (§11.4)', async ({
+  page,
+}) => {
   await page.goto('/');
   await page.locator('.blocklySvg').first().waitFor();
   // The reading auto-opens as the textbook's first page and marks ITSELF
@@ -482,9 +469,7 @@ test('textbook: sidebar composition opens readings through the reader (§11.4)',
   // Clicking a reading pushes the ?page= URL contract and titles the tab.
   await readingItem.click();
   expect(new URL(page.url()).searchParams.get('page')).toBe('reading_variables');
-  expect(await page.title()).toBe(
-    'Reading: Variables - Textbook: Chapter 1 - BlockPy Textbook',
-  );
+  expect(await page.title()).toBe('Reading: Variables - Textbook: Chapter 1 - BlockPy Textbook');
   // Instructor mode exposes the RAW editor (legacy EDITOR_HTML RAW mode).
   await page.locator('#blockpy-instructor-mode').check();
   await textbook.getByLabel(/Raw Editor/).check();
@@ -513,7 +498,9 @@ test('kettle island degrades gracefully without the legacy bundle (§17)', async
   await expect(page.locator('.blockpy-host-editor')).toBeHidden();
 });
 
-test('LTI page environment: loading screen removed, cookie flag published (§13)', async ({ page }) => {
+test('LTI page environment: loading screen removed, cookie flag published (§13)', async ({
+  page,
+}) => {
   await page.goto('/');
   await page.locator('.blocklySvg').first().waitFor();
   // The harness page ships the legacy .delete-on-load span; mounting
@@ -521,7 +508,9 @@ test('LTI page environment: loading screen removed, cookie flag published (§13)
   await expect(page.locator('.delete-on-load')).toHaveCount(0);
   // The cookie fallback published the boot flag (editor.html:27).
   expect(
-    await page.evaluate(() => (window as never as { ltiLoadedCorrectly: boolean }).ltiLoadedCorrectly),
+    await page.evaluate(
+      () => (window as never as { ltiLoadedCorrectly: boolean }).ltiLoadedCorrectly,
+    ),
   ).toBe(true);
   // §15.3 compatibility globals from the app-owned navigation.
   const globals = await page.evaluate(() => {
@@ -561,31 +550,25 @@ test('History mode: toolbar + merge diff + Use adopts the old version', async ({
   // Use adopts it: history mode exits, the dual editor returns with it.
   await page.getByRole('button', { name: 'Use' }).click();
   await expect(page.locator('.blockpy-history-toolbar')).toHaveCount(0);
-  await expect(
-    page.locator('.blockpy-python-blockmirror .cm-content').first(),
-  ).toContainText('b = a + 1');
+  await expect(page.locator('.blockpy-python-blockmirror .cm-content').first()).toContainText(
+    'b = a + 1',
+  );
   // Blocks regenerated from the adopted version too.
   await expect(page.locator('.blocklySvg').first()).toBeVisible();
 });
 
-test('Run boots the engine lazily; system messages go to status + dev console', async ({ page }) => {
+test('Run boots the engine lazily; system messages go to status + dev console', async ({
+  page,
+}) => {
   await page.goto('/');
   await page.locator('button.blockpy-run').click();
   // Engine boot is lazy (R7). The load announcement is a SYSTEM message:
   // footer status area, not the student console.
-  await expect(page.locator('.blockpy-status')).toContainText(
-    'Loading Python engine',
-  );
-  await expect(page.locator('.blockpy-printer')).not.toContainText(
-    'Loading Python engine',
-  );
-  await expect(page.locator('button.blockpy-run')).toHaveClass(
-    /blockpy-run-running/,
-  );
+  await expect(page.locator('.blockpy-status')).toContainText('Loading Python engine');
+  await expect(page.locator('.blockpy-printer')).not.toContainText('Loading Python engine');
+  await expect(page.locator('button.blockpy-run')).toHaveClass(/blockpy-run-running/);
   // The Execution badge reflects the active run.
-  await expect(
-    page.locator('.blockpy-status .badge').last(),
-  ).toHaveClass(/server-status-active/);
+  await expect(page.locator('.blockpy-status .badge').last()).toHaveClass(/server-status-active/);
   // Dev console is instructor-only and shares the console slot: students
   // see no toggle; instructors get a toggle badged with the unseen count.
   await expect(page.locator('.blockpy-console-toggle')).toHaveCount(0);
@@ -595,13 +578,9 @@ test('Run boots the engine lazily; system messages go to status + dev console', 
   await expect(toggle.locator('.blockpy-console-toggle-badge')).toHaveText('1');
   await toggle.click();
   await expect(page.locator('.blockpy-dev-console')).toBeVisible();
-  await expect(page.locator('.blockpy-dev-console')).toContainText(
-    'Loading Python engine',
-  );
+  await expect(page.locator('.blockpy-dev-console')).toContainText('Loading Python engine');
   // The badge is consumed by viewing; the toggle now points back.
-  await expect(page.locator('.blockpy-console-toggle')).toContainText(
-    'Console',
-  );
+  await expect(page.locator('.blockpy-console-toggle')).toContainText('Console');
 });
 
 // Full Pyodide execution downloads Pyodide + Pedal wheels from CDNs — opt in
@@ -613,8 +592,7 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
   // The grading POST (§14.3) fires after feedback presents; it must carry
   // the block-workspace PNG (legacy getPngFromBlocks, server.js:675-680).
   const updatePost = page.waitForRequest(
-    (request) =>
-      request.url().includes('update_submission') && request.method() === 'POST',
+    (request) => request.url().includes('update_submission') && request.method() === 'POST',
     { timeout: 240_000 },
   );
   await page.locator('button.blockpy-run').click();
@@ -629,9 +607,7 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
   const updateBody = (await updatePost).postData() ?? '';
   expect(updateBody).toContain('correct=true');
   expect(updateBody).toContain(`image=${encodeURIComponent('data:image/png;base64,')}`);
-  await expect(page.locator('button.blockpy-run')).not.toHaveClass(
-    /blockpy-run-running/,
-  );
+  await expect(page.locator('button.blockpy-run')).not.toHaveClass(/blockpy-run-running/);
   // Trace explorer: the run collected an E3 trace; stepping shows variables,
   // and the LAST page shows the final end-of-run state (module-return
   // snapshot: a = 0).
@@ -651,9 +627,7 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
   await evalInput.fill('a + 41');
   await page.getByRole('button', { name: 'Enter' }).click();
   // Frozen echo line + the value, all inside the printer.
-  await expect(
-    page.locator('.blockpy-printer input[disabled]').first(),
-  ).toHaveValue('a + 41');
+  await expect(page.locator('.blockpy-printer input[disabled]').first()).toHaveValue('a + 41');
   await expect(page.locator('.blockpy-printer code')).toContainText('41', {
     timeout: 30_000,
   });
@@ -663,10 +637,9 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
   await page.keyboard.press('Control+a');
   await page.keyboard.type('a = 1\nprint(a)');
   await page.locator('button.blockpy-run').click();
-  await expect(page.locator('.blockpy-feedback')).toContainText(
-    'Try printing the value of a.',
-    { timeout: 60_000 },
-  );
+  await expect(page.locator('.blockpy-feedback')).toContainText('Try printing the value of a.', {
+    timeout: 60_000,
+  });
   // Editing !on_run.py changes grading on the very next run (the grader is
   // read from the VFS per run, not captured at boot).
   await page.locator('#blockpy-as-instructor').check();
@@ -679,10 +652,9 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
   );
   await page.locator('.nav-link', { hasText: 'answer.py' }).click();
   await page.locator('button.blockpy-run').click();
-  await expect(page.locator('.blockpy-feedback')).toContainText(
-    'Edited grader speaking!',
-    { timeout: 60_000 },
-  );
+  await expect(page.locator('.blockpy-feedback')).toContainText('Edited grader speaking!', {
+    timeout: 60_000,
+  });
   await page.locator('#blockpy-as-instructor').uncheck();
   // Student programs can open() staged VFS files (student search-order view,
   // prefix-stripped: '&sample_data.txt' → 'sample_data.txt').
@@ -690,23 +662,17 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
   await page.keyboard.press('Control+a');
   await page.keyboard.type("print(open('sample_data.txt').read())");
   await page.locator('button.blockpy-run').click();
-  await expect(page.locator('.blockpy-printer')).toContainText(
-    'temperature,42',
-    { timeout: 60_000 },
-  );
+  await expect(page.locator('.blockpy-printer')).toContainText('temperature,42', {
+    timeout: 60_000,
+  });
   // Remote uploaded files stage too (preload_all_files → listUploadedFiles →
   // downloadFile → VFS remote contents, consulted last in the search order).
   await content.click();
   await page.keyboard.press('Control+a');
   await page.keyboard.type("print(open('capitals.txt').read())");
   await page.locator('button.blockpy-run').click();
-  await expect(page.locator('.blockpy-printer')).toContainText(
-    'France,Paris',
-    { timeout: 60_000 },
-  );
-  await expect(page.locator('button.blockpy-run')).not.toHaveClass(
-    /blockpy-run-running/,
-  );
+  await expect(page.locator('.blockpy-printer')).toContainText('France,Paris', { timeout: 60_000 });
+  await expect(page.locator('button.blockpy-run')).not.toHaveClass(/blockpy-run-running/);
   // Queued inputs (quick-menu dialog) replay into input() — the compat-mode
   // stdin strategy (M1.3.4 → inputsPrefill).
   await page.locator('[title="Edit Inputs"]').click();
@@ -716,9 +682,7 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
   await page.keyboard.press('Control+a');
   await page.keyboard.type('name = input("Who? ")\nprint("Hi", name)');
   await expect(content).toContainText('Who?'); // typed text landed in CM
-  await expect(page.locator('button.blockpy-run')).not.toHaveClass(
-    /blockpy-run-running/,
-  );
+  await expect(page.locator('button.blockpy-run')).not.toHaveClass(/blockpy-run-running/);
   await expect(page.locator('button.blockpy-run')).toContainText('Run');
   await page.locator('button.blockpy-run').click();
   await expect(page.locator('.blockpy-printer')).toContainText('Who?', {
@@ -731,9 +695,7 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
   // auto-loads the package from imports, captures Agg figures as PNGs.
   await content.click();
   await page.keyboard.press('Control+a');
-  await page.keyboard.type(
-    'import matplotlib.pyplot as plt\nplt.plot([1, 2, 3])\nplt.show()',
-  );
+  await page.keyboard.type('import matplotlib.pyplot as plt\nplt.plot([1, 2, 3])\nplt.show()');
   await page.locator('button.blockpy-run').click();
   const plot = page.locator('.blockpy-printer .blockpy-console-image-output img');
   await expect(plot).toBeVisible({ timeout: 120_000 });
@@ -746,13 +708,14 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
   await page.keyboard.press('Control+a');
   await page.keyboard.type('print("mini", 6 * 7)');
   await page.locator('.blockpy-minified button.blockpy-run').click();
-  await expect(page.locator('.blockpy-minified-printer')).toContainText(
-    'mini 42',
-    { timeout: 60_000 },
-  );
+  await expect(page.locator('.blockpy-minified-printer')).toContainText('mini 42', {
+    timeout: 60_000,
+  });
 });
 
-test('focused editor mode: enter grows the editor, drawer serves feedback, Esc restores (M4.2)', async ({ page }) => {
+test('focused editor mode: enter grows the editor, drawer serves feedback, Esc restores (M4.2)', async ({
+  page,
+}) => {
   await page.goto('/');
   await page.locator('.blocklySvg').first().waitFor();
   // Measure the CM6 surface (the blockmirror wrapper collapses — floated/
@@ -785,9 +748,7 @@ test('focused editor mode: enter grows the editor, drawer serves feedback, Esc r
   await expect(page.locator('.blockpy-feedback')).toBeVisible();
   // Instructions overlay toggle.
   await page.locator('.blockpy-focus-instructions').click();
-  await expect(page.locator('.blockpy-dialog')).toContainText(
-    'Print the value of',
-  );
+  await expect(page.locator('.blockpy-dialog')).toContainText('Print the value of');
   await page.locator('.blockpy-dialog .modal-okay').click();
   // Esc restores the full chrome.
   await page.keyboard.press('Escape');
@@ -801,13 +762,9 @@ test('theme cycler applies data-theme scopes and persists (M4.1/LD-23)', async (
   await page.locator('.blocklySvg').first().waitFor();
   const themeButton = page.locator('[title^="Color Theme:"]');
   // Parity default: no data-theme attribute, parchment content frame.
-  expect(
-    await page.evaluate(() => document.documentElement.dataset.theme),
-  ).toBeUndefined();
+  expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBeUndefined();
   await themeButton.click(); // → dark
-  expect(
-    await page.evaluate(() => document.documentElement.dataset.theme),
-  ).toBe('dark');
+  expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('dark');
   // Token override binds: the content frame leaves parchment.
   const frameBg = await page
     .locator('.blockpy-content')
@@ -822,34 +779,28 @@ test('theme cycler applies data-theme scopes and persists (M4.1/LD-23)', async (
   // Persists across a reload (BLOCKPY_display.theme).
   await page.reload();
   await page.locator('.blocklySvg').first().waitFor();
-  expect(
-    await page.evaluate(() => document.documentElement.dataset.theme),
-  ).toBe('dark');
+  expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('dark');
   // Cycle back to light for the rest of the suite.
   await page.locator('[title^="Color Theme:"]').click(); // → win2000
   await page.locator('[title^="Color Theme:"]').click(); // → light
-  expect(
-    await page.evaluate(() => document.documentElement.dataset.theme),
-  ).toBeUndefined();
+  expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBeUndefined();
 });
 
-test('layout regressions: no horizontal overflow, panels side by side, white editor', async ({ page }) => {
+test('layout regressions: no horizontal overflow, panels side by side, white editor', async ({
+  page,
+}) => {
   await page.goto('/');
   await expect(page.locator('.blocklySvg').first()).toBeVisible();
   // 1. No horizontal scroll on the page.
   const overflow = await page.evaluate(
-    () =>
-      document.documentElement.scrollWidth -
-      document.documentElement.clientWidth,
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(overflow).toBeLessThanOrEqual(0);
   // 2. Console and feedback are side by side (same top, disjoint x-ranges).
   const consoleBox = (await page.locator('.blockpy-console').boundingBox())!;
   const feedbackBox = (await page.locator('.blockpy-feedback').boundingBox())!;
   expect(Math.abs(consoleBox.y - feedbackBox.y)).toBeLessThan(2);
-  expect(feedbackBox.x).toBeGreaterThanOrEqual(
-    consoleBox.x + consoleBox.width - 1,
-  );
+  expect(feedbackBox.x).toBeGreaterThanOrEqual(consoleBox.x + consoleBox.width - 1);
   // 3. The text editor surface is white, not the parchment page tint.
   const editorBg = await page
     .locator('.cm-editor')
@@ -863,18 +814,14 @@ test('layout regressions: no horizontal overflow, panels side by side, white edi
   });
   expect(spriteStatus).toBe(200);
   // 5. Toolbar buttons carry icons (lucide SVGs).
-  const runIcons = await page
-    .locator('button.blockpy-run svg')
-    .count();
+  const runIcons = await page.locator('button.blockpy-run svg').count();
   expect(runIcons).toBeGreaterThan(0);
   // 6. Feedback badge is content-sized, not stretched by the flex column
   //    (offsetWidth catches the stretch even while the badge is empty).
   const badgeWidth = await page
     .locator('.feedback-badge')
     .evaluate((el) => (el as HTMLElement).offsetWidth);
-  const feedbackPane = (await page
-    .locator('.blockpy-feedback')
-    .boundingBox())!;
+  const feedbackPane = (await page.locator('.blockpy-feedback').boundingBox())!;
   expect(badgeWidth).toBeLessThan(feedbackPane.width / 2);
   // 7. The dev console swaps into the console slot (same half-width column
   //    as the student console) with the dark terminal styling.
@@ -885,13 +832,11 @@ test('layout regressions: no horizontal overflow, panels side by side, white edi
   const devBox = (await devPrinter.boundingBox())!;
   // Re-measure: the instructor toggle grows the file-tab strip, shifting
   // rows below Row 2.
-  const feedbackNow = (await page
-    .locator('.blockpy-feedback')
-    .boundingBox())!;
+  const feedbackNow = (await page.locator('.blockpy-feedback').boundingBox())!;
   expect(devBox.y).toBeGreaterThanOrEqual(feedbackNow.y - 1);
   expect(devBox.y).toBeLessThan(feedbackNow.y + feedbackNow.height);
   expect(devBox.width).toBeLessThan(feedbackNow.width * 1.1);
-  expect(
-    await devPrinter.evaluate((el) => getComputedStyle(el).backgroundColor),
-  ).not.toBe('rgb(255, 255, 255)');
+  expect(await devPrinter.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(
+    'rgb(255, 255, 255)',
+  );
 });

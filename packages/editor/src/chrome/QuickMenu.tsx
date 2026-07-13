@@ -66,10 +66,7 @@ export interface SubmissionControls {
  * Legacy `ui.menu.textMarkSubmitted` (blockpy.js:593-607). `dirty` is
  * `display.dirtySubmission`.
  */
-export function markSubmittedText(
-  controls: SubmissionControls,
-  dirty: boolean,
-): string {
+export function markSubmittedText(controls: SubmissionControls, dirty: boolean): string {
   if (controls.status.toLowerCase() === 'completed') {
     return controls.grouped ? 'Problem closed' : 'Assignment closed';
   }
@@ -85,8 +82,7 @@ export function markSubmittedText(
 /** Legacy `ui.menu.isSubmitted` (blockpy.js:619-622). */
 export function isSubmitted(controls: SubmissionControls): boolean {
   return (
-    Boolean(controls.reviewed || controls.canClose) &&
-    controls.status.toLowerCase() === 'submitted'
+    Boolean(controls.reviewed || controls.canClose) && controls.status.toLowerCase() === 'submitted'
   );
 }
 
@@ -184,9 +180,7 @@ export function QuickMenu(props: QuickMenuProps) {
   // A feedback rating requested the prompted variant (legacy rate →
   // startShare(true), blockpy.js:808-812) — the Feedback pane raises the
   // store flag; this menu owns the dialog.
-  const promptedShareRequested = useEditorChromeStore(
-    (state) => state.promptedShare,
-  );
+  const promptedShareRequested = useEditorChromeStore((state) => state.promptedShare);
   const shareUrlRef = useRef(props.shareUrl);
   shareUrlRef.current = props.shareUrl;
   useEffect(() => {
@@ -255,9 +249,7 @@ export function QuickMenu(props: QuickMenuProps) {
             type="checkbox"
             id="blockpy-as-instructor"
             checked={props.instructor ?? false}
-            onChange={(event) =>
-              props.onInstructorChange?.(event.target.checked)
-            }
+            onChange={(event) => props.onInstructorChange?.(event.target.checked)}
           />
           <label className="form-check-label" htmlFor="blockpy-as-instructor">
             View as instructor
@@ -331,10 +323,7 @@ export function QuickMenu(props: QuickMenuProps) {
             checked={reuseDraft}
             onChange={(event) => setReuseDraft(event.target.checked)}
           />
-          <label
-            className="form-check-label"
-            htmlFor="blockpy-remember-inputs"
-          >
+          <label className="form-check-label" htmlFor="blockpy-remember-inputs">
             Reuse inputs for next execution
           </label>
         </div>
@@ -345,9 +334,8 @@ export function QuickMenu(props: QuickMenuProps) {
           onChange={(event) => setInputsDraft(event.target.value)}
         />
         <br />
-        Edit the inputs above to store and reuse them across multiple
-        executions. Each input should be put on its own line. You do not need
-        quotes; the text will be entered literally.
+        Edit the inputs above to store and reuse them across multiple executions. Each input should
+        be put on its own line. You do not need quotes; the text will be entered literally.
       </Dialog>
 
       {/* Legacy START_SHARE (dialog.js:218-261), unprompted variant; the
@@ -381,16 +369,14 @@ export function QuickMenu(props: QuickMenuProps) {
           </button>
         </div>
         <div className="mb-4">
-          Note that you CANNOT share this link with other students, or access
-          it yourself. This is strictly for sharing with the course staff when
-          something goes wrong or you need help with your code.
+          Note that you CANNOT share this link with other students, or access it yourself. This is
+          strictly for sharing with the course staff when something goes wrong or you need help with
+          your code.
         </div>
         <div className="mb-4">
-          The link is also available through this QR code. Do not share this
-          QR code unless your instructor or TA asks you to.
-          <div className="blockpy-copy-share-qrcode">
-            QR code generation failed.
-          </div>
+          The link is also available through this QR code. Do not share this QR code unless your
+          instructor or TA asks you to.
+          <div className="blockpy-copy-share-qrcode">QR code generation failed.</div>
         </div>
       </Dialog>
     </div>

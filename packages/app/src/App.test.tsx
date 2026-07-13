@@ -110,8 +110,22 @@ it('dual-renders the group nav and publishes the markCorrect global (§9, §15.3
         assignment: { ...minimalConfig.assignment, assignmentData: RAW_PAYLOAD },
         group: {
           assignments: [
-            { id: 101, name: 'Server Problem', url: '#101', subordinate: false, hidden: false, correct: false },
-            { id: 103, name: 'Reading', url: '#103', subordinate: false, hidden: false, correct: false },
+            {
+              id: 101,
+              name: 'Server Problem',
+              url: '#101',
+              subordinate: false,
+              hidden: false,
+              correct: false,
+            },
+            {
+              id: 103,
+              name: 'Reading',
+              url: '#103',
+              subordinate: false,
+              hidden: false,
+              correct: false,
+            },
           ],
           anySecretive: false,
           currentAssignmentId: 101,

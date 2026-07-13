@@ -26,10 +26,7 @@ defineBlock('ast_Global', {
     const input = this.getInput('GLOBAL')!;
     // Update pluralization
     if (this.getField('START_GLOBALS')) {
-      this.setFieldValue(
-        this.nameCount_ > 1 ? 'make globals' : 'make global',
-        'START_GLOBALS',
-      );
+      this.setFieldValue(this.nameCount_ > 1 ? 'make globals' : 'make global', 'START_GLOBALS');
     }
     // Update fields
     let i = 0;

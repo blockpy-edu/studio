@@ -18,9 +18,7 @@ defineBlock('ast_If', {
     this.orelse_ = 0;
     this.elifs_ = 0;
     this.appendValueInput('TEST').appendField('if');
-    this.appendStatementInput('BODY')
-      .setCheck(null)
-      .setAlign(Blockly.inputs.Align.RIGHT);
+    this.appendStatementInput('BODY').setCheck(null).setAlign(Blockly.inputs.Align.RIGHT);
     this.setInputsInline(false);
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
@@ -90,10 +88,7 @@ generator.forBlock['ast_If'] = function (block) {
   const typed = block as IfBlock;
   // Test
   const test =
-    'if ' +
-    (generator.valueToCode(block, 'TEST', generator.ORDER_NONE) ||
-      generator.blank) +
-    ':\n';
+    'if ' + (generator.valueToCode(block, 'TEST', generator.ORDER_NONE) || generator.blank) + ':\n';
   // Body:
   const body = generator.statementToCode(block, 'BODY') || generator.PASS;
   // Elifs
@@ -101,11 +96,8 @@ generator.forBlock['ast_If'] = function (block) {
   for (let i = 0; i < typed.elifs_; i++) {
     let clause =
       'elif ' +
-      (generator.valueToCode(block, 'ELIFTEST' + i, generator.ORDER_NONE) ||
-        generator.blank);
-    clause +=
-      ':\n' +
-      (generator.statementToCode(block, 'ELIFBODY' + i) || generator.PASS);
+      (generator.valueToCode(block, 'ELIFTEST' + i, generator.ORDER_NONE) || generator.blank);
+    clause += ':\n' + (generator.statementToCode(block, 'ELIFBODY' + i) || generator.PASS);
     elifs[i] = clause;
   }
   // Orelse:
@@ -113,66 +105,57 @@ generator.forBlock['ast_If'] = function (block) {
   // Legacy used `this.orelse_`; generator functions are invoked with the
   // block as `this`, so this is the same value.
   if (typed.orelse_) {
-    orelse =
-      'else:\n' +
-      (generator.statementToCode(block, 'ORELSEBODY') || generator.PASS);
+    orelse = 'else:\n' + (generator.statementToCode(block, 'ORELSEBODY') || generator.PASS);
   }
   return test + body + elifs.join('') + orelse;
 };
 
-registerConverter(
-  'If',
-  function (this: TextToBlocksConverter, node: ir.If, _parent: unknown) {
-    const test = node.test;
-    const body = node.body;
-    let orelse: any = node.orelse;
+registerConverter('If', function (this: TextToBlocksConverter, node: ir.If, _parent: unknown) {
+  const test = node.test;
+  const body = node.body;
+  let orelse: ir.Stmt[] | undefined = node.orelse;
 
-    let hasOrelse = false;
-    let elifCount = 0;
+  let hasOrelse = false;
+  let elifCount = 0;
 
-    const values: Record<string, Element | null> = {
-      TEST: this.convert(test, node) as Element,
-    };
-    const statements: Record<string, Element[] | null> = {
-      BODY: this.convertBody(body, node),
-    };
+  const values: Record<string, Element | null> = {
+    TEST: this.convert(test, node) as Element,
+  };
+  const statements: Record<string, Element[] | null> = {
+    BODY: this.convertBody(body, node),
+  };
 
-    while (orelse !== undefined && orelse.length > 0) {
-      if (orelse.length === 1) {
-        if (orelse[0]._astname === 'If') {
-          // This is an ELIF
-          this.heights.shift();
-          values['ELIFTEST' + elifCount] = this.convert(
-            orelse[0].test,
-            node,
-          ) as Element;
-          statements['ELIFBODY' + elifCount] = this.convertBody(
-            orelse[0].body,
-            node,
-          );
-          elifCount++;
-        } else {
-          hasOrelse = true;
-          statements['ORELSEBODY'] = this.convertBody(orelse, node);
-        }
+  while (orelse !== undefined && orelse.length > 0) {
+    if (orelse.length === 1) {
+      if (orelse[0]!._astname === 'If') {
+        // This is an ELIF
+        this.heights.shift();
+        values['ELIFTEST' + elifCount] = this.convert((orelse[0] as ir.If).test, node) as Element;
+        statements['ELIFBODY' + elifCount] = this.convertBody((orelse[0] as ir.If).body, node);
+        elifCount++;
       } else {
         hasOrelse = true;
         statements['ORELSEBODY'] = this.convertBody(orelse, node);
       }
-      orelse = orelse[0].orelse;
+    } else {
+      hasOrelse = true;
+      statements['ORELSEBODY'] = this.convertBody(orelse, node);
     }
+    // Non-`If` statements have no `orelse`, which ends the loop via the
+    // `!== undefined` guard (legacy relied on the same fall-through).
+    orelse = (orelse[0] as ir.If).orelse;
+  }
 
-    return createBlock(
-      'ast_If',
-      node.lineno,
-      {},
-      values,
-      {},
-      {
-        '@orelse': hasOrelse,
-        '@elifs': elifCount,
-      },
-      statements,
-    );
-  },
-);
+  return createBlock(
+    'ast_If',
+    node.lineno,
+    {},
+    values,
+    {},
+    {
+      '@orelse': hasOrelse,
+      '@elifs': elifCount,
+    },
+    statements,
+  );
+});

@@ -74,12 +74,7 @@ describe('ImagesManager (legacy IMAGE_EDITOR_HTML)', () => {
     fireEvent.click(capitalsRow.querySelector('button')!); // Delete
     expect(uploads.remove).toHaveBeenCalledWith('assignment', '101', 'capitals.txt');
     fireEvent.click(capitalsRow.querySelectorAll('button')[1]!); // Rename
-    expect(uploads.rename).toHaveBeenCalledWith(
-      'assignment',
-      '101',
-      'capitals.txt',
-      'renamed.txt',
-    );
+    expect(uploads.rename).toHaveBeenCalledWith('assignment', '101', 'capitals.txt', 'renamed.txt');
   });
 
   it('uploads the chosen file; filename pre-fills; placement gated', async () => {

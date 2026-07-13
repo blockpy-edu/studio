@@ -78,10 +78,7 @@ export function DocsPanel({ url, onCollapse }: DocsPanelProps) {
     };
   }, [url]);
 
-  const html = useMemo(
-    () => (markdown === null ? '' : renderInstructions(markdown)),
-    [markdown],
-  );
+  const html = useMemo(() => (markdown === null ? '' : renderInstructions(markdown)), [markdown]);
 
   // Post-render pass: assign heading ids (TOC anchors) and collect the TOC;
   // highlight code fences on the legacy 400 ms debounce (LD-10 pipeline).
@@ -105,22 +102,14 @@ export function DocsPanel({ url, onCollapse }: DocsPanelProps) {
   }, [markdown, html]);
 
   const visibleToc = filter.trim()
-    ? toc.filter((entry) =>
-        entry.text.toLowerCase().includes(filter.trim().toLowerCase()),
-      )
+    ? toc.filter((entry) => entry.text.toLowerCase().includes(filter.trim().toLowerCase()))
     : toc;
 
   return (
     <div className="blockpy-docs-panel">
       <div className="blockpy-panel-header">
         <strong>Docs:</strong>
-        <a
-          className="blockpy-docs-download"
-          href={url}
-          target="_blank"
-          rel="noreferrer"
-          download
-        >
+        <a className="blockpy-docs-download" href={url} target="_blank" rel="noreferrer" download>
           <Icon name="download" />
           Download
         </a>
@@ -156,10 +145,7 @@ export function DocsPanel({ url, onCollapse }: DocsPanelProps) {
               />
               <ul>
                 {visibleToc.map((entry) => (
-                  <li
-                    key={entry.id}
-                    style={{ paddingLeft: `${(entry.level - 1) * 10}px` }}
-                  >
+                  <li key={entry.id} style={{ paddingLeft: `${(entry.level - 1) * 10}px` }}>
                     <a
                       href={`#${entry.id}`}
                       onClick={(event) => {

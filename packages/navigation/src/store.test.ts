@@ -4,8 +4,22 @@ import { GroupNavStore, type GroupNavBootData, type GroupNavOptions } from './st
 
 const BOOT: GroupNavBootData = {
   assignments: [
-    { id: 101, name: 'Hello World', url: '/a/101', subordinate: false, hidden: false, correct: false },
-    { id: 102, name: 'Quiz: Vars', url: '/a/102', subordinate: true, hidden: false, correct: false },
+    {
+      id: 101,
+      name: 'Hello World',
+      url: '/a/101',
+      subordinate: false,
+      hidden: false,
+      correct: false,
+    },
+    {
+      id: 102,
+      name: 'Quiz: Vars',
+      url: '/a/102',
+      subordinate: true,
+      hidden: false,
+      correct: false,
+    },
     { id: 103, name: 'Reading', url: '/a/103', subordinate: false, hidden: false, correct: true },
     { id: 104, name: 'Finale', url: '/a/104', subordinate: false, hidden: false, correct: false },
   ],
@@ -340,9 +354,9 @@ describe('organizer refresh (M4.6; Studio extension)', () => {
   it('renameEntry updates the header list in place', () => {
     const store = makeStore();
     store.renameEntry(103, 'Reading: Renamed');
-    expect(
-      store.getSnapshot().entries.find((entry) => entry.id === 103)!.name,
-    ).toBe('Reading: Renamed');
+    expect(store.getSnapshot().entries.find((entry) => entry.id === 103)!.name).toBe(
+      'Reading: Renamed',
+    );
     // Unknown ids are no-ops (subordinates are not in the header).
     store.renameEntry(102, 'nope');
     expect(store.getSnapshot().entries).toHaveLength(3);
@@ -351,9 +365,7 @@ describe('organizer refresh (M4.6; Studio extension)', () => {
   it('removeEntry drops the assignment from the header', () => {
     const store = makeStore();
     store.removeEntry(103);
-    expect(store.getSnapshot().entries.map((entry) => entry.id)).toEqual([
-      101, 104,
-    ]);
+    expect(store.getSnapshot().entries.map((entry) => entry.id)).toEqual([101, 104]);
     store.removeEntry(999); // unknown id: no-op
     expect(store.getSnapshot().entries).toHaveLength(2);
   });

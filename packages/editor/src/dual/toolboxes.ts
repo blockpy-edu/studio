@@ -50,13 +50,7 @@ export const TOOLBOX_CATEGORY = {
   DECISIONS: {
     name: 'Decisions',
     colour: 'LOGIC',
-    blocks: [
-      'if ___: pass',
-      'if ___: pass\nelse: pass',
-      '___ < ___',
-      '___ and ___',
-      'not ___',
-    ],
+    blocks: ['if ___: pass', 'if ___: pass\nelse: pass', '___ < ___', '___ and ___', 'not ___'],
   },
   CALCULATIONS: {
     name: 'Calculation',
@@ -118,11 +112,7 @@ export const TOOLBOX_CATEGORY = {
   DICTIONARIES: {
     name: 'Dictionaries',
     colour: 'DICTIONARY',
-    blocks: [
-      "{'1st key': ___, '2nd key': ___, '3rd key': ___}",
-      '{}',
-      "___['key']",
-    ],
+    blocks: ["{'1st key': ___, '2nd key': ___, '3rd key': ___}", '{}', "___['key']"],
   },
 } satisfies Record<string, ToolboxEntry>;
 
@@ -150,11 +140,7 @@ export const TOOLBOXES: Record<string, ToolboxEntry[]> = {
     {
       name: 'Functions',
       colour: 'FUNCTIONS',
-      blocks: [
-        'def ___(___): pass',
-        'def ___(___: int)->str: pass',
-        'return ___',
-      ],
+      blocks: ['def ___(___): pass', 'def ___(___: int)->str: pass', 'return ___'],
     },
     TOOLBOX_CATEGORY.SEP,
     TOOLBOX_CATEGORY.CALCULATIONS,
@@ -167,13 +153,7 @@ export const TOOLBOXES: Record<string, ToolboxEntry[]> = {
     {
       name: 'Lists',
       colour: 'LIST',
-      blocks: [
-        '[0, 0, 0]',
-        '[___, ___, ___]',
-        '[]',
-        '___.append(___)',
-        'range(0, 10)',
-      ],
+      blocks: ['[0, 0, 0]', '[___, ___, ___]', '[]', '___.append(___)', 'range(0, 10)'],
     },
     TOOLBOX_CATEGORY.DICTIONARIES,
   ],
@@ -237,13 +217,7 @@ export const TOOLBOXES: Record<string, ToolboxEntry[]> = {
     {
       name: 'Classes',
       colour: 'OO',
-      blocks: [
-        'class ___: pass',
-        'class ___(___): pass',
-        '___.___',
-        '___: ___',
-        'super()',
-      ],
+      blocks: ['class ___: pass', 'class ___(___): pass', '___.___', '___: ___', 'super()'],
     },
     {
       name: 'Functions',
@@ -452,9 +426,7 @@ export const TOOLBOXES: Record<string, ToolboxEntry[]> = {
  * assignment/getter blocks in `custom="VARIABLE"` categories.
  */
 function setHideGettersSetters(value: boolean): void {
-  (Blockly.Variables as unknown as Record<string, unknown>)[
-    '_HIDE_GETTERS_SETTERS'
-  ] = value;
+  (Blockly.Variables as unknown as Record<string, unknown>)['_HIDE_GETTERS_SETTERS'] = value;
 }
 
 /**
@@ -512,10 +484,7 @@ export function toolboxPythonToBlocks(
  * - every {@link EXTRA_TOOLS} entry is appended;
  * - the result is wrapped in `<xml id="toolbox" style="display:none">`.
  */
-export function makeToolboxXml(
-  toolbox: ToolboxSpec,
-  converter: TextToBlocksConverter,
-): string {
+export function makeToolboxXml(toolbox: ToolboxSpec, converter: TextToBlocksConverter): string {
   let resolved: ToolboxSpec = toolbox;
   // Use palette if it exists, otherwise assume its a custom one. (legacy)
   if (typeof resolved === 'string' && resolved in TOOLBOXES) {

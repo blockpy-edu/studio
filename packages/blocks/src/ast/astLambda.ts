@@ -26,9 +26,7 @@ type LambdaBlock = Blockly.Block & {
 
 defineBlock('ast_Lambda', {
   init: function (this: LambdaBlock) {
-    this.appendDummyInput()
-      .appendField('lambda')
-      .setAlign(Blockly.inputs.Align.RIGHT);
+    this.appendDummyInput().appendField('lambda').setAlign(Blockly.inputs.Align.RIGHT);
     this.decoratorsCount_ = 0;
     this.parametersCount_ = 0;
     this.hasReturn_ = false;
@@ -41,10 +39,10 @@ defineBlock('ast_Lambda', {
     this.setColour(COLOR.FUNCTIONS);
     this.updateShape_();
   },
-  mutationToDom: (Blockly.Blocks['ast_FunctionDef'] as any).mutationToDom,
-  domToMutation: (Blockly.Blocks['ast_FunctionDef'] as any).domToMutation,
-  updateShape_: (Blockly.Blocks['ast_FunctionDef'] as any).updateShape_,
-  setReturnAnnotation_: (Blockly.Blocks['ast_FunctionDef'] as any)
+  mutationToDom: (Blockly.Blocks['ast_FunctionDef'] as Record<string, unknown>).mutationToDom,
+  domToMutation: (Blockly.Blocks['ast_FunctionDef'] as Record<string, unknown>).domToMutation,
+  updateShape_: (Blockly.Blocks['ast_FunctionDef'] as Record<string, unknown>).updateShape_,
+  setReturnAnnotation_: (Blockly.Blocks['ast_FunctionDef'] as Record<string, unknown>)
     .setReturnAnnotation_,
 });
 
@@ -54,17 +52,11 @@ generator.forBlock['ast_Lambda'] = function (block) {
   const parameters = new Array<string>(typed.parametersCount_);
   for (let i = 0; i < typed.parametersCount_; i++) {
     parameters[i] =
-      generator.valueToCode(block, 'PARAMETER' + i, generator.ORDER_NONE) ||
-      generator.blank;
+      generator.valueToCode(block, 'PARAMETER' + i, generator.ORDER_NONE) || generator.blank;
   }
   // Body
-  const body =
-    generator.valueToCode(block, 'BODY', generator.ORDER_LAMBDA) ||
-    generator.PASS;
-  return [
-    'lambda ' + parameters.join(', ') + ': ' + body,
-    generator.ORDER_LAMBDA,
-  ];
+  const body = generator.valueToCode(block, 'BODY', generator.ORDER_LAMBDA) || generator.PASS;
+  return ['lambda ' + parameters.join(', ') + ': ' + body, generator.ORDER_LAMBDA];
 };
 
 registerConverter(
