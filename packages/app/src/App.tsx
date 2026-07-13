@@ -787,6 +787,14 @@ export function App({ config, extras, registerActions }: AppProps) {
         // Subordinate-reading preamble beneath no one: the quiz renders the
         // reading ABOVE itself (quiz_ui.ts:194-208).
         renderReading={(readingId) => reading(readingId, true)}
+        // quizzer.ts:108-110 — url-slug readingIds resolve through the
+        // assignment store's by_url fallback; unresolved slugs fail soft
+        // inside the Quizzer (readingId stays null, console.error).
+        lookupReadingId={async (url) => {
+          const resolved = await api.loadAssignmentByUrl(url);
+          if (!resolved) throw new Error(`No assignment found for url ${url}`);
+          return resolved.id;
+        }}
         onTimeLimitInfo={onTimeLimitInfo}
         // Quiz editor persistence: the two documents through saveFile with
         // the QUIZ's ids (legacy saveAssignment, quizzer.ts:195-205).

@@ -857,6 +857,13 @@ test('harness group picker swaps to the real bakery curriculum (demo)', async ({
   await expect(nav.locator('option', { hasText: '1A3.1) Basic Output' })).toHaveCount(1);
   // The group opens on its first assignment — a real bakery quiz.
   await expect(page.getByRole('button', { name: 'Start Quiz' }).first()).toBeVisible();
+  // Its subordinate reading (settings.readingId url slug, resolved through
+  // GET /api/assignments/by_url) renders in full ABOVE the quiz for
+  // students (LD-31).
+  await expect(page.locator('.quizzer-reading-preamble').first()).toContainText(
+    'Computer Science is not really about computers',
+    { timeout: 10_000 },
+  );
   // Open a real coding assignment; its actual instructions render.
   await nav.selectOption({ label: '1A3.1) Basic Output' });
   await expect(page.locator('.blockpy-instructions').first()).toContainText('Hello world', {

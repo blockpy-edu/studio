@@ -158,6 +158,8 @@ export function Quizzer(props: QuizzerProps) {
   const [isDirty, setIsDirty] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [readingId, setReadingId] = useState<number | null>(null);
+  // Instructor-only: whether the collapsed subordinate reading is expanded.
+  const [showReading, setShowReading] = useState(false);
   // Instructor view: the visual quiz editor is the normal authoring
   // workflow; "Actual Quiz" shows the student surface.
   const [editorView, setEditorView] = useState<'quiz' | 'editor' | null>(null);
@@ -431,6 +433,24 @@ export function Quizzer(props: QuizzerProps) {
       ))}
     </div>
   );
+  // Subordinate-reading preamble (settings.readingId, quiz_ui.ts:194-208).
+  // Students get the reading rendered in full above the quiz; instructor
+  // views get a collapse toggle (initially collapsed) instead of legacy's
+  // static "Reading is hidden" note (LD-31).
+  const collapsedReading = readingId !== null && props.renderReading && (
+    <div className="quizzer-reading-preamble quizzer-reading-collapsed">
+      <button
+        type="button"
+        className="btn btn-sm btn-outline-secondary"
+        aria-expanded={showReading}
+        onClick={() => setShowReading((value) => !value)}
+      >
+        {showReading ? 'Hide Subordinate Reading' : 'Show Subordinate Reading'}
+      </button>
+      {showReading && props.renderReading(readingId)}
+    </div>
+  );
+
   if (isInstructor && activeView === 'editor') {
     const quizId = loaded.assignment.id;
     const submissionId = loaded.submission?.id ?? null;
@@ -438,6 +458,7 @@ export function Quizzer(props: QuizzerProps) {
     return withSurface(
       <div className="blockpy-quizzer" style={{ backgroundColor: '#fcf8e3' }}>
         {viewToggle}
+        {collapsedReading}
         <QuizEditor
           instructions={loaded.assignment.instructions}
           checks={loaded.assignment.onRun ?? ''}
@@ -565,14 +586,16 @@ export function Quizzer(props: QuizzerProps) {
       {readingId !== null && asStudent && props.renderReading && (
         <div className="quizzer-reading-preamble">{props.renderReading(readingId)}</div>
       )}
-      {readingId !== null && !asStudent && (
-        <div>
-          <strong>
-            Reading is hidden; Click &quot;View as Student&quot; to preview the Reading.
-          </strong>
-          <hr />
-        </div>
-      )}
+      {readingId !== null &&
+        !asStudent &&
+        (collapsedReading || (
+          <div>
+            <strong>
+              Reading is hidden; Click &quot;View as Student&quot; to preview the Reading.
+            </strong>
+            <hr />
+          </div>
+        ))}
       {attemptBar('below')}
       {isInstructor && (
         <div className="form-group">

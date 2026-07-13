@@ -526,3 +526,20 @@ Replicate decisions (D4, D6) produce no entries — they are legacy parity.
   11.2 registry leak — one retained workspace per editor mount
   otherwise; see block-editor.ts dispose).
 - **Wire impact:** none — localStorage toggle only.
+
+## LD-31 — Subordinate-reading preamble visible in instructor views (user request, 2026-07-13)
+
+- **Legacy:** a quiz with `settings.readingId` renders the subordinate
+  reading in full above the questions ONLY when "View As Student" is on
+  (quiz_ui.ts:194-208); otherwise instructors get the static line
+  "Reading is hidden; Click 'View as Student' to preview the Reading."
+- **Studio:** the student rendering is unchanged (full reading above the
+  quiz; url-slug readingIds now resolve through the GET-only
+  `/assignments/by_url` route, quizzer.ts:108-110 → assignment.ts:119-127).
+  Instructor views — the Quiz Editor (their default) and Actual Quiz with
+  "View As Student" off — replace the static line with a
+  "Show/Hide Subordinate Reading" toggle, initially collapsed, so the
+  pairing is visible without leaving instructor mode. The legacy line
+  remains only as the fallback when no reading renderer is composed.
+- **Wire impact:** none new — the preamble uses the same loadAssignment /
+  by_url endpoints the reader and textbook already call.

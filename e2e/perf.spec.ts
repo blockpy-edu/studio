@@ -44,6 +44,9 @@ test('editor page + hydrated reading stay under the pre-engine heap budget', asy
   // removes its launch button, so a snapshotted list goes stale under
   // parallel-suite timing.
   const launchButtons = page.locator('.blockpy-host-reading .reader-run-button');
+  // count() below doesn't wait — under parallel-suite load the buttons
+  // hydrate after the host div, so anchor on the first one appearing.
+  await launchButtons.first().waitFor();
   let hydrated = 0;
   while ((await launchButtons.count()) > 0) {
     await launchButtons.first().click();

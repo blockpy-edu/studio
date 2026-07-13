@@ -690,6 +690,18 @@ const routes: Record<string, (params: URLSearchParams, grader?: DemoQuizGrader) 
           };
   },
   '/api/update_submission_status': () => ({ success: true }),
+  // GET-only by_url resolution (assignments.py:341-353) — quizzes resolve
+  // their subordinate-reading url slugs through this before rendering the
+  // preamble. Demo records only; the showcase fixtures use numeric ids.
+  '/api/assignments/by_url': (params) => {
+    const url = params.get('url');
+    const match = url
+      ? [...DEMO_ASSIGNMENTS.values()].find((record) => record.url === url)
+      : undefined;
+    return match
+      ? { success: true, assignment: match }
+      : { success: false, message: `Assignment ${url ?? ''} does not exist` };
+  },
   '/api/list_files': () => uploaded,
   '/api/upload_file': () => ({ success: true }),
   '/api/rename_file': () => ({ success: true }),

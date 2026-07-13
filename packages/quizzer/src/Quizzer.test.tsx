@@ -257,4 +257,54 @@ describe('Quizzer (quizzer.ts port, §11.3)', () => {
       expect(view.container.querySelectorAll('.quizzer-question-card').length).toBe(1);
     });
   });
+
+  it('renders the subordinate reading fully for students, resolving url slugs', async () => {
+    const withReading = {
+      ...INSTRUCTIONS,
+      settings: { ...INSTRUCTIONS.settings, readingId: 'bakery_intro_cs_read' },
+    };
+    const lookupReadingId = vi.fn(async () => 42);
+    renderQuizzer(
+      {
+        lookupReadingId,
+        renderReading: (readingId: number) => <div>Reading preamble {readingId}</div>,
+      },
+      loadResult('', withReading),
+    );
+    await waitFor(() => expect(screen.getByText('Reading preamble 42')).toBeDefined());
+    expect(lookupReadingId).toHaveBeenCalledWith('bakery_intro_cs_read');
+    // No toggle for students — the reading is simply part of the page.
+    expect(screen.queryByRole('button', { name: 'Show Subordinate Reading' })).toBeNull();
+  });
+
+  it('collapses the subordinate reading behind a toggle for instructors (LD-31)', async () => {
+    const withReading = {
+      ...INSTRUCTIONS,
+      settings: { ...INSTRUCTIONS.settings, readingId: 7 },
+    };
+    renderQuizzer(
+      {
+        isInstructor: () => true,
+        renderReading: (readingId: number) => <div>Reading preamble {readingId}</div>,
+      },
+      loadResult('', withReading),
+    );
+    // Quiz Editor view (the instructor default): toggle present, collapsed.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Show Subordinate Reading' })).toBeDefined(),
+    );
+    expect(screen.queryByText('Reading preamble 7')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Show Subordinate Reading' }));
+    expect(screen.getByText('Reading preamble 7')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Subordinate Reading' }));
+    expect(screen.queryByText('Reading preamble 7')).toBeNull();
+    // Actual Quiz, not-as-student: the same toggle replaces the legacy
+    // "Reading is hidden" note; View As Student renders the reading in full.
+    fireEvent.click(screen.getByRole('button', { name: 'Actual Quiz' }));
+    await waitFor(() => expect(screen.getByLabelText('View As Student')).toBeDefined());
+    expect(screen.queryByText(/Reading is hidden/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Show Subordinate Reading' })).toBeDefined();
+    fireEvent.click(screen.getByLabelText('View As Student'));
+    await waitFor(() => expect(screen.getByText('Reading preamble 7')).toBeDefined());
+  });
 });

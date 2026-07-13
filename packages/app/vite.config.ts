@@ -20,32 +20,40 @@ function devApi(): Plugin {
           .ssrLoadModule('/src/demo-quiz-grader.ts')
           .then((mod) => (mod as { gradeQuizWire: DemoQuizGrader }).gradeQuizWire));
       server.middlewares.use((req, res, next) => {
-        const path = (req.url ?? '').split('?')[0] ?? '';
+        const [path = '', query = ''] = (req.url ?? '').split('?');
         // Prefix-gate BEFORE consuming the body — a drained stream would
         // starve any later middleware that wanted the request.
-        if (req.method !== 'POST' || !path.startsWith('/api/')) return next();
+        if (!path.startsWith('/api/')) return next();
+        // Most routes are legacy form-encoded POSTs; /api/assignments/by_url
+        // is the one GET-only route (params ride in the query string).
+        if (req.method !== 'POST' && req.method !== 'GET') return next();
+        const respond = async (params: URLSearchParams) => {
+          const grader = await loadGrader().catch(() => undefined);
+          const routed = routeDevRequest(path, params, grader);
+          if (!routed) return next();
+          if (routed.text !== undefined) {
+            res.setHeader('Content-Type', 'text/plain');
+            res.end(routed.text);
+            return;
+          }
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(routed.json));
+        };
+        if (req.method === 'GET') {
+          void respond(new URLSearchParams(query));
+          return;
+        }
         const chunks: Buffer[] = [];
         req.on('data', (chunk: Buffer) => chunks.push(chunk));
         req.on('end', () => {
-          void (async () => {
-            const body = Buffer.concat(chunks).toString('utf8');
-            let params: URLSearchParams;
-            try {
-              params = new URLSearchParams(body);
-            } catch {
-              params = new URLSearchParams();
-            }
-            const grader = await loadGrader().catch(() => undefined);
-            const routed = routeDevRequest(path, params, grader);
-            if (!routed) return next();
-            if (routed.text !== undefined) {
-              res.setHeader('Content-Type', 'text/plain');
-              res.end(routed.text);
-              return;
-            }
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify(routed.json));
-          })();
+          const body = Buffer.concat(chunks).toString('utf8');
+          let params: URLSearchParams;
+          try {
+            params = new URLSearchParams(body);
+          } catch {
+            params = new URLSearchParams();
+          }
+          void respond(params);
         });
       });
     },
