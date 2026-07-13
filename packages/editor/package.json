@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@blockly/keyboard-navigation": "0.6.14",
     "@blockpy/blocks": "workspace:*",
     "@blockpy/engine": "workspace:*",
     "@blockpy/vfs": "workspace:*",

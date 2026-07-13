@@ -61,6 +61,7 @@ import {
   FileInput,
   Focus,
   History,
+  Keyboard,
   Palette,
   Images,
   LayoutGrid,
@@ -130,6 +131,8 @@ const ICONS = {
   focus: Focus,
   // Docs browser panel (M4.3; Studio extension, no legacy glyph).
   docs: BookOpen,
+  // Blockly keyboard navigation (M6.2; Studio extension, no legacy glyph).
+  keyboardNav: Keyboard,
   // File management (M3.7; Studio extensions, no legacy glyphs).
   fileTree: FolderTree,
   rename: PenLine,

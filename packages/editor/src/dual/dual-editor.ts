@@ -254,6 +254,11 @@ export class DualEditor {
     this.textEditor.setAutocomplete(enabled);
   }
 
+  /** Blockly keyboard navigation opt-in (M6.2, LD-30). */
+  setKeyboardNav(enabled: boolean): void {
+    this.blockEditor.setKeyboardNav(enabled);
+  }
+
   /**
    * Live-swap the color theme on both halves (M4.1, LD-23). No-op when
    * unchanged — Blockly's setTheme forces a full workspace refresh, which

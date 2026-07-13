@@ -525,6 +525,12 @@ export function CodingEditor(props: CodingEditorProps) {
     editorRef.current?.setAutocomplete(autocompleteOn);
   }, [autocompleteOn]);
 
+  // Blockly keyboard navigation (M6.2, LD-30; default off, persisted).
+  const keyboardNavOn = useEditorChromeStore((state) => state.blockKeyboardNav);
+  useEffect(() => {
+    editorRef.current?.setKeyboardNav(keyboardNavOn);
+  }, [keyboardNavOn]);
+
   // System messages (engine boot, grader lifecycle, instructor output) go
   // to the footer status line + the instructor-only dev console — never the
   // student console.
@@ -1105,10 +1111,13 @@ export function CodingEditor(props: CodingEditorProps) {
                 height={focusedMode ? Math.max(500, window.innerHeight - 220) : 400}
                 editorRef={(editor) => {
                   editorRef.current = editor;
-                  // Apply the persisted autocomplete preference to the
-                  // fresh editor (the effect only fires on later changes).
+                  // Apply the persisted preferences to the fresh editor
+                  // (the effects only fire on later changes).
                   if (editor && store.getState().autocomplete) {
                     editor.setAutocomplete(true);
+                  }
+                  if (editor && store.getState().blockKeyboardNav) {
+                    editor.setKeyboardNav(true);
                   }
                   props.onEditorReady?.(editor);
                 }}

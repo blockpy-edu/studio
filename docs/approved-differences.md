@@ -511,3 +511,18 @@ Replicate decisions (D4, D6) produce no entries — they are legacy parity.
   (e.g. no-errors `#5bc0de`); keyboard-only/manual passes (completion-box
   span, Blockly keyboard-nav plugin) are separate §16.3 lines.
 - **Wire impact:** none — roles/labels/colors are client-side only.
+
+## LD-30 — Blockly keyboard navigation plugin (Milestone 6.2; §16.3)
+
+- **Legacy:** no keyboard access to the block canvas at all.
+- **Studio:** @blockly/keyboard-navigation 0.6.14 (the Blockly-11 line),
+  wired as a page-global NavigationController that workspaces join on a
+  persisted, default-off toolbar toggle (`BLOCKPY_display.
+  blockKeyboardNav`). §16.3 frames this as best-effort: the plugin's
+  0.6.x cursor/shortcut set ships as-is, and gaps (mutator dialogs,
+  field editing depth) are the plugin's documented limits, not ours to
+  paper over. Disposed editors leave the controller (and we manually
+  dispose the trashcan flyout's workspace around an upstream Blockly
+  11.2 registry leak — one retained workspace per editor mount
+  otherwise; see block-editor.ts dispose).
+- **Wire impact:** none — localStorage toggle only.

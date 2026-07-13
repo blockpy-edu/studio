@@ -70,6 +70,8 @@ export function PythonToolbar({
   const historyMode = useEditorChromeStore((state) => state.historyMode);
   const autocomplete = useEditorChromeStore((state) => state.autocomplete);
   const toggleAutocomplete = useEditorChromeStore((state) => state.toggleAutocomplete);
+  const blockKeyboardNav = useEditorChromeStore((state) => state.blockKeyboardNav);
+  const toggleBlockKeyboardNav = useEditorChromeStore((state) => state.toggleBlockKeyboardNav);
   const running = runState === 'running';
 
   return (
@@ -147,6 +149,24 @@ export function PythonToolbar({
           <Icon name="autocomplete" /> Autocomplete
         </button>
       </div>
+      {/* Blockly keyboard navigation (M6.2, LD-30; §16.3 best-effort —
+          default off, persisted). Only meaningful with a block workspace. */}
+      {enableBlocks && (
+        <div className="btn-group mr-2" role="group">
+          <button
+            type="button"
+            className={
+              'btn btn-outline-secondary blockpy-toggle-keyboard-nav' +
+              (blockKeyboardNav ? ' active' : '')
+            }
+            aria-pressed={blockKeyboardNav}
+            title="Toggle keyboard navigation for the block workspace"
+            onClick={toggleBlockKeyboardNav}
+          >
+            <Icon name="keyboardNav" />
+          </button>
+        </div>
+      )}
       {/* Docs panel toggle (M4.3; Studio extension — docs_url set). */}
       {onToggleDocs && (
         <div className="btn-group mr-2" role="group">

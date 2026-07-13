@@ -14,6 +14,7 @@ function resetStore() {
   state.setPythonMode('split');
   state.setFocusedMode(false);
   if (state.docsPanel) state.toggleDocsPanel();
+  if (state.blockKeyboardNav) state.toggleBlockKeyboardNav();
 }
 
 describe('CodingEditor chrome', () => {
@@ -315,6 +316,20 @@ describe('CodingEditor chrome', () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  it('keyboard-nav toggle (M6.2/LD-30) arms the plugin without crashing', async () => {
+    const { container } = render(<CodingEditor startingCode="a = 0" />);
+    const toggle = container.querySelector<HTMLButtonElement>('.blockpy-toggle-keyboard-nav')!;
+    expect(toggle).not.toBeNull();
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    // On → the effect calls NavigationController.addWorkspace/enable on
+    // the live jsdom workspace; off → disable. Both must not throw.
+    await act(async () => void fireEvent.click(toggle));
+    expect(useEditorChromeStore.getState().blockKeyboardNav).toBe(true);
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    await act(async () => void fireEvent.click(toggle));
+    expect(useEditorChromeStore.getState().blockKeyboardNav).toBe(false);
   });
 
   it('hides the view toggle when blocks are disabled (enableBlocks)', () => {

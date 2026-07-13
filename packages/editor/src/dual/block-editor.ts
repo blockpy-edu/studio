@@ -17,6 +17,13 @@
  *    text hidden; 675px responsive stacking; read-only overlay layer.
  */
 import * as Blockly from 'blockly/core';
+// @ts-expect-error TS7016 — @blockly/keyboard-navigation 0.6.x ships no
+// type declarations, and an ambient shim loses to the resolved untyped JS
+// under moduleResolution "bundler" in cross-package consumers. The
+// expect-error travels with this source into every program; if the plugin
+// ever ships types it flips to an unused-directive error — the upgrade
+// tripwire we want. The surface we use is typed just below.
+import { NavigationController } from '@blockly/keyboard-navigation';
 import {
   TextToBlocksConverter,
   installVariablesFlyout,
@@ -24,6 +31,31 @@ import {
   type ConverterConfiguration,
 } from '@blockpy/blocks';
 import { makeToolboxXml, type ToolboxSpec } from './toolboxes';
+
+/**
+ * Blockly keyboard navigation (M6.2, LD-30; §16.3 "best-effort"): the
+ * plugin's shortcut registration is PAGE-GLOBAL (Blockly.ShortcutRegistry),
+ * so one lazily-initialized controller serves every workspace. Workspaces
+ * opt in per the user toggle.
+ */
+interface KeyboardNavigationController {
+  /** Registers the keyboard shortcuts (page-global; call once). */
+  init(): void;
+  addWorkspace(workspace: Blockly.WorkspaceSvg): void;
+  removeWorkspace(workspace: Blockly.WorkspaceSvg): void;
+  enable(workspace: Blockly.WorkspaceSvg): void;
+  disable(workspace: Blockly.WorkspaceSvg): void;
+}
+
+let navigationController: KeyboardNavigationController | null = null;
+
+function keyboardNavController(): KeyboardNavigationController {
+  if (navigationController === null) {
+    navigationController = new NavigationController() as KeyboardNavigationController;
+    navigationController.init();
+  }
+  return navigationController;
+}
 
 const BLOCKLY_CHANGE_EVENTS: string[] = [
   Blockly.Events.BLOCK_CREATE,
@@ -87,6 +119,7 @@ export class DualBlockEditor {
   readonly converter: TextToBlocksConverter;
   private readonly host: BlockEditorHost;
   private mode_: keyof typeof DualBlockEditor.VIEW_CONFIGURATIONS = 'split';
+  private keyboardNav_ = false;
   private outOfDate_: string | null = null;
   private readOnlyDiv_: HTMLElement | null = null;
   private toolbox_: ToolboxSpec;
@@ -128,6 +161,24 @@ export class DualBlockEditor {
     }
     this.workspace.updateToolbox(this.makeToolbox());
     this.resized();
+  }
+
+  /**
+   * Opt this workspace in/out of plugin keyboard navigation (M6.2, LD-30).
+   * Idempotent per the plugin: addWorkspace registers cursor/markers,
+   * enable arms accessibility mode.
+   */
+  setKeyboardNav(enabled: boolean): void {
+    const controller = keyboardNavController();
+    if (enabled) {
+      if (!this.keyboardNav_) {
+        controller.addWorkspace(this.workspace);
+        this.keyboardNav_ = true;
+      }
+      controller.enable(this.workspace);
+    } else if (this.keyboardNav_) {
+      controller.disable(this.workspace);
+    }
   }
 
   /** Live-swap the workspace theme (M4.1; only dark restyles). */
@@ -351,6 +402,19 @@ export class DualBlockEditor {
 
   dispose(): void {
     this.setReadOnly(false);
+    if (this.keyboardNav_) {
+      // The page-global controller must forget disposed workspaces.
+      keyboardNavController().removeWorkspace(this.workspace);
+    }
+    // Upstream Blockly 11.2 leak (§16.3 memory budget): WorkspaceSvg.dispose
+    // never disposes the TRASHCAN flyout's workspace, so its registry entry
+    // (Workspace.getAll) is retained per editor mount. Disposing it first is
+    // clean; disposing it after ws.dispose throws in the theme manager.
+    (
+      this.workspace as unknown as {
+        trashcan?: { flyout?: Blockly.IFlyout | null };
+      }
+    ).trashcan?.flyout?.dispose();
     this.workspace.dispose();
   }
 }

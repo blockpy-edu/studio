@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest';
 import { act, render } from '@testing-library/react';
+import * as Blockly from 'blockly/core';
 import { MinifiedEditor } from './MinifiedEditor';
 import type { RunController } from './CodingEditor';
 import { useEditorChromeStore } from './store';
@@ -88,6 +89,24 @@ describe('MinifiedEditor (§8.4)', () => {
     expect(editors[0]!.querySelector('.blockpy-minified-printer')!.textContent).toContain('alpha');
     expect(editors[1]!.querySelector('.blockpy-minified-printer')!.textContent).toBe('');
     expect(useEditorChromeStore.getState().console).toEqual([]);
+  });
+
+  it('10 editors mount + unmount without leaking Blockly workspaces (§16.3 memory)', () => {
+    // The §16.3 budget line: one ENGINE per page regardless of nested
+    // editor count (the engine is the App's single RunController — editors
+    // only receive it), and N editors must release their resources on
+    // unmount. Workspace registry growth is the observable jsdom proxy for
+    // the leak half; heap numbers belong to the e2e canary.
+    const before = Blockly.Workspace.getAll().length;
+    const mounted = Array.from({ length: 10 }, (_, i) =>
+      render(<MinifiedEditor initialCode={`a = ${i}`} />),
+    );
+    expect(document.querySelectorAll('.blockpy-minified')).toHaveLength(10);
+    expect(Blockly.Workspace.getAll().length).toBeGreaterThan(before);
+    for (const instance of mounted) instance.unmount();
+    // Every workspace (main + flyout per editor) must deregister.
+    expect(Blockly.Workspace.getAll().length).toBe(before);
+    expect(document.querySelectorAll('.blockpy-minified')).toHaveLength(0);
   });
 
   it('Reset restores the original code block contents', async () => {

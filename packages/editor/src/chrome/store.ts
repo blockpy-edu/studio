@@ -113,6 +113,12 @@ export interface EditorChromeState {
    * the assignment carries a `docs_url`; persisted like fileTree.
    */
   docsPanel: boolean;
+  /**
+   * Blockly keyboard navigation (M6.2, LD-30; §16.3 best-effort). Arms the
+   * @blockly/keyboard-navigation plugin on the block workspace. Default
+   * OFF; persisted like the other display toggles.
+   */
+  blockKeyboardNav: boolean;
   /** User-supplied passcode sent with every server payload (A7 §1). */
   passcode: string;
   /**
@@ -169,6 +175,7 @@ export interface EditorChromeState {
   setTheme(theme: ThemeName): void;
   setFocusedMode(on: boolean): void;
   toggleDocsPanel(): void;
+  toggleBlockKeyboardNav(): void;
   setPasscode(passcode: string): void;
   setDirtySubmission(dirty: boolean): void;
   setEvalState(state: EvalState): void;
@@ -210,6 +217,8 @@ const FILE_TREE_KEY = 'BLOCKPY_display.fileTree';
 const THEME_KEY = 'BLOCKPY_display.theme';
 /** localStorage key for the docs panel (M4.3). */
 const DOCS_PANEL_KEY = 'BLOCKPY_display.docsPanel';
+/** localStorage key for Blockly keyboard navigation (M6.2). */
+const KEYBOARD_NAV_KEY = 'BLOCKPY_display.blockKeyboardNav';
 
 function readStoredFlag(key: string): boolean {
   try {
@@ -277,6 +286,7 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   theme: INITIAL_THEME,
   focusedMode: false,
   docsPanel: readStoredFlag(DOCS_PANEL_KEY),
+  blockKeyboardNav: readStoredFlag(KEYBOARD_NAV_KEY),
   passcode: '',
   dirtySubmission: true,
   evalState: 'hidden',
@@ -348,6 +358,12 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
       const next = !state.docsPanel;
       writeStoredFlag(DOCS_PANEL_KEY, next);
       return { docsPanel: next };
+    }),
+  toggleBlockKeyboardNav: () =>
+    set((state) => {
+      const next = !state.blockKeyboardNav;
+      writeStoredFlag(KEYBOARD_NAV_KEY, next);
+      return { blockKeyboardNav: next };
     }),
   setPasscode: (passcode) => set({ passcode }),
   setDirtySubmission: (dirty) => set({ dirtySubmission: dirty }),
