@@ -844,3 +844,34 @@ test('layout regressions: no horizontal overflow, panels side by side, white edi
     'rgb(255, 255, 255)',
   );
 });
+
+test('harness group picker swaps to the real bakery curriculum (demo)', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.blocklySvg').first().waitFor();
+  const picker = page.locator('#blockpy-dev-group');
+  await expect(picker).toBeVisible();
+  await expect(picker).toHaveValue('showcase');
+  // Swap to Bakery 1A: the whole app remounts against the real group.
+  await picker.selectOption('bakery_1a');
+  const nav = page.locator('.assignment-selector-div').first().locator('select');
+  await expect(nav.locator('option', { hasText: '1A3.1) Basic Output' })).toHaveCount(1);
+  // The group opens on its first assignment — a real bakery quiz.
+  await expect(page.getByRole('button', { name: 'Start Quiz' }).first()).toBeVisible();
+  // Open a real coding assignment; its actual instructions render.
+  await nav.selectOption({ label: '1A3.1) Basic Output' });
+  await expect(page.locator('.blockpy-instructions').first()).toContainText('Hello world', {
+    timeout: 10_000,
+  });
+  await expect(page.locator('.cm-editor .cm-content').first()).toContainText('print(');
+  // Deep link: ?group= survives reloads.
+  await picker.selectOption('bakery_6b');
+  await expect(page).toHaveURL(/group=bakery_6b/);
+  await page.reload();
+  await expect(page.locator('#blockpy-dev-group')).toHaveValue('bakery_6b');
+  await expect(
+    page
+      .locator('.assignment-selector-div')
+      .first()
+      .locator('option', { hasText: '6B1.1) Find Fruits' }),
+  ).toHaveCount(1);
+});

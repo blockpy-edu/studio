@@ -5,6 +5,7 @@
 **Status:** Draft for review
 **Audience:** BlockPy maintainers and contributors implementing the rewrite
 **Contributing:** code style, lint policy, and the PR checklist live in [docs/CODE_STANDARDS.md](docs/CODE_STANDARDS.md); behavior deltas need a [ledger entry](docs/approved-differences.md) first.
+**Live demo:** the dev harness deploys to GitHub Pages on every push to main (`.github/workflows/pages.yml`) — the dropdown at the top switches between the showcase fixtures and real bakery-curriculum groups (1A, 6B); execution and grading run entirely in your browser. Regenerate the demo content with `node tools/extract-demo-groups.mjs` (needs the untracked `courses/bakery_course.json`).
 
 ---
 

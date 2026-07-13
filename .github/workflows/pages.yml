@@ -1,0 +1,53 @@
+# Deploys the dev-harness demo (packages/app index.html + the in-browser
+# /api stub) to GitHub Pages. The published page has the assignment-group
+# dropdown at the top: the showcase fixtures plus the real bakery 1A/6B
+# groups (packages/app/src/demo/bakery-groups.json). Python execution and
+# Pedal grading run entirely in the visitor's browser (Pyodide from the
+# CDN); quiz grading runs the quizzer's local engine.
+#
+# One-time repo setup: Settings → Pages → Source: "GitHub Actions".
+name: Deploy demo to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One live deployment at a time; don't cancel a production deploy mid-flight.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Project pages serve under /<repo>/ — vite rewrites asset URLs and
+      # dev.ts derives blockly-media from import.meta.env.BASE_URL.
+      - run: pnpm --filter @blockpy/app exec vite build --base "/${{ github.event.repository.name }}/"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: packages/app/dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

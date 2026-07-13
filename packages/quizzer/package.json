@@ -8,7 +8,9 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     },
-    "./styles/*": "./src/styles/*"
+    "./styles/*": "./src/styles/*",
+    "./grading": "./src/grading.ts",
+    "./documents": "./src/documents.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
