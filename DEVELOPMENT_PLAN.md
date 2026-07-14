@@ -1,8 +1,8 @@
 # BlockPy Studio — Development Plan
 
 **Derived from:** [README.md](README.md) (spec draft)
-**Last updated:** 2026-07-12
-**Status:** Active — Phases 0–2 complete; Phases 3–6 proposed (Phases 3–5 added from the maintainer review of 2026-07-11)
+**Last updated:** 2026-07-14
+**Status:** Active — Phases 0–5 complete; Phase 6 in flight; Phase 7 (punch list 2) added from the maintainer review of 2026-07-14
 
 This plan turns the specification into an ordered set of engineering phases, milestones, and deliverables. Section references (§) point into the spec.
 
@@ -351,7 +351,92 @@ Lint baseline (2026-07-11, `pnpm lint`): **136 problems** — 72 `@typescript-es
 
 ---
 
-## 8. Cross-cutting workstreams (run through all phases)
+## 8. Phase 7 — Punch list 2: maintainer review of 2026-07-14
+
+Goal: burn down the sixteen defects/gaps from the maintainer's 2026-07-14 review. Every item was investigated against the code on 2026-07-14 (five parallel deep-dives: feedback/error surfacing, engine-boot/toolbar/files, settings plumbing, blocks/quiz grading, UI/nav/fork); root causes and exact fix sites are inline below. Ordering is severity × dependency: grading correctness first (M7.0 — a blank T/F can record `correct: true`), then error-reporting correctness (M7.1), then the settings restorations (M7.2 — other milestones' gates ride on them), then chrome/UX, with the server-coupled fork flow last (its client work can't freeze until a server-contract check runs).
+
+Ledger entries pre-assigned: **LD-35** (unanswered quiz questions graded as incorrect), **LD-36** (pink bug icon made real), **LD-37** (engine-boot indicator), **LD-38** (feedback rating pinned bottom-right), **LD-39** (upload without auto-run), **LD-40** (quiz font-size control), **LD-41** (textbook chapter expand/collapse), **LD-42** (working fork dialog). NOT ledgered: semicolon support, draggable dialogs, and the M7.2 settings keys (all restore legacy behavior); the `<exec>` strip (Studio-only runtime cleanup → skulpt-compat appendix); dark-nav theming and the focus-drawer default (amend LD-23/LD-24 in place).
+
+### Milestone 7.0 — Quiz grading correctness (do first: wrong recorded grades)
+
+Root cause (2026-07-14): both graders silently skip questions whose answer is **absent** — the server's own documented "Hack" (`quizzes.py:72-76`) ported quirk-for-quirk (`packages/quizzer/src/grading.ts:328-330`). Skipped questions are excluded from `totalPoints` and never force `totalCorrect = false`, so a blank T/F rides an otherwise-correct submission to `correct: true`. Studio nuance: VISIBLE questions are pre-filled with `''` (`documents.ts:216-220`) and DO grade incorrect — the false-correct arises when the key is absent (pooled/hidden `hiddenAnswers` routing, partial submissions). Latent second divergence: the port's `String(student).toLowerCase()` T/F compare (`grading.ts:93-107`) turns undefined-student × unauthored-`correct` into `'undefined' === 'undefined'` → silent false pass where the server would crash on `None.lower()`.
+
+- [ ] **LD-35 (fix; server-team flag):** absent answers grade as incorrect — 0 points, COUNTED in `totalPoints`, `totalCorrect = false` (`grading.ts:328-330` + the `questions_checked` guard at `:356`); status squares flip to red once skipped questions get feedback entries. Server-team flag filed to mirror in `quizzes.py:72-76` — until it lands, real submissions still hit the server hack; the client fix is safe to ship first because it governs only the quiz editor's Try-It local grading and the static demo (no live student scores change under a client-only fix).
+- [ ] Harden the T/F branch (`grading.ts:93-102`): explicit guards for empty/undefined student answers and unauthored `correct` — never rely on `String()` coercion; sweep the other per-type branches for the same aliasing.
+- [ ] Keep the visible-`''` vs absent split deliberate and documented in the ledger entry: `buildSubmissionDocument` continues writing `''` for visible questions (seen-but-blank grades incorrect today, correctly); LD-35 covers the absent-key path.
+- [ ] Tests: update `grading.test.ts:148-156` (currently asserts the skip); add pooled-hidden, partial-submission, and per-type unanswered matrix cases.
+
+### Milestone 7.1 — Student tracebacks & internal-grading-error surfacing
+
+- [ ] **`<exec>` frame stripped from student tracebacks.** Root cause: `runtime.py` loads via `pyodide.runPython` with Pyodide's default `"<exec>"` filename (`runner.ts:119`), so every runtime error's traceback opens with the harness frame `File "<exec>", line 299, in run` (the `eval` at `runtime.py:299`) before the student's `answer.py` frame — and the string reaches the console verbatim (`CodingEditor.tsx:617` → `Console.tsx:103-105`). Fix in `format_error` (`runtime.py:355-373`): drop exactly one outer frame (`tb = exc.__traceback__.tb_next`) before `format_exception` — SyntaxError (whose `tb_next` is None) and the REPL `evaluate()` path both come out clean; the `line`/`student_line` walk keeps the full tb. Regression test asserts no `<exec>` line survives any error path (if the tracer's `TraceLimitError` harness frames leak too, escalate to filter-all-`<exec>`). Skulpt-compat appendix note (Studio-only: Skulpt built tracebacks frame-by-frame, legacy `feedback.js:452`, and never had a harness frame). Explicitly deferred adjacent item: prefix-adjusting the visible `File "answer.py", line N` numbers (only the `student_line` field subtracts `answer_prefix` today).
+- [ ] **LD-36 — pink bug icon made real (internal-grading-error dialog).** Internal grader crashes already carry the full traceback as `PedalFeedback.system_error` (`pedal-env.py:169-185` fail-soft → `pedal.ts:49-52`) but reach only `console.error` + the dev-console/footer via `handlers.system` (`engine-adapter.ts:294-298` → `CodingEditor.tsx:543-551`) — no on-demand affordance. The quick-menu bug icon is the legacy-dead element (`QuickMenu.tsx:309-312`; legacy `interface.js:181` had no click/visible binding, only `feedback.js:269` ever `.hide()` it) and sits in the Row-1 right column = literally the top-right corner. Plan: store gains `graderError: string | null` (+ dialog-open flag); the adapter routes `system_error` through a new `RunHandlers.systemError` channel (the `PedalEnvironmentError` path at `runner.ts:195-212` is the second source); the icon renders only while `graderError` is set — faint pink (`--blockpy-student-error-pink` at reduced opacity; the `display:none` at `blockpy.css:1039-1044` goes away with conditional rendering) — and opens a `Dialog` showing `<pre class="blockpy-printer-traceback">`. Decisions (made): visible to ALL roles (the point is that a student can pull the traceback when reporting a broken grader; the generic "Internal Grading Error" badge already shows to everyone); the dev-console log is kept as a supplement; `graderError` clears at run start with the console reset. Second LD-10-style dead-legacy-code-made-real entry.
+
+### Milestone 7.2 — Settings actually apply (incl. autocomplete → assignment setting)
+
+Audit result (2026-07-14, full key-by-key table in the investigation record): of the SettingsEditor's rows only **9 are live** (`toolbox`, `docs_url`, `disable_feedback`, `disable_instructor_run`, `disable_tifa`, `preload_all_files`, `can_close`, `hide_evaluate`, `allow_real_requests`) plus `hide_files` partially; ~28 are inert. Eight are inert in LEGACY too (`type`, `part_id`, `disable_trace`, `disable_edit`, `hide_all`, `hide_import_statements`, `hide_coverage_button`, `hide_submission` server-only) — they keep round-tripping and STAY inert per A4. The gap is uniformly in `App.tsx`: SettingsEditor renders/merges correctly, but App only forwards ~10 keys.
+
+- [ ] **Autocomplete becomes assignment setting `enable_autocomplete` (default false), REVERSING M3.3/M3.5.** Net-new Studio key (A4 has no legacy analog — registers in the A4 Studio-extensions table beside `allow_real_requests`/`docs_url`): SettingsEditor boolean row; App passes `settingBool(settings['enable_autocomplete'] ?? false)` as a `CodingEditor` prop replacing the store selector (`CodingEditor.tsx:528-532`) and the on-ready read (`:1128-1129`); the CM6 Compartment mechanism (`dual-editor.ts:252-254`, `text-editor.ts:334-337`) is untouched. REMOVE the per-user surface: store flag + `toggleAutocomplete` + `BLOCKPY_display.autocomplete` (`store.ts:103,187,227,305,382-387`) and the PythonToolbar toggle (`PythonToolbar.tsx:71-72,137-151`). Decision (made): full removal — the Settings tab is the one switch; no instructor-only preview toggle; orphaned localStorage keys left in place (unread, harmless).
+- [ ] **The three named dead keys:**
+  - `has_clock` — QuickMenu already implements the behavior (`QuickMenu.tsx:132-138,313`; the A4 §6 inversion is resolved internally, prop carries the positive meaning) but `App.tsx:1230` hardcodes `hasClock: true`. Fix: pass `settingBool(settings['has_clock'] ?? false)` — A4 default false, so today's always-on clock is the bug.
+  - `hide_queued_inputs` — the consumer exists (`QuickMenu.tsx:271` gates Edit-Inputs); App's quickMenu object (`App.tsx:1226-1284`) simply never passes it. One line.
+  - `hide_files` — only `addIsVisible` + tree eligibility honored today; the FileTabs strip ALWAYS renders (`CodingEditor.tsx:934-947`). Fix: gate the whole Row-3 strip on legacy `files.visible = instructor || !hideFiles || preloadAllFiles` (`blockpy.js:913-917`), threading `preload_all_files` into CodingEditor. **`hide_files` defaults TRUE (A4 §5)** — students on default assignments stop seeing the strip, which IS legacy behavior; the always-visible strip is the regression. Delete/rename gating (`blockpy.js:1058,1061`) folds into the same expression via the M3.7 capability checks.
+- [ ] **Slice 2 — remaining regressed keys, cheapest first** (consumers mostly need wiring, not building; each becomes its own checkbox at implementation): `can_blocks` (App → existing `CodingEditor.enableBlocks`, default true per A4), `hide_trace_button`, `disable_student_run`, `only_uploads`/`only_interactive` (student read-only editor), `hide_editors`, `hide_middle_panel`, `can_image` (Toggle Images gate), `hide_import_datasets_button` (button is a stub — gate it anyway), `start_view` (apply to `pythonMode` at load), `disable_timeout` (engine watchdog off). Deferred WITH their features, not here: `datasets`/`preload_files` (CORGIS, M1.5 pending), `is_parsons`, `save_turtle_output` (turtle), `small_layout`, `instructions_pool` (pools), client `passcode` gate.
+
+### Milestone 7.3 — Engine-boot loading indicator (LD-37)
+
+Root cause: on first Run the button flips instantly to the orange Stop state (`PythonToolbar.tsx:80-90`) and the only "Loading Python engine…" text lands in the footer/dev console (`engine-adapter.ts:106` → `CodingEditor.tsx:543-551`) — a 10–30 s opaque Pyodide download reads as a hang. The adapter ALREADY exposes `onBootStateChange(booting)` (`engine-adapter.ts:49-50`, fired at `:103`/`:149`) — currently dropped on the floor (`App.tsx:626-631` never passes it).
+
+- [ ] Wire `onBootStateChange` → new store flag `engineBooting`: PythonToolbar renders the LD-32 `blockpy-loading-spinner` glyph + "Starting Python…" label while booting (distinct from Stop), and the console panel gets a non-blocking status overlay ("Starting Python — one-time setup…") reusing the LD-32 overlay CSS (`blockpy.css:57-106`) scoped to the console, NOT full-screen. Ruling (made): a boot indicator is chrome, not routed system output — it does not violate the dev-console rule; `handlers.system` text keeps flowing to footer + dev console unchanged.
+- [ ] The second opaque wait rides the same flag: first-grading Pedal wheel install ("Loading feedback engine…", `engine-adapter.ts:347`, 180 s watchdog) drives the indicator with its own message.
+- [ ] Gated `PYODIDE_E2E` test: indicator appears on first Run, clears when output streams, never reappears on the second run.
+
+### Milestone 7.4 — Toolbar upload/download + file-button alignment
+
+- [ ] **Upload/download made real (LD-39).** Both buttons are disabled stubs (`PythonToolbar.tsx:124-136`; the header comment at `:4-6` lists them as unwired placeholders). Port the legacy flow: Upload = hidden `<input type="file">` (the `Footer.tsx:60-83` FileReader pattern), `accept=".py,.ipynb,.txt,.csv,.json"`; `.ipynb` runs a `convertIpynbToPython` port (`python.js:161-181` — code cells joined, `%`-magic cells dropped, markdown/raw wrapped in `'''`); contents write to the ACTIVE file through the VFS + `handleCodeChange` (autosave/dirty ride along); read-only files refuse (D3-A). Download = Blob + temp `<a download>` (`abstract_editor.js:18-35`); `answer.py` downloads as `sluggify(assignmentName) + '.py'` (`python.js:466-474`), mimetype `text/x-python`. `X-File.Upload`/`X-File.Download` logged at the handler sites (already-legacy event ids). **LD-39 delta:** legacy AUTO-RAN after upload (`python.js:462`) — Studio does NOT (maintainer wording: the buttons "just work locally"); ledgered.
+- [ ] **Filesystem toggle joins the file-ops cluster.** Today the tree toggle sits far-left, jammed before the "View:" label (`FileTabs.tsx:112-127`) while Add New sits far-right (`:150`). Move it to its own `<li>` adjacent to `AddNewMenu` at the right end; the "View:" pseudo-tab stays as the A8 first `<li>` (re-verify the `:first-child` padding rule, `blockpy.css:785`); the rail-header collapse button (`CodingEditor.tsx:953-960`) keeps the same icon so the open/closed toggles read as one control. _Sequencing: land AFTER the M7.2 `hide_files` strip gate — both edit the same FileTabs region._
+
+### Milestone 7.5 — Block editor: semicolon statement groups
+
+Root cause: `@lezer/python` parses `a = 1; b = 2` as a legal `StatementGroup` node (grammar `python.grammar:83-86`) — no error node, so the B3 gate passes — but `to-ast.ts statement()` has no case for it and throws `unsupported statement StatementGroup` (`to-ast.ts:260-261`), which the chop-and-retry loop turns into a raw block from that line to EOF (nested bodies break identically via `body()`, `to-ast.ts:348-354`). Legacy BlockMirror DID support semicolons (the Skulpt AST yields two same-line `Assign`s; its grindlehook demo is full of them) and also normalized `;` → newlines on the return trip — so support is parity restoration, not a delta.
+
+- [ ] Add the `StatementGroup` case in `statement()`: flatten children (skipping `;` tokens) through `statement()` itself, every sub-statement carrying the shared line via `lineOf` — matching the Skulpt shape (both callers already spread `ir.Stmt[]`; `measureNode`/`convertBody` tolerate same-line statements as BlockMirror did).
+- [ ] Round-trip: `;` → newline normalization is legacy-faithful and accepted. Corpus untouched (zero semicolon programs exist in it — legacy's own exact-text TESTS avoided them for the same reason); coverage lands as a dedicated NON-exact-text suite asserting the normalized double-trip, not as corpus entries.
+
+### Milestone 7.6 — Chrome & quiz UX polish
+
+- [ ] **Feedback rating pinned bottom-right in both states (LD-38).** The expanded rating is in-flow (`Feedback.tsx:159-160`, `textAlign` only) while collapsed is absolute-pinned (`:181-184`) — and `.blockpy-feedback` isn't `position:relative` (`blockpy.css:319-324`), so even the collapsed pin anchors to a distant ancestor. Fix structurally rather than absolute-positioning both: `.blockpy-feedback` becomes a flex column with an inner scroll wrapper (message + positives, `overflow-y:auto`, flex-1) and the rating as a pinned footer row aligned right — visible while long feedback scrolls, no content overlap, and the "Thank you!" animation (`blockpy.css:654-660`) keeps floating above it. Legacy used the identical split-personality layout, so this diverges from parity → ledgered with the usability rationale (B6).
+- [ ] **Draggable dialogs (parity restoration, no LD).** Legacy dialogs were draggable by the title bar (`dialog.js:78-80`, jQuery-UI `handle: ".modal-title"`); Studio's `Dialog.tsx` is static. Pointer-events drag on `.modal-header` (pointer capture, `transform: translate` on `.modal-dialog`, `touch-action:none`, `cursor:move`), offset reset on each open (`visible` effect). One shared component fixes all six call sites (QuickMenu ×2, AddNewMenu, CodingEditor ×2, GroupOrganizer); the theme skins target `.modal-header`/`.modal-title` — classes stay intact.
+- [ ] **Focus mode: console/feedback drawer open by default (amends LD-24).** `drawerOpen` starts false (`CodingEditor.tsx:365`) and `setFocused` force-collapses on every toggle (`:379`). Fix: default true + `setFocused` opens on entry; stays component-local/non-persisted matching the LD-24 posture (loads start in parity chrome). Update the drawer test (`CodingEditor.test.tsx:259-266`).
+- [ ] **Quiz font-size control (LD-40).** No sizing hook exists today (`quizzer.css` sets no base size; inline blanks already `font-size: inherit`, so they scale for free). `--quizzer-font-size` var on `.blockpy-quizzer` consumed by `.quizzer-question-card`; an A−/A+ stepper (discrete steps: 1 / 1.15 / 1.3 / 1.5 rem) on the quiz surface near the overview bar; persisted per-user globally in localStorage (`BLOCKPY_display.quizFontSize` — the established key family) via reader-style `safeGet`/`safeSet` guards.
+
+### Milestone 7.7 — Dark theme covers the group navigation (amends LD-23)
+
+Root cause: `data-theme` is already GLOBAL (`document.documentElement`, `store.ts:269-275`) — scoping is not the problem; the dark scope (`themes.css:20-146`) simply has no rules for the nav, whose colors are hardcoded: `.assignment-selector-btn:not(.btn-success) { background:white; color:black }` + disabled `#e0e0e0` (`navigation.css:59-67`), the warning-yellow strip (`:27-32`), the `.correct/incorrect/secret-submission` option colors (`:42-52`), and bootstrap-subset `.btn`/`.btn-outline-secondary` text colors.
+
+- [ ] Tokenize the navigation colors (or add explicit `:root[data-theme='dark']` overrides in `navigation.css`) covering: selector-strip surface/border, selector buttons + disabled state, the three submission-status colors, and `.btn-outline-secondary` as used outside `.blockpy-content`. Win2000 stays editor-scoped by design (it deliberately skins only `.blockpy-content`); dark goes page-wide.
+- [ ] Extend the M6.1 axe contrast gate to the dark-mode nav.
+
+### Milestone 7.8 — Textbook chapter navigation
+
+Investigation verdict: chapter HEADER rows are non-clickable BY DESIGN in legacy AND Studio (`textbook.html:60-75` binds click only `if item.reading`; `Textbook.tsx:224-250` replicates, incl. header+reading rows staying clickable) — the report is either about that design or about readings collapsing to disabled "Missing Reading" rows when the `loadAssignmentByUrl` endpoint is unpublished (the LD-16 resolver returns null → `missing:true` → no handler; CSS is not implicated). Fix both:
+
+- [ ] **Chapter headers become useful (LD-41, net-new):** header rows toggle expand/collapse of their subtree (chevron affordance); a header that ALSO carries a reading keeps opening it (legacy semantics preserved). Default expanded — today's flat look is the initial state; expand state per-session.
+- [ ] **Missing-reading diagnosability:** when `resolveAssignment` fails because the by_url endpoint is unpublished (vs a genuinely bad ref), instructor views say WHY ("by_url endpoint not configured — LD-16") instead of a silent disabled row; re-flag the server-team ask (publish `loadAssignmentByUrl` in `$blockPyUrls`, M6.4).
+
+### Milestone 7.9 — Fork flow for non-owned assignments (LD-42)
+
+Investigation: Studio has NO fork implementation — only the reserved `forkAssignment` URL key (`context.ts:21`); ownership fields (`owner_id`/`course_id`/`forked_id`/`forked_version`) survive only in `assignment.raw`, undecoded; a non-owned instructor save currently **fails silently** in submission-sync. Legacy's flow: saveFile failure carrying `response.forkable` → `startPossibleFork` (`server.js:657-661`) → `OFFER_FORK` dialog (`dialog.js:161-190`) — but legacy's dialog buttons had NO click handlers (dead UI, like the bug icon). The server route works and is tested (`POST /assignments/fork`, `assignments.py:133-177`, instructor-guarded, group-move + url + new-owning-course options).
+
+- [ ] **Verify the server contract first (blocking):** confirm the deployed blockpy-server returns `forkable` on rejected instructor saves (extend the A5 fixtures with a non-owned instructor save). If absent, the prompt gates on the decoded ownership comparison instead.
+- [ ] **API:** `ApiClient.forkAssignment(assignmentId, {courseId, group, url, transferSubmissions})` on the reserved key, `isEndpointConnected`-gated; decode `owner_id`/`course_id`/`forked_id`/`forked_version` into `DecodedAssignment`.
+- [ ] **Client flow (legacy's dead buttons made real — LD-42):** submission-sync inspects failed saves for `forkable` → OFFER_FORK dialog port (Fork entire group / Fork just this assignment / Reset my local changes; transfer-submissions checkbox; owning-course id prefilled from `user.courseId`) with WORKING handlers → on success adopt the returned fork (redirect/`loadAssignment` to the new id). Proactive layer: instructor view of a non-owned assignment shows a passive "not owned — editing will offer a fork" notice from the decoded ownership, so the first autosave isn't the discovery moment.
+- [ ] Tests: sync-layer units (forkable response → dialog → API ordering), dialog component tests, smoke against a dev stub emitting `forkable`.
+
+**Exit criteria:** all sixteen review items closed or explicitly ledgered (LD-35…LD-42 written); suites green including the updated grading/round-trip/drawer tests; the LD-35 and by_url server-team flags filed; gated boot-indicator and fork smokes passing.
+
+---
+
+## 9. Cross-cutting workstreams (run through all phases)
 
 | Workstream                          | Cadence                                                                                |
 | ----------------------------------- | -------------------------------------------------------------------------------------- |
@@ -364,7 +449,7 @@ Lint baseline (2026-07-11, `pnpm lint`): **136 problems** — 72 `@typescript-es
 
 ---
 
-## 9. Risk register
+## 10. Risk register
 
 | #   | Risk                                                                                                                   | Impact                                            | Mitigation                                                                                                                   |
 | --- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
@@ -380,10 +465,12 @@ Lint baseline (2026-07-11, `pnpm lint`): **136 problems** — 72 `@typescript-es
 | R10 | Group organizer slice 2 blocked on missing server endpoints (type change, subordinate JSON, live position ordering)    | M4.6 slips                                        | Slice 1 ships on existing endpoints; server-team flags filed LD-16-style; capability-detected controls                       |
 | R11 | Themes (M4.1) drift from the B6 visual-parity mandate                                                                  | Parity regressions in the default look            | Light stays default + normative; themes are explicit opt-in; overrides live in tokens only                                   |
 | R12 | `match` block design has no BlockMirror precedent                                                                      | Round-trip regressions in blocks mode             | v1 textual patterns; corpus fixtures gate merges exactly like §16.1.2                                                        |
+| R13 | LD-35 quiz-grading fix diverges client vs server until the server mirrors it (real submissions still hit the skip hack) | Try-It/demo grades disagree with recorded grades  | Client fix affects only local grading (editor Try-It, static demo); server-team flag filed with the fix diff; ledger documents the interim divergence |
+| R14 | Fork flow (M7.9) depends on the server emitting `forkable` on rejected saves — unverified on the deployed server        | M7.9 slips or mis-triggers                        | Blocking contract-verification step first (A5 fixture extension); fallback gate = decoded ownership comparison               |
 
 ---
 
-## 10. Suggested build order (dependency-driven)
+## 11. Suggested build order (dependency-driven)
 
 ```
 Phase 0:  scaffold ──► A1..A7 appendices ──► spikes S1..S3
@@ -396,13 +483,16 @@ Phase 4:  M4.1 themes ──► M4.2 focused-mode ──► M4.3 docs-panel
           M4.4 csv/json ──► M4.5 image-editor │ M4.6 organizer │ M4.7 textbook-routes   (independent tracks)
 Phase 5:  M5.1 lint-zero (starts immediately, any time) ──► M5.2 blocks-typing ──► M5.3 standards-doc
 Phase 6:  hardening ──► default-on
+Phase 7:  M7.0 quiz-grading ──► M7.1 tracebacks ──► M7.2 settings ──► M7.3 boot-indicator
+          M7.4 toolbar-files │ M7.5 semicolons │ M7.6 ui-polish │ M7.7 dark-nav │ M7.8 textbook   (parallel once M7.2 lands)
+          M7.9 fork  (server-contract verification first; otherwise independent)
 ```
 
-`vfs`, `api`, and `engine` milestones can proceed in parallel once Phase 0 lands; `editor` needs all three. Within Phase 2, `reader` depends on the minified editor (built in 1.4) and `quizzer` depends on the engine's `quiz.preprocess` phase (built in 1.3). Within Phases 3–4: M3.0 precedes anything touching the runtime Python (M3.2, M3.5); M3.7's grid generalization precedes M4.3's right rail; M4.1 precedes M4.2 (focused mode must respect themes); Phase 5 runs whenever, but M5.2 should trail M3.6 so the blocks typing pass covers the new match/async converters once instead of twice.
+`vfs`, `api`, and `engine` milestones can proceed in parallel once Phase 0 lands; `editor` needs all three. Within Phase 2, `reader` depends on the minified editor (built in 1.4) and `quizzer` depends on the engine's `quiz.preprocess` phase (built in 1.3). Within Phases 3–4: M3.0 precedes anything touching the runtime Python (M3.2, M3.5); M3.7's grid generalization precedes M4.3's right rail; M4.1 precedes M4.2 (focused mode must respect themes); Phase 5 runs whenever, but M5.2 should trail M3.6 so the blocks typing pass covers the new match/async converters once instead of twice. Within Phase 7: M7.2's `hide_files` strip gate precedes M7.4's tab-strip relocation (same FileTabs region); M7.7 rides the M4.1 token system; M7.0 and M7.6's quiz font control both touch the quizzer but are independent; M7.9's client work waits only on its own server-contract check. Phase 7 precedes the M6.4 default-on gate — the punch list is part of what "default-on ready" means.
 
 ---
 
-## 11. Definition of done (project-level)
+## 12. Definition of done (project-level)
 
 1. All five conformance suites (§16.1) green in CI.
 2. Golden-transcript replay matches modulo the approved-differences ledger (§16.2 / G3).
