@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { GraduationCap, ListOrdered } from 'lucide-react';
 import {
   CodingEditor,
+  Dialog,
   MinifiedEditor,
   requestPasscode,
   useEditorChromeStore,
@@ -157,6 +158,14 @@ export function App({ config, extras, registerActions }: AppProps) {
   const focusedMode = useEditorChromeStore((state) => state.focusedMode);
   // Group organizer dialog (M4.6 slice 1, LD-28).
   const [organizerOpen, setOrganizerOpen] = useState(false);
+  // OFFER_FORK dialog (M7.9, LD-42): opened when save_assignment rejects
+  // with `forkable: true` (helpers.py:55-60) or proactively from the
+  // not-owned notice. Legacy rendered this dialog with DEAD buttons
+  // (dialog.js:161-190 bound no handlers); these work.
+  const [forkOffer, setForkOffer] = useState<{ message: string } | null>(null);
+  const [forkUrl, setForkUrl] = useState('');
+  const [forkBusy, setForkBusy] = useState(false);
+  const [forkError, setForkError] = useState('');
 
   // -- server client (spec §14): built once per mount ------------------------
   const apiBundle = useMemo(() => {
@@ -628,6 +637,12 @@ export function App({ config, extras, registerActions }: AppProps) {
         // paths.assets: deployed location of the build's assets/ dir —
         // overrides the build-time worker URL (engine-adapter).
         ...(paths.assets ? { assetsBase: paths.assets } : {}),
+        // LD-37: one-time setup waits (Pyodide boot, Pedal wheels) drive
+        // the Run-button spinner + console banner instead of reading as a
+        // hang. Chrome UI, not a routed system message — the dev-console
+        // rule (system output never in the student console) is untouched.
+        onBootStateChange: (booting, label) =>
+          useEditorChromeStore.getState().setEngineBooting(booting ? (label ?? 'Loading…') : null),
       }),
     [paths.pyodideIndexURL, paths.assets],
   );
@@ -1041,6 +1056,95 @@ export function App({ config, extras, registerActions }: AppProps) {
         </div>
       )}
       {loadError !== null && <div className="alert alert-warning">{loadError}</div>}
+      {/* Proactive not-owned notice (M7.9, LD-42): decoded ownership predicts
+          the fork BEFORE the first rejected save is the discovery moment. */}
+      {instructorView &&
+        !focusedMode &&
+        api !== null &&
+        active?.assignment.courseId != null &&
+        api.context.courseId != null &&
+        active.assignment.courseId !== Number(api.context.courseId) && (
+          <div className="alert alert-warning blockpy-fork-notice">
+            This assignment belongs to another course (course ID {active.assignment.courseId}), so
+            your edits cannot be saved to it.{' '}
+            {api.isEndpointConnected('forkAssignment') ? (
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary blockpy-fork-open"
+                onClick={() => {
+                  setForkError('');
+                  setForkOffer({ message: '' });
+                }}
+              >
+                Fork it into your course…
+              </button>
+            ) : (
+              <span>
+                (Forking is not configured on this page — ask your server administrator to publish
+                the forkAssignment endpoint.)
+              </span>
+            )}
+          </div>
+        )}
+      {/* OFFER_FORK (M7.9, LD-42) — the legacy dialog with WORKING buttons.
+          Single-assignment fork via /assignments/fork (forks into the
+          CALLER's course); "fork entire group" needs a server route a
+          non-owner may call (server-team flag). */}
+      <Dialog
+        title="Assignment Not Owned; Fork?"
+        visible={forkOffer !== null}
+        onClose={() => {
+          setForkOffer(null);
+          setForkUrl('');
+        }}
+        onOkay={() => {
+          if (!api || active?.assignment.id == null || forkBusy) return;
+          setForkBusy(true);
+          setForkError('');
+          void api
+            .forkAssignment(active.assignment.id, {
+              ...(forkUrl.trim() ? { url: forkUrl.trim() } : {}),
+            })
+            .then((response) => {
+              setForkBusy(false);
+              if (response.success === true && typeof response['id'] === 'number') {
+                setForkOffer(null);
+                setForkUrl('');
+                // Adopt the fork: navigate to the new assignment id through
+                // the host dispatch (URL + nav stay consistent).
+                const load = dispatchRef.current ?? loadAssignment;
+                void load(response['id'] as number).catch(() => undefined);
+              } else {
+                setForkError(String(response['message'] ?? 'The fork request failed.'));
+              }
+            });
+        }}
+        okayLabel={forkBusy ? 'Forking…' : 'Fork just this assignment'}
+      >
+        <p>
+          {forkOffer?.message ||
+            'It looks like you want to edit this assignment, but you are not an instructor ' +
+              'in the course that owns it.'}
+        </p>
+        <p>
+          Forking creates your own copy, owned by your course, that you can edit freely. You will
+          need to update the Launch URL in the assignment&apos;s settings on your LMS to point at
+          your copy.
+        </p>
+        <div className="form-group">
+          <label htmlFor="blockpy-fork-url">
+            New URL for your copy (optional; must be unique):{' '}
+            <input
+              id="blockpy-fork-url"
+              type="text"
+              className="form-control"
+              value={forkUrl}
+              onChange={(event) => setForkUrl(event.target.value)}
+            />
+          </label>
+        </div>
+        {forkError && <div className="alert alert-danger">{forkError}</div>}
+      </Dialog>
       {versionOutdated && (
         <div className="alert alert-warning blockpy-version-outdated">
           The assignment has been updated since you started working on it. Reload the page to get
@@ -1122,6 +1226,12 @@ export function App({ config, extras, registerActions }: AppProps) {
             hideFiles={
               settings['hide_files'] !== undefined ? settingBool(settings['hide_files']) : undefined
             }
+            // preload_all_files forces the files UI visible (legacy
+            // files.visible ORs it in, blockpy.js:914).
+            preloadAllFiles={settingBool(settings['preload_all_files'] ?? false)}
+            // enable_autocomplete ASSIGNMENT setting (M7.2, Studio
+            // extension): default off; no per-user toggle exists.
+            enableAutocomplete={settingBool(settings['enable_autocomplete'] ?? false)}
             hideEvaluate={
               settings['hide_evaluate'] !== undefined
                 ? settingBool(settings['hide_evaluate'])
@@ -1176,19 +1286,29 @@ export function App({ config, extras, registerActions }: AppProps) {
                   : prev,
               );
               if (api && active && api.isEndpointConnected('saveAssignment')) {
-                void api.saveAssignment({
-                  assignment_id: active.assignment.id ?? '',
-                  settings: blob,
-                  ...(fields.name !== undefined ? { name: fields.name } : {}),
-                  ...(fields.url !== undefined ? { url: fields.url } : {}),
-                  ...(fields.points !== undefined && fields.points !== ''
-                    ? { points: fields.points }
-                    : {}),
-                  ...(fields.ipRanges !== undefined ? { ip_ranges: fields.ipRanges } : {}),
-                  ...(fields.public !== undefined ? { public: String(fields.public) } : {}),
-                  ...(fields.hidden !== undefined ? { hidden: String(fields.hidden) } : {}),
-                  ...(fields.reviewed !== undefined ? { reviewed: String(fields.reviewed) } : {}),
-                });
+                void api
+                  .saveAssignment({
+                    assignment_id: active.assignment.id ?? '',
+                    settings: blob,
+                    ...(fields.name !== undefined ? { name: fields.name } : {}),
+                    ...(fields.url !== undefined ? { url: fields.url } : {}),
+                    ...(fields.points !== undefined && fields.points !== ''
+                      ? { points: fields.points }
+                      : {}),
+                    ...(fields.ipRanges !== undefined ? { ip_ranges: fields.ipRanges } : {}),
+                    ...(fields.public !== undefined ? { public: String(fields.public) } : {}),
+                    ...(fields.hidden !== undefined ? { hidden: String(fields.hidden) } : {}),
+                    ...(fields.reviewed !== undefined ? { reviewed: String(fields.reviewed) } : {}),
+                  })
+                  .then((response) => {
+                    // Non-owner instructor save: the server rejects with
+                    // forkable=true (helpers.py:55-60) — offer the fork
+                    // (M7.9, LD-42; legacy startPossibleFork, server.js:657).
+                    if (response.success === false && response['forkable'] === true) {
+                      setForkError('');
+                      setForkOffer({ message: String(response['message'] ?? '') });
+                    }
+                  });
               }
             }}
             assignmentHidden={active?.assignment.raw['hidden'] === true}
@@ -1227,7 +1347,12 @@ export function App({ config, extras, registerActions }: AppProps) {
               grader: true,
               instructor: instructorView,
               onInstructorChange: setInstructorView,
-              hasClock: true,
+              // has_clock ASSIGNMENT setting (A4 §6: default false; QuickMenu
+              // resolved the legacy showClock inversion internally — pass the
+              // positive value). Hardcoding `true` here was the M7.2 bug.
+              hasClock: settingBool(settings['has_clock'] ?? false),
+              // hide_queued_inputs (blockpy.js:627): hides Edit Inputs.
+              hideQueuedInputs: settingBool(settings['hide_queued_inputs'] ?? false),
               // Fullscreen event stream (X-Display.Fullscreen.*, A2).
               onLogEvent: (eventType, message) => logEvent(eventType, '', '', message, ''),
               // Legacy canShare (blockpy.js:632-650): parts base64 → shareUrl.

@@ -145,6 +145,13 @@ const BOOLEAN_SETTINGS: [key: string, def: boolean, doc: string][] = [
     false,
     'STUDIO: If checked, the `requests` module performs REAL network calls through the browser (subject to CORS) instead of resolving against the ?mock_urls.blockpy table. Default off preserves the legacy mock behavior.',
   ],
+  // Studio addition (M7.2): autocomplete is an ASSIGNMENT setting, not a
+  // user toggle (maintainer decision 2026-07-14, reversing M3.3).
+  [
+    'enable_autocomplete',
+    false,
+    'STUDIO: If checked, the text editor offers code autocompletion while students type. Default off.',
+  ],
 ];
 
 /** Legacy string settings rows (wire key, label, doc). */

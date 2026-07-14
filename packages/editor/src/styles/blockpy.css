@@ -105,6 +105,22 @@
   }
 }
 
+/* LD-37: the spinner also rides inline contexts (Run button, console
+   status row) where the flex sizing above needs an inline-block box. */
+.blockpy-run .blockpy-loading-spinner {
+  display: inline-block;
+  vertical-align: text-bottom;
+  border-width: 2px;
+}
+
+.blockpy-console-booting {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-style: italic;
+  color: var(--blockpy-neutral-800);
+}
+
 .green-check-mark {
   font-weight: bold;
   color: var(--blockpy-positive-green);
@@ -318,9 +334,24 @@
 
 .blockpy-feedback {
   padding: 10px;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
+}
+
+/* LD-38: label + message + positives scroll INSIDE this wrapper while the
+   rating footer below stays pinned at the bottom-right of the box (legacy
+   left the expanded rating in-flow, so it floated up under short
+   messages and scrolled away under long ones). */
+.blockpy-feedback-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.blockpy-feedback-response {
+  flex: none;
+  text-align: right;
+  margin-top: 2px;
 }
 
 /* Panel title rows (Feedback/Trace/Console): flex, action button pushed
@@ -1036,11 +1067,22 @@ div.blockpy-blocks.blockpy-editor-menu.col-md-6 {
   border: 1px solid var(--blockpy-neutral-250);
 }
 
+/* LD-36: the legacy-dead bug icon made real. Rendered only while an
+   internal grading error is recorded; deliberately FAINT so it reads as a
+   quiet affordance, brightening on hover/focus. */
 .blockpy-quick-menu .blockpy-student-error {
   font-size: 16px;
   cursor: pointer;
   color: var(--blockpy-student-error-pink);
-  display: none;
+  background: none;
+  border: none;
+  padding: 0 2px;
+  opacity: 0.55;
+}
+
+.blockpy-quick-menu .blockpy-student-error:hover,
+.blockpy-quick-menu .blockpy-student-error:focus {
+  opacity: 1;
 }
 
 .blockpy-content sup {

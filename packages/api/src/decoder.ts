@@ -25,6 +25,16 @@ export interface DecodedAssignment {
   extraStartingFiles: string;
   /** Raw JSON string of !assignment_settings.blockpy (parse separately). */
   settings: string;
+  /**
+   * Ownership (M7.9, LD-42): the client compares `courseId` against the
+   * context's course to predict "editing will offer a fork" for
+   * instructors (assignment.py:72-81 columns; save_assignment rejects
+   * non-owner edits with `forkable: true`, helpers.py:55-60).
+   */
+  ownerId: number | null;
+  courseId: number | null;
+  forkedId: number | null;
+  forkedVersion: number | null;
   /** The complete original payload — never discard (spec §14.5). */
   raw: RawRecord;
 }
@@ -58,6 +68,10 @@ export function decodeAssignment(raw: RawRecord): DecodedAssignment {
     extraInstructorFiles: str(raw.extra_instructor_files),
     extraStartingFiles: str(raw.extra_starting_files),
     settings: str(raw.settings),
+    ownerId: id(raw.owner_id),
+    courseId: id(raw.course_id),
+    forkedId: id(raw.forked_id),
+    forkedVersion: id(raw.forked_version),
     raw,
   };
 }

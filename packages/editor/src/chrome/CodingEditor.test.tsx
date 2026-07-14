@@ -256,9 +256,13 @@ describe('CodingEditor chrome', () => {
     expect(container.querySelector('.blockpy-header')).toBeNull();
     expect(container.querySelector('.blockpy-quick-menu')).toBeNull();
     expect(container.querySelector('.blockpy-python-toolbar')).not.toBeNull();
-    // Drawer: collapsed by default, badge visible; clicking it expands the
-    // console + feedback pair.
+    // Drawer: OPEN by default (M7.6, amends LD-24) — console + feedback are
+    // visible on entry; the toggle collapses to the slim bar and the badge
+    // re-expands.
     expect(container.querySelector('.blockpy-focus-drawer')).not.toBeNull();
+    expect(container.querySelector('.blockpy-printer')).not.toBeNull();
+    expect(container.querySelector('.blockpy-feedback')).not.toBeNull();
+    act(() => void fireEvent.click(container.querySelector('.blockpy-focus-drawer-toggle')!));
     expect(container.querySelector('.blockpy-printer')).toBeNull();
     const badge = container.querySelector<HTMLElement>('.blockpy-focus-feedback-badge')!;
     expect(badge.textContent).toBe('Ready');

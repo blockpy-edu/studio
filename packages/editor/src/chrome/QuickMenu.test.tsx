@@ -27,6 +27,7 @@ function resetStore() {
   state.setDirtySubmission(true);
   state.setPasscode('');
   state.setTheme('light');
+  state.setGraderError(null);
 }
 
 describe('formatClockTime (utilities.js getCurrentTime)', () => {
@@ -83,10 +84,31 @@ describe('QuickMenu component', () => {
     expect(menu!.querySelector('[title="Full Screen"]')).not.toBeNull();
     expect(menu!.querySelector('[title="Edit Inputs"]')).not.toBeNull();
     expect(menu!.querySelector('[title="Toggle Images"]')).not.toBeNull();
-    // Bug icon present but display:none via CSS (dead in legacy too).
-    expect(menu!.querySelector('.blockpy-student-error')).not.toBeNull();
+    // Bug icon absent until an internal grading error records (LD-36).
+    expect(menu!.querySelector('.blockpy-student-error')).toBeNull();
     // No share URL configured → no share button (legacy canShare).
     expect(menu!.querySelector('[title^="Get Shareable Link"]')).toBeNull();
+  });
+
+  it('LD-36: grading error → faint bug icon → traceback dialog; clears', () => {
+    const { container } = render(<QuickMenu />);
+    expect(container.querySelector('.blockpy-student-error')).toBeNull();
+    act(() => {
+      useEditorChromeStore.getState().setGraderError('Traceback (most recent call last):\nBoom');
+    });
+    const icon = container.querySelector('.blockpy-student-error');
+    expect(icon).not.toBeNull();
+    fireEvent.click(icon!);
+    const dialog = container.querySelector('.blockpy-dialog');
+    expect(dialog).not.toBeNull();
+    expect(dialog!.querySelector('.modal-title')!.textContent).toBe('Internal Grading Error');
+    expect(dialog!.querySelector('pre.blockpy-printer-traceback')!.textContent).toContain('Boom');
+    // Clearing the error (next run start) removes both dialog and icon.
+    act(() => {
+      useEditorChromeStore.getState().setGraderError(null);
+    });
+    expect(container.querySelector('.blockpy-dialog')).toBeNull();
+    expect(container.querySelector('.blockpy-student-error')).toBeNull();
   });
 
   it('hides the queued-inputs button under hide_queued_inputs', () => {

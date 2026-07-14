@@ -532,7 +532,9 @@ function TryItPanel(props: {
             return response;
           }
           const submission = JSON.parse(scratchAnswers.current || '{}');
-          const result = processQuiz(props.instructions, props.checks, submission);
+          // seed 0 = the Try It Quizzer's own pool seed (no submission id),
+          // so LD-35 grading sees the same pooled-visible set it rendered.
+          const result = processQuiz(props.instructions, props.checks, submission, { seed: 0 });
           setSummary(
             `Local grade: score ${(result.score * 100).toFixed(1)}% of ${result.pointsPossible} points; correct=${String(result.correct)}`,
           );

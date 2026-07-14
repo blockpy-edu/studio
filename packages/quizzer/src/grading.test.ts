@@ -145,18 +145,75 @@ describe('processQuiz totals (quizzes.py:58-99)', () => {
   };
   const CHECKS = { questions: { tf: { correct: true }, mc: { correct: 'a' } } };
 
-  it('skips unanswered questions and excludes their points', () => {
+  it('LD-35: unanswered presented questions grade as incorrect (points counted)', () => {
+    // The server skips absent answers entirely (quizzes.py:72-76 "Hack"),
+    // letting a blank question ride to correct=true. Studio grades it.
     const result = processQuiz(INSTRUCTIONS, CHECKS, {
-      studentAnswers: { tf: 'true', mc: 'b' },
+      studentAnswers: { tf: 'true', mc: 'a' },
     });
-    expect(result.pointsPossible).toBe(4); // skipped excluded
-    expect(result.score).toBeCloseTo(1 / 4);
-    expect(result.correct).toBe(false);
-    expect(result.feedbacks['skipped']).toBeUndefined();
+    expect(result.pointsPossible).toBe(5); // 'skipped' now counted
+    expect(result.score).toBeCloseTo(4 / 5);
+    expect(result.correct).toBe(false); // the blank T/F blocks correct
+    expect(result.feedbacks['skipped']).toMatchObject({ correct: false, score: 0 });
+  });
+
+  it('LD-35: pooled-out questions stay excluded; visible pooled ones grade', () => {
+    const pooledInstructions: QuizInstructions = {
+      questions: {
+        p1: q('true_false_question'),
+        p2: q('true_false_question'),
+        fixed: q('true_false_question'),
+      },
+      pools: [{ name: 'pool', amount: 1, questions: ['p1', 'p2'] }],
+    };
+    const pooledChecks = {
+      questions: { p1: { correct: true }, p2: { correct: true }, fixed: { correct: true } },
+    };
+    // No attempt context: pooled questions with absent answers are ambiguous
+    // (which one was shown?) — both excluded; the fixed blank still grades.
+    const noContext = processQuiz(pooledInstructions, pooledChecks, {
+      studentAnswers: {},
+    });
+    expect(noContext.pointsPossible).toBe(1); // only 'fixed'
+    expect(noContext.correct).toBe(false);
+    expect(noContext.feedbacks['p1']).toBeUndefined();
+    expect(noContext.feedbacks['p2']).toBeUndefined();
+    // Explicit visibility: the shown pooled question grades when blank.
+    const withVisible = processQuiz(
+      pooledInstructions,
+      pooledChecks,
+      { studentAnswers: { fixed: 'true' } },
+      { visible: new Set(['p1', 'fixed']) },
+    );
+    expect(withVisible.pointsPossible).toBe(2);
+    expect(withVisible.feedbacks['p1']).toMatchObject({ correct: false });
+    expect(withVisible.feedbacks['p2']).toBeUndefined();
+    // A hiddenAnswers stash is positive evidence the question was hidden.
+    const stashed = processQuiz(pooledInstructions, pooledChecks, {
+      studentAnswers: { fixed: 'true' },
+      hiddenAnswers: { p2: 'true' },
+    });
+    expect(stashed.feedbacks['p2']).toBeUndefined();
+  });
+
+  it('hardened T/F: coercion can never alias undefined answer to undefined check', () => {
+    // Unauthored check + absent answer used to compute
+    // String(undefined) === String(undefined) → a silent false PASS.
+    expect(checkQuizQuestion(q('true_false_question'), {}, undefined)?.correct).toBe(false);
+    expect(checkQuizQuestion(q('true_false_question'), {}, '')?.correct).toBe(false);
+    expect(checkQuizQuestion(q('true_false_question'), { correct: true }, undefined)).toMatchObject(
+      { correct: false, score: 0 },
+    );
+    // Authored string checks still compare case-insensitively.
+    expect(checkQuizQuestion(q('true_false_question'), { correct: 'True' }, 'true')?.correct).toBe(
+      true,
+    );
   });
 
   it('nothing answered ⇒ correct=false; unknown type ⇒ error feedback', () => {
-    expect(processQuiz(INSTRUCTIONS, CHECKS, {}).correct).toBe(false);
+    const empty = processQuiz(INSTRUCTIONS, CHECKS, {});
+    expect(empty.correct).toBe(false);
+    expect(empty.pointsPossible).toBe(5); // all presented, all graded blank
     const weird = processQuiz(
       { questions: { c: q('calculated_question') } },
       { questions: {} },

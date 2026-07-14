@@ -1,10 +1,10 @@
 /**
  * Python editor toolbar — Row 4 top (A8 §1 button groups, in legacy order).
  * Class names and FA icon classes are legacy hooks (§9.6, A8 §3.2); the
- * groups not yet backed by functionality (datasets, upload, history, save,
- * delete, extra) render disabled so the layout is conformant while their
- * wiring lands incrementally.
+ * groups not yet backed by functionality (datasets) render disabled so the
+ * layout is conformant while their wiring lands incrementally.
  */
+import { useRef } from 'react';
 import { useEditorChromeStore } from './store';
 import { Icon, type IconName } from './icons';
 import type { DualEditorMode } from '../dual/dual-editor';
@@ -41,6 +41,13 @@ export interface PythonToolbarProps {
    */
   onToggleDocs?(): void;
   docsOpen?: boolean;
+  /**
+   * Local file transfer (M7.4, LD-39): upload a .py/.ipynb/text file into
+   * the active editor tab; download the current code as a file. Buttons
+   * stay disabled without handlers (read-only files pass no onUpload).
+   */
+  onUpload?(file: File): void;
+  onDownload?(): void;
 }
 
 const MODE_TABS: { name: string; iconName: IconName; mode: DualEditorMode }[] = [
@@ -63,16 +70,21 @@ export function PythonToolbar({
   focusedMode = false,
   onToggleDocs,
   docsOpen = false,
+  onUpload,
+  onDownload,
 }: PythonToolbarProps) {
+  const uploadInputRef = useRef<HTMLInputElement>(null);
   const runState = useEditorChromeStore((state) => state.runState);
   const pythonMode = useEditorChromeStore((state) => state.pythonMode);
   const setPythonMode = useEditorChromeStore((state) => state.setPythonMode);
   const historyMode = useEditorChromeStore((state) => state.historyMode);
-  const autocomplete = useEditorChromeStore((state) => state.autocomplete);
-  const toggleAutocomplete = useEditorChromeStore((state) => state.toggleAutocomplete);
   const blockKeyboardNav = useEditorChromeStore((state) => state.blockKeyboardNav);
   const toggleBlockKeyboardNav = useEditorChromeStore((state) => state.toggleBlockKeyboardNav);
+  const engineBooting = useEditorChromeStore((state) => state.engineBooting);
   const running = runState === 'running';
+  // LD-37: during the one-time engine/wheel download the Run button reads
+  // as loading (spinner + "Loading…") instead of an inert orange Stop.
+  const booting = running && engineBooting !== null;
 
   return (
     <div className="blockpy-python-toolbar col-md-12 btn-toolbar" role="toolbar">
@@ -85,8 +97,14 @@ export function PythonToolbar({
             (runState === 'error' ? ' blockpy-run-error' : '')
           }
           onClick={running ? onStop : onRun}
+          title={booting ? (engineBooting ?? undefined) : undefined}
         >
-          <Icon name={running ? 'stop' : 'run'} /> {running ? 'Stop' : 'Run'}
+          {booting ? (
+            <span className="blockpy-loading-spinner" aria-hidden="true" />
+          ) : (
+            <Icon name={running ? 'stop' : 'run'} />
+          )}{' '}
+          {booting ? 'Loading…' : running ? 'Stop' : 'Run'}
         </button>
       </div>
       {enableBlocks && (
@@ -121,34 +139,48 @@ export function PythonToolbar({
           <Icon name="datasets" /> Import datasets
         </button>
       </div>
+      {/* Local upload/download (M7.4, LD-39): upload writes the chosen
+          file into the active tab (.ipynb converted, python.js:161-181);
+          download saves the current code. No server round trip; unlike
+          legacy, upload does NOT auto-run. */}
       <div className="btn-group mr-2" role="group">
-        <button type="button" className="btn btn-outline-secondary" disabled>
+        <input
+          ref={uploadInputRef}
+          type="file"
+          accept=".py,.ipynb,.txt,.csv,.json,.md"
+          style={{ display: 'none' }}
+          aria-hidden="true"
+          tabIndex={-1}
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file && onUpload) onUpload(file);
+            // Legacy resets the input so re-choosing the same file fires
+            // again (abstract_editor.js:11).
+            event.target.value = '';
+          }}
+        />
+        <button
+          type="button"
+          className="btn btn-outline-secondary blockpy-toolbar-upload"
+          disabled={!onUpload}
+          title="Upload a local file into the editor"
+          onClick={() => uploadInputRef.current?.click()}
+        >
           <Icon name="upload" /> Upload
         </button>
         <button
           type="button"
-          className="btn btn-outline-secondary"
+          className="btn btn-outline-secondary blockpy-toolbar-download"
           aria-label="Download the current file"
-          disabled
+          title="Download the current code as a file"
+          disabled={!onDownload}
+          onClick={onDownload}
         >
           <Icon name="download" />
         </button>
       </div>
-      {/* Autocomplete toggle (M3.3; Studio extension — default off). */}
-      <div className="btn-group mr-2" role="group">
-        <button
-          type="button"
-          className={
-            'btn btn-outline-secondary blockpy-toggle-autocomplete' +
-            (autocomplete ? ' active' : '')
-          }
-          aria-pressed={autocomplete}
-          title="Toggle code autocomplete"
-          onClick={toggleAutocomplete}
-        >
-          <Icon name="autocomplete" /> Autocomplete
-        </button>
-      </div>
+      {/* NB: the M3.3 per-user Autocomplete toggle is gone — autocomplete
+          became the enable_autocomplete ASSIGNMENT setting (M7.2). */}
       {/* Blockly keyboard navigation (M6.2, LD-30; §16.3 best-effort —
           default off, persisted). Only meaningful with a block workspace. */}
       {enableBlocks && (

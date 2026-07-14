@@ -44,3 +44,18 @@
 .quizzer-question-card textarea {
   max-width: 100%;
 }
+
+/* Quiz font size (M7.6, LD-40): the A−/A+ stepper sets the var on the
+   surface root; question text (incl. inline blanks/selects, which are
+   font-size:inherit) scales with it. Default = today's 1rem. */
+.quizzer-question-card {
+  font-size: var(--quizzer-font-size, 1rem);
+}
+
+.quizzer-font-controls {
+  float: right;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 4px;
+}

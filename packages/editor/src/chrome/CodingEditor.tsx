@@ -31,6 +31,7 @@ import { HistoryDiffView } from '../components/HistoryDiffView';
 import { ImagesManager, type UploadsController } from './ImagesManager';
 import { Instructions, renderInstructions } from './Instructions';
 import { PythonToolbar } from './PythonToolbar';
+import { convertIpynbToPython, downloadPlan, triggerBrowserDownload } from './file-transfer';
 import { QuickMenu, type QuickMenuProps } from './QuickMenu';
 import { SettingsEditor, type AssignmentFields } from './SettingsEditor';
 import { TraceExplorer } from './TraceExplorer';
@@ -72,6 +73,12 @@ export interface RunHandlers {
    * student console.
    */
   system?(text: string): void;
+  /**
+   * Internal grading error (Pedal system_error / environment failure): the
+   * full grader traceback. Surfaces as the quick-menu bug icon → dialog
+   * (LD-36) in addition to the `system` dev-console routing.
+   */
+  systemError?(traceback: string): void;
 }
 
 export interface RunOptions {
@@ -220,6 +227,13 @@ export interface CodingEditorProps {
   /** Legacy `hide_evaluate` setting: never offer the console Evaluate. */
   hideEvaluate?: boolean;
   /**
+   * `enable_autocomplete` ASSIGNMENT setting (M7.2; Studio extension —
+   * default off). Reversed from the M3.3 per-user toggle by maintainer
+   * decision 2026-07-14: instructors opt an assignment in via the Settings
+   * tab; there is no student-facing toggle.
+   */
+  enableAutocomplete?: boolean;
+  /**
    * Legacy `disable_feedback` setting (engine.js:115): skip the instructor
    * grading pass entirely — runs report only their own success/errors.
    */
@@ -242,8 +256,17 @@ export interface CodingEditorProps {
    * (legacy saveAssignmentSettings → save_assignment).
    */
   onSaveSettings?: (blob: string, fields: AssignmentFields) => void;
-  /** Legacy `hide_files` setting (A4: defaults TRUE) — gates Add New. */
+  /**
+   * Legacy `hide_files` setting (A4: defaults TRUE) — gates the whole files
+   * UI for students: the tab strip, the tree rail, and Add New (legacy
+   * files.visible/addIsVisible, blockpy.js:913-917).
+   */
   hideFiles?: boolean;
+  /**
+   * Legacy `preload_all_files` setting: forces the files UI visible even
+   * under hide_files (legacy files.visible ORs it in, blockpy.js:914).
+   */
+  preloadAllFiles?: boolean;
   /**
    * Fetch the submission's event log (legacy `loadHistory` endpoint). The
    * History button is enabled only when provided (`isHistoryAvailable`).
@@ -315,6 +338,7 @@ export function CodingEditor(props: CodingEditorProps) {
     onLogEvent,
     runController,
     hideEvaluate,
+    enableAutocomplete,
     disableFeedback,
     allowRealRequests,
     disableTifa,
@@ -337,10 +361,15 @@ export function CodingEditor(props: CodingEditorProps) {
   useEffect(() => {
     store.getState().setInstructionsOverride(null);
   }, [store]);
-  // Tree rail gating (M3.7): user toggle AND the legacy files-UI gate
-  // (instructor || !hideFiles), and only with a VFS to list.
-  const showFileTree =
-    fileTreeOn && Boolean(props.vfs) && ((props.instructor ?? false) || !(props.hideFiles ?? true));
+  // Legacy files.visible (blockpy.js:913-917): the WHOLE files UI — tab
+  // strip, tree rail, Add New — shows for instructors, un-hidden
+  // assignments, or when preload_all_files forces it. hide_files defaults
+  // TRUE (A4 §5), so default student assignments have no files UI (M7.2 —
+  // the always-visible strip was the regression).
+  const filesVisible =
+    (props.instructor ?? false) || !(props.hideFiles ?? true) || (props.preloadAllFiles ?? false);
+  // Tree rail gating (M3.7): user toggle AND files.visible, with a VFS.
+  const showFileTree = fileTreeOn && Boolean(props.vfs) && filesVisible;
   // Docs panel gating (M4.3): assignment provides docs_url AND the
   // persisted user toggle is on.
   const docsPanelOn = useEditorChromeStore((state) => state.docsPanel);
@@ -362,7 +391,9 @@ export function CodingEditor(props: CodingEditorProps) {
   // the same store flag); console + feedback live in a collapsible bottom
   // drawer whose feedback badge stays visible while collapsed.
   const focusedMode = useEditorChromeStore((state) => state.focusedMode);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  // Drawer defaults OPEN (M7.6, amends LD-24): console + feedback visible on
+  // focus entry; the user can still collapse to the slim bar.
+  const [drawerOpen, setDrawerOpen] = useState(true);
   const [instructionsOverlay, setInstructionsOverlay] = useState(false);
   const feedback = useEditorChromeStore((state) => state.feedback);
   const activeFileRef = useRef(activeFile);
@@ -371,7 +402,7 @@ export function CodingEditor(props: CodingEditorProps) {
     (on: boolean) => {
       if (store.getState().focusedMode === on) return;
       store.getState().setFocusedMode(on);
-      setDrawerOpen(false);
+      setDrawerOpen(true);
       setInstructionsOverlay(false);
       onLogEvent?.(
         on ? 'X-Display.Focus.Enter' : 'X-Display.Focus.Exit',
@@ -513,6 +544,37 @@ export function CodingEditor(props: CodingEditorProps) {
     [onCodeChange, onFileEdit, vfs, activeFile, fileReadOnly, store],
   );
 
+  // -- local upload/download (M7.4, LD-39) -----------------------------------
+  // Upload writes the chosen file into the ACTIVE tab through the normal
+  // change path (VFS + autosave + dirty ride along); .ipynb converts via the
+  // legacy port. Unlike legacy (python.js:462), no auto-run. Download saves
+  // the current code under the legacy naming rules.
+  const handleUpload = useCallback(
+    (file: File) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        let contents = typeof reader.result === 'string' ? reader.result : '';
+        if (file.name.endsWith('.ipynb')) {
+          try {
+            contents = convertIpynbToPython(contents);
+          } catch {
+            // Unparseable notebook JSON — fall back to the raw text.
+          }
+        }
+        onLogEvent?.('X-File.Upload', '', '', contents, activeFile);
+        handleCodeChange(contents);
+      };
+      reader.readAsText(file);
+    },
+    [activeFile, handleCodeChange, onLogEvent],
+  );
+  const handleDownload = useCallback(() => {
+    const contents = vfs ? (vfs.read(activeFile) ?? code) : code;
+    const { downloadName, mimetype } = downloadPlan(activeFile, props.assignmentName);
+    onLogEvent?.('X-File.Download', '', '', '', downloadName);
+    triggerBrowserDownload(contents, downloadName, mimetype);
+  }, [vfs, activeFile, code, onLogEvent, props.assignmentName]);
+
   // Live toolbox reload on settings change (legacy `reloadToolbox`).
   const toolboxSpec = props.toolboxSetting
     ? resolveToolboxSetting(props.toolboxSetting, vfs)
@@ -525,11 +587,11 @@ export function CodingEditor(props: CodingEditorProps) {
     }
   }, [toolboxSpec]);
 
-  // Autocomplete preference → live CM6 reconfigure (M3.3; default off).
-  const autocompleteOn = useEditorChromeStore((state) => state.autocomplete);
+  // `enable_autocomplete` assignment setting → live CM6 reconfigure (M7.2;
+  // default off — an ASSIGNMENT setting, not a user toggle).
   useEffect(() => {
-    editorRef.current?.setAutocomplete(autocompleteOn);
-  }, [autocompleteOn]);
+    editorRef.current?.setAutocomplete(enableAutocomplete ?? false);
+  }, [enableAutocomplete]);
 
   // Blockly keyboard navigation (M6.2, LD-30; default off, persisted).
   const keyboardNavOn = useEditorChromeStore((state) => state.blockKeyboardNav);
@@ -554,6 +616,10 @@ export function CodingEditor(props: CodingEditorProps) {
     const controller = runController;
     const { setRunState, appendConsole, clearConsole, setFeedback } = store.getState();
     clearConsole();
+    // A fresh run clears the previous internal-grading-error state — the bug
+    // icon disappears until a grader failure sets it again (LD-36; parity
+    // with legacy clearing the icon per grade, feedback.js:269).
+    store.getState().setGraderError(null);
     if (!controller) {
       appendConsole({
         kind: 'stderr',
@@ -587,6 +653,8 @@ export function CodingEditor(props: CodingEditorProps) {
           // input() suspends on the console's input line (§6.5).
           onInput: (prompt) => store.getState().requestConsoleInput(prompt),
           system: handleSystem,
+          // Internal grading errors light the quick-menu bug icon (LD-36).
+          systemError: (traceback) => store.getState().setGraderError(traceback),
         },
         {
           trace: true,
@@ -746,6 +814,8 @@ export function CodingEditor(props: CodingEditorProps) {
             stdout: (text) => appendConsole({ kind: 'stdout', text }),
             stderr: (text) => appendConsole({ kind: 'stderr', text }),
             system: handleSystem,
+            // on_eval grader crashes light the bug icon too (LD-36).
+            systemError: (traceback) => store.getState().setGraderError(traceback),
           },
           // on_eval grading (engine.js:146-156): runs only when the
           // assignment HAS an on_eval script and feedback isn't disabled —
@@ -931,20 +1001,26 @@ export function CodingEditor(props: CodingEditorProps) {
           <div className="col-md-12">{consoleAndFeedback}</div>
         </div>
       )}
-      {!focusedMode && vfs && !(showFileTree && pythonMode === 'text' && !historyMode) && (
-        <div className="row">
-          <FileTabs
-            vfs={vfs}
-            role={role}
-            activeFile={activeFile}
-            onSelect={handleSelectFile}
-            // addIsVisible = instructor || !hideFiles (blockpy.js:916-918;
-            // hide_files defaults TRUE per A4 §5).
-            addVisible={(props.instructor ?? false) || !(props.hideFiles ?? true)}
-            instructor={props.instructor ?? false}
-          />
-        </div>
-      )}
+      {/* Row 3: the file strip renders only under legacy files.visible
+          (M7.2 — hide_files defaults TRUE, so students see no strip unless
+          the assignment opts in or preload_all_files forces it). */}
+      {!focusedMode &&
+        vfs &&
+        filesVisible &&
+        !(showFileTree && pythonMode === 'text' && !historyMode) && (
+          <div className="row">
+            <FileTabs
+              vfs={vfs}
+              role={role}
+              activeFile={activeFile}
+              onSelect={handleSelectFile}
+              // addIsVisible = instructor || !hideFiles (blockpy.js:916-918;
+              // hide_files defaults TRUE per A4 §5).
+              addVisible={(props.instructor ?? false) || !(props.hideFiles ?? true)}
+              instructor={props.instructor ?? false}
+            />
+          </div>
+        )}
       <div className="row">
         {!focusedMode && showFileTree && vfs && (
           <div className="col-md-3 blockpy-panel blockpy-file-tree-rail">
@@ -992,6 +1068,10 @@ export function CodingEditor(props: CodingEditorProps) {
                 }
               : {})}
             onHistory={loadHistory ? handleToggleHistory : undefined}
+            // Local upload/download (M7.4, LD-39). Upload respects the
+            // read-only guard (D3-A: never overwrite an uneditable file).
+            onUpload={fileReadOnly ? undefined : handleUpload}
+            onDownload={handleDownload}
             // File actions for the ACTIVE file (M3.7 / LD-21), gated by the
             // VFS capability guards + role editability.
             {...(vfs
@@ -1123,9 +1203,9 @@ export function CodingEditor(props: CodingEditorProps) {
                 height={focusedMode ? Math.max(500, window.innerHeight - 220) : 400}
                 editorRef={(editor) => {
                   editorRef.current = editor;
-                  // Apply the persisted preferences to the fresh editor
-                  // (the effects only fire on later changes).
-                  if (editor && store.getState().autocomplete) {
+                  // Apply the configured/persisted preferences to the fresh
+                  // editor (the effects only fire on later changes).
+                  if (editor && enableAutocomplete) {
                     editor.setAutocomplete(true);
                   }
                   if (editor && store.getState().blockKeyboardNav) {

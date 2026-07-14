@@ -137,6 +137,34 @@ export class ApiClient {
     }
   }
 
+  /**
+   * Fork a non-owned assignment into the CALLER's course (M7.9, LD-42).
+   * Wire contract = the WORKING `/assignments/fork` route
+   * (assignments.py:133-178): `assignment_id`, optional `group` (target
+   * group id) and `url` (collision → failure "URL is already taken");
+   * course from the base payload. Response carries the FORK's
+   * `{id, url, name, redirect, edit}`. SERVER-TEAM FLAG: today's templates
+   * publish `forkAssignment` = `blockpy.fork_assignment`
+   * (editor.html:205), a half-finished route that never returns the
+   * fork's id (blockpy.py:1139-1178) — repoint it at
+   * `url_for('assignments.fork')`. Callers must treat a success response
+   * WITHOUT a numeric `id` as failure (the App does).
+   */
+  async forkAssignment(
+    assignmentId: number,
+    options: { group?: number; url?: string } = {},
+  ): Promise<LegacyResponse> {
+    if (this.guardReadOnly()) return { success: false, readOnly: true };
+    return this.options.transport.postRetry(
+      this.url('forkAssignment'),
+      this.buildPayload({
+        assignment_id: assignmentId,
+        ...(options.group !== undefined ? { group: options.group } : {}),
+        ...(options.url !== undefined ? { url: options.url } : {}),
+      }),
+    );
+  }
+
   /** `new_group_id: -1` removes the assignment from any group. */
   async moveMembership(fields: {
     assignment_id: number;

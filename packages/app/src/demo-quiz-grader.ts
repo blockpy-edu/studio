@@ -15,7 +15,9 @@ export function gradeQuizWire(record: DemoQuizRecord, savedAnswer: string): Demo
   const instructions = parseQuizInstructions(record.instructions);
   const checks = JSON.parse(record.on_run ?? '{}') as QuizChecksDocument;
   const submission = parseQuizSubmission(savedAnswer);
-  const result = processQuiz(instructions, checks, submission);
+  // Pool seed = the demo submission id (9000 + assignment id, demoLoadResponse)
+  // so grading sees the same pooled-visible set the student did (LD-35).
+  const result = processQuiz(instructions, checks, submission, { seed: 9000 + record.id });
   return {
     success: true,
     correct: result.correct,

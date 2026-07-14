@@ -135,29 +135,35 @@ export function Feedback({ size = 'col-md-6', ...props }: FeedbackProps) {
           </button>
         )}
       </div>
-      <strong className="blockpy-feedback-label">{feedback.label}</strong>
-      <div
-        ref={messageRef}
-        className="blockpy-feedback-message"
-        // Legacy renders feedback HTML unsanitized (D4-A applies here too —
-        // the message body comes from instructor Pedal scripts), AFTER the
-        // markdown pass (feedback.js:213).
-        dangerouslySetInnerHTML={{ __html: renderedMessage }}
-      />
-      {(feedback.positives ?? []).length > 0 && (
-        <div className="blockpy-feedback-positives">
-          {feedback.positives!.map((positive, i) => (
-            <div key={i} className="blockpy-feedback-positive" title={positive.title}>
-              <Icon name="star" /> {positive.message}
-            </div>
-          ))}
-        </div>
-      )}
+      {/* LD-38: the body scrolls inside this wrapper; the rating footer
+          below stays pinned bottom-right in BOTH states (legacy pinned only
+          the collapsed variant — the expanded one floated up under short
+          messages and scrolled away under long ones). */}
+      <div className="blockpy-feedback-body">
+        <strong className="blockpy-feedback-label">{feedback.label}</strong>
+        <div
+          ref={messageRef}
+          className="blockpy-feedback-message"
+          // Legacy renders feedback HTML unsanitized (D4-A applies here too —
+          // the message body comes from instructor Pedal scripts), AFTER the
+          // markdown pass (feedback.js:213).
+          dangerouslySetInnerHTML={{ __html: renderedMessage }}
+        />
+        {(feedback.positives ?? []).length > 0 && (
+          <div className="blockpy-feedback-positives">
+            {feedback.positives!.map((positive, i) => (
+              <div key={i} className="blockpy-feedback-positive" title={positive.title}>
+                <Icon name="star" /> {positive.message}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
       <div style={{ position: 'relative' }}>
         <span className={`blockpy-feedback-thank-you${thankYou ? ' show' : ''}`}>Thank you!</span>
       </div>
       {ratable && showRating && (
-        <small className="blockpy-feedback-response-full" style={{ textAlign: 'right' }}>
+        <small className="blockpy-feedback-response blockpy-feedback-response-full">
           <span style={{ cursor: 'pointer' }} onClick={flipRating} title="Hide rating">
             <Icon name="rateCollapse" />
           </span>{' '}
@@ -179,10 +185,7 @@ export function Feedback({ size = 'col-md-6', ...props }: FeedbackProps) {
         </small>
       )}
       {ratable && !showRating && (
-        <small
-          className="blockpy-feedback-response-collapsed"
-          style={{ position: 'absolute', right: 0, bottom: 0 }}
-        >
+        <small className="blockpy-feedback-response blockpy-feedback-response-collapsed">
           <span
             style={{ cursor: 'pointer', verticalAlign: 'middle' }}
             onClick={flipRating}

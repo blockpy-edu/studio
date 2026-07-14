@@ -22,7 +22,15 @@
  *     here (README §11.3.7 scopes the editor out of v1); View-as-Student,
  *     the seed field, pool badges, and question ids are.
  */
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 import { AssignmentSurface } from '@blockpy/editor';
 import { renderReadingMarkdown } from '@blockpy/reader';
 import {
@@ -145,6 +153,32 @@ const TEXT_TYPES = new Set([
   'fill_in_multiple_blanks_question',
 ]);
 
+/**
+ * Quiz font size (M7.6, LD-40): discrete rem steps applied to the question
+ * cards via a CSS var; persisted per-user globally (the BLOCKPY_display.*
+ * key family, guarded like reader/settings.ts safeGet/safeSet).
+ */
+export const QUIZ_FONT_STEPS = [1, 1.15, 1.3, 1.5] as const;
+const QUIZ_FONT_KEY = 'BLOCKPY_display.quizFontSize';
+
+function readStoredFontStep(): number {
+  try {
+    const stored = Number(localStorage.getItem(QUIZ_FONT_KEY));
+    const index = QUIZ_FONT_STEPS.indexOf(stored as (typeof QUIZ_FONT_STEPS)[number]);
+    return index === -1 ? 0 : index;
+  } catch {
+    return 0;
+  }
+}
+
+function writeStoredFontStep(index: number): void {
+  try {
+    localStorage.setItem(QUIZ_FONT_KEY, String(QUIZ_FONT_STEPS[index]));
+  } catch {
+    // Storage unavailable (sandboxed iframe) — the size still applies.
+  }
+}
+
 export function Quizzer(props: QuizzerProps) {
   const [loaded, setLoaded] = useState<LoadedQuiz | null>(null);
   const [answers, setAnswers] = useState<Record<QuestionId, StudentAnswer>>({});
@@ -164,6 +198,13 @@ export function Quizzer(props: QuizzerProps) {
   // workflow; "Actual Quiz" shows the student surface.
   const [editorView, setEditorView] = useState<'quiz' | 'editor' | null>(null);
   const [reloadNonce, setReloadNonce] = useState(0);
+  // Quiz font size step (M7.6, LD-40) — persisted per user.
+  const [fontStep, setFontStep] = useState(readStoredFontStep);
+  const stepFont = (delta: number) => {
+    const next = Math.max(0, Math.min(QUIZ_FONT_STEPS.length - 1, fontStep + delta));
+    setFontStep(next);
+    writeStoredFontStep(next);
+  };
 
   const propsRef = useRef(props);
   propsRef.current = props;
@@ -563,9 +604,39 @@ export function Quizzer(props: QuizzerProps) {
   return withSurface(
     <div
       className="blockpy-quizzer"
-      style={{ backgroundColor: '#fcf8e3', paddingBottom: '1px', paddingTop: '1px' }}
+      style={
+        {
+          backgroundColor: '#fcf8e3',
+          paddingBottom: '1px',
+          paddingTop: '1px',
+          '--quizzer-font-size': `${QUIZ_FONT_STEPS[fontStep]}rem`,
+        } as CSSProperties
+      }
     >
       {viewToggle}
+      {/* Quiz font size stepper (M7.6, LD-40) — per-user, persisted. */}
+      <div className="quizzer-font-controls" role="group" aria-label="Quiz text size">
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-secondary quizzer-font-smaller"
+          aria-label="Smaller quiz text"
+          title="Smaller quiz text"
+          disabled={fontStep === 0}
+          onClick={() => stepFont(-1)}
+        >
+          A−
+        </button>
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-secondary quizzer-font-larger"
+          aria-label="Larger quiz text"
+          title="Larger quiz text"
+          disabled={fontStep === QUIZ_FONT_STEPS.length - 1}
+          onClick={() => stepFont(1)}
+        >
+          A+
+        </button>
+      </div>
       {errorMessage.length > 0 && (
         <div className="alert alert-warning p-1 border rounded float-right">{errorMessage}</div>
       )}

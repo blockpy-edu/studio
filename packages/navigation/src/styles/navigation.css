@@ -65,3 +65,45 @@
   background-color: #e0e0e0;
   color: black;
 }
+
+/*
+ * Dark theme (M7.7, amends LD-23): the nav renders OUTSIDE .blockpy-content
+ * and its colors above are hardcoded, so the M4.1 token overrides never
+ * reached it — every rule needs an explicit dark variant. data-theme is
+ * already global on :root (store.ts applyThemeAttribute); values follow the
+ * themes.css dark ramp. Win2000 deliberately stays editor-scoped.
+ */
+:root[data-theme='dark'] .assignment-selector-div .row {
+  border-color: #4a4234;
+  background-color: #26221a;
+}
+
+:root[data-theme='dark'] .assignment-selector-btn:not(.btn-success) {
+  background-color: #2d2d2d;
+  color: #e8e6e3;
+  border-color: #555;
+}
+
+:root[data-theme='dark'] .assignment-selector-btn:disabled:not(.btn-success) {
+  background-color: #232323;
+  color: #8c8c8c;
+}
+
+:root[data-theme='dark'] .assignment-selector {
+  background-color: #2d2d2d;
+  color: #e8e6e3;
+  border-color: #555;
+}
+
+/* Option status colors: same hue semantics, dark-surface variants. */
+:root[data-theme='dark'] .correct-submission {
+  background-color: #1e4620;
+}
+
+:root[data-theme='dark'] .incorrect-submission {
+  background-color: #5a1f1f;
+}
+
+:root[data-theme='dark'] .secret-submission {
+  background-color: #24304d;
+}

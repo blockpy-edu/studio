@@ -106,6 +106,8 @@ this — it is a fix, not parity; see Deltas).
 | Key | Added | Effect |
 |---|---|---|
 | `docs_url` | M4.3 / LD-25 | URL of a markdown reference document rendered in the collapsible Docs panel beside the editor. Raw string; empty/absent hides the affordance. Server-ignored; a LEGACY client instructor save drops it (the registry-rebuild bug above) — Studio saves round-trip it. |
+| `allow_real_requests` | M3.5 | Bool, default false. When true the engine skips the `?mock_urls.blockpy` requests mock and lets the real `requests` package hit the network (browser CORS best-effort, risk R9). |
+| `enable_autocomplete` | M7.2 | Bool, default false. Text-editor code autocompletion for this ASSIGNMENT (maintainer decision 2026-07-14, reversing the M3.3 per-user toggle — the toolbar button and `BLOCKPY_display.autocomplete` key are retired). |
 
 ---
 

@@ -111,6 +111,16 @@ through the Studio Pedal environment (`tools/run-grader-corpus.mjs`,
   and are adopted into the module baseline after first import — module-level
   state in site-packages persists across runs (unlike legacy Skulpt's fully
   fresh state). Stdlib and staged modules still purge per job (§6.2).
+- **Student tracebacks carry no harness frames (M7.1, 2026-07-14).**
+  `runtime.py` loads via `runPython` (co_filename `"<exec>"`), so a caught
+  student error's traceback opened with our own `run`/`evaluate` frame —
+  `File "<exec>", line N, in run` — before the student's `answer.py`
+  frame. `format_error` now drops leading `<exec>` frames from the chain
+  and filters formatted entries for non-leading ones (the trace-limit
+  tracer raises from a tail harness frame). Skulpt never had this class of
+  frame (legacy built tracebacks frame-by-frame client-side,
+  feedback.js:452), so the cleaned output is the parity shape. Verified in
+  runner.test.ts across runtime/syntax/eval/trace-limit paths.
 
 ## Open items
 

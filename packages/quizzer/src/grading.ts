@@ -25,9 +25,16 @@
  *   - `correct_any` (a newer authoring field, bakery FEEDBACK_FIELDS) is
  *     preserved by the editor but NOT graded — the server ignores it too;
  *   - essay/text-only always score 1; unknown types produce the
- *     "Unknown Type: …" error feedback; unanswered questions are skipped
- *     and their points excluded; empty quiz → correct=false.
+ *     "Unknown Type: …" error feedback; empty quiz → correct=false.
+ *
+ * DELIBERATE DELTA (LD-35): the server skips questions with ABSENT answers
+ * entirely (quizzes.py:72-76, its own "Hack" comment) — which let a blank
+ * question ride an otherwise-correct submission to correct=true. This port
+ * grades absent answers for questions that were actually PRESENTED (their
+ * type's empty answer → incorrect, points counted); questions pooled OUT of
+ * the attempt stay excluded. Server-team flag filed to mirror the fix.
  */
+import { defaultAnswer, selectVisibleQuestions } from './documents';
 import type {
   QuestionId,
   QuizInstructions,
@@ -87,23 +94,31 @@ function checkMatchingPart(studentPart: unknown, correctPart: unknown): boolean 
 export function checkQuizQuestion(
   question: QuizQuestion,
   check: Record<string, unknown>,
-  student: StudentAnswer,
+  student: StudentAnswer | null | undefined,
 ): QuestionResult | null {
+  // Null/absent answers grade as the type's EMPTY answer (LD-35) — never let
+  // String(undefined) coercion alias against an unauthored check value (the
+  // server would crash on None.lower(); coercion must not turn that into a
+  // silent pass).
+  if (student === undefined || student === null) {
+    student = defaultAnswer(question, undefined);
+  }
   const type = question.type;
   if (type === 'true_false_question') {
-    const correct =
-      String(student).toLowerCase() ===
-      String(
-        check['correct'] === true
-          ? 'True'
-          : check['correct'] === false
-            ? 'False'
-            : check['correct'],
-      ).toLowerCase();
+    const expected =
+      check['correct'] === true
+        ? 'true'
+        : check['correct'] === false
+          ? 'false'
+          : typeof check['correct'] === 'string'
+            ? check['correct'].toLowerCase()
+            : null; // unauthored check ⇒ never correct
+    const given = typeof student === 'string' && student ? student.toLowerCase() : null;
+    const correct = expected !== null && given !== null && given === expected;
     return {
       score: correct ? 1 : 0,
       correct,
-      message: !correct ? check['wrong'] : 'Correct',
+      message: !correct ? (check['wrong'] ?? 'Incorrect') : 'Correct',
     };
   } else if (type === 'matching_question') {
     const answers = (student ?? []) as Array<string | undefined | null>;
@@ -310,16 +325,49 @@ export function checkQuizQuestion(
   return null; // unknown type → "Unknown Type" feedback upstream
 }
 
-/** process_quiz (quizzes.py:58-99): grades every ANSWERED question; missing
- *  answers are skipped and their points excluded; nothing checked ⇒ false. */
+export interface ProcessQuizOptions {
+  /** Question ids actually presented in this attempt. When provided, absent
+   *  answers for presented questions grade as incorrect (LD-35) and absent
+   *  answers for the rest stay excluded (pooled out of the attempt). */
+  visible?: Set<QuestionId>;
+  /** Pool seed (submission id / id+attempt per poolRandomness) — used to
+   *  recompute `visible` when the caller doesn't pass it directly. */
+  seed?: number;
+}
+
+/** process_quiz (quizzes.py:58-99) with the LD-35 delta: every PRESENTED
+ *  question grades — absent answers grade as the type's empty answer instead
+ *  of being skipped (the server's "Hack" excluded them from the total, so a
+ *  blank question could ride an otherwise-correct submission to correct).
+ *  Questions pooled OUT of the attempt (per `visible`/`seed`, or — when
+ *  neither is known — pool membership / a `hiddenAnswers` stash) stay
+ *  excluded. Nothing checked ⇒ false. */
 export function processQuiz(
   instructions: QuizInstructions,
   checks: QuizChecksDocument,
   submission: QuizSubmission,
+  options?: ProcessQuizOptions,
 ): LocalQuizResult {
   const studentAnswers = submission.studentAnswers ?? {};
+  const hiddenAnswers = (submission.hiddenAnswers ?? {}) as Record<QuestionId, unknown>;
   const checkMap = checks.questions ?? {};
   const questions = instructions.questions ?? {};
+  const visible =
+    options?.visible ??
+    (options?.seed !== undefined
+      ? selectVisibleQuestions(instructions, options.seed, submission.attempt?.count ?? 0)
+      : null);
+  const pooled = new Set<QuestionId>();
+  for (const pool of instructions.pools ?? []) {
+    for (const pooledId of pool.questions) pooled.add(pooledId);
+  }
+  const presented = (questionId: QuestionId): boolean => {
+    if (visible) return visible.has(questionId);
+    // No attempt context: non-pooled questions are always shown; pooled ones
+    // are ambiguous, so keep the legacy exclusion (a hiddenAnswers stash is
+    // positive evidence the question was hidden).
+    return !pooled.has(questionId) && !(questionId in hiddenAnswers);
+  };
   let totalScore = 0;
   let totalPoints = 0;
   let totalCorrect = true;
@@ -327,7 +375,7 @@ export function processQuiz(
   const feedbacks: Record<QuestionId, QuizQuestionFeedback> = {};
   for (const [questionId, question] of Object.entries(questions)) {
     const student = studentAnswers[questionId];
-    if (student === undefined || student === null) continue;
+    if ((student === undefined || student === null) && !presented(questionId)) continue;
     const check = asRecord(checkMap[questionId]);
     const points = typeof question.points === 'number' ? question.points : 1;
     totalPoints += points;

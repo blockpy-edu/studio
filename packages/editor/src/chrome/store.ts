@@ -97,11 +97,6 @@ export interface EditorChromeState {
   /** Render console images vs raw text (legacy `display.renderImages`). */
   renderImages: boolean;
   /**
-   * Text-editor autocomplete (M3.3; STUDIO EXTENSION — legacy CM5 had
-   * none). Default OFF; persisted like the legacy localSettings keys.
-   */
-  autocomplete: boolean;
-  /**
    * Filesystem tree rail (M3.7; STUDIO EXTENSION, no legacy analog).
    * Default OFF; persisted. In text-only mode the tree REPLACES the
    * horizontal tab strip.
@@ -162,6 +157,21 @@ export interface EditorChromeState {
    * set_instructions) until the next assignment load.
    */
   instructionsOverride: string | null;
+  /**
+   * Internal grading error traceback (LD-36): set when the grader crashes
+   * (Pedal system_error / environment failure), cleared at run start. While
+   * set, the quick-menu bug icon appears (faint pink) and opens a dialog
+   * showing this text. The legacy icon existed but was dead (interface.js:181
+   * had no bindings; only feedback.js:269 ever .hide() it).
+   */
+  graderError: string | null;
+  /**
+   * Engine one-time-setup label (LD-37): non-null while Pyodide (first Run)
+   * or the Pedal wheels (first grading) download — drives the Run button
+   * spinner and the console status banner so the wait doesn't read as a
+   * hang. The value is the user-facing message.
+   */
+  engineBooting: string | null;
 
   setPythonMode(mode: DualEditorMode): void;
   toggleHistoryMode(): void;
@@ -184,7 +194,6 @@ export interface EditorChromeState {
   cancelConsoleInput(): void;
   setClearInputs(clear: boolean): void;
   toggleRenderImages(): void;
-  toggleAutocomplete(): void;
   toggleFileTree(): void;
   setTheme(theme: ThemeName): void;
   setFocusedMode(on: boolean): void;
@@ -200,6 +209,8 @@ export interface EditorChromeState {
   requestPromptedShare(): void;
   clearPromptedShare(): void;
   setInstructionsOverride(instructions: string | null): void;
+  setGraderError(traceback: string | null): void;
+  setEngineBooting(label: string | null): void;
 }
 
 /**
@@ -223,8 +234,9 @@ const INITIAL_SERVER_STATUS = Object.fromEntries(
   SERVER_ENDPOINTS.map((endpoint) => [endpoint, 'offline']),
 ) as Record<ServerEndpoint, ServerStatusState>;
 
-/** localStorage key for the autocomplete preference (showRating pattern). */
-const AUTOCOMPLETE_KEY = 'BLOCKPY_display.autocomplete';
+// NB: the M3.3 'BLOCKPY_display.autocomplete' key is retired (M7.2 —
+// autocomplete became the enable_autocomplete ASSIGNMENT setting); stale
+// keys in existing browsers are simply never read again.
 /** localStorage key for the file-tree rail (M3.7). */
 const FILE_TREE_KEY = 'BLOCKPY_display.fileTree';
 /** localStorage key for the color theme (M4.1). */
@@ -302,7 +314,6 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   pendingInput: null,
   clearInputs: true,
   renderImages: true,
-  autocomplete: readStoredFlag(AUTOCOMPLETE_KEY),
   fileTree: readStoredFlag(FILE_TREE_KEY),
   theme: INITIAL_THEME,
   focusedMode: false,
@@ -317,6 +328,8 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   devUnseen: 0,
   promptedShare: false,
   instructionsOverride: null,
+  graderError: null,
+  engineBooting: null,
 
   setPythonMode: (mode) => set({ pythonMode: mode }),
   toggleHistoryMode: () => set((state) => ({ historyMode: !state.historyMode })),
@@ -379,12 +392,6 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   },
   setClearInputs: (clear) => set({ clearInputs: clear }),
   toggleRenderImages: () => set((state) => ({ renderImages: !state.renderImages })),
-  toggleAutocomplete: () =>
-    set((state) => {
-      const next = !state.autocomplete;
-      writeStoredFlag(AUTOCOMPLETE_KEY, next);
-      return { autocomplete: next };
-    }),
   toggleFileTree: () =>
     set((state) => {
       const next = !state.fileTree;
@@ -431,4 +438,6 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   requestPromptedShare: () => set({ promptedShare: true }),
   setInstructionsOverride: (instructions) => set({ instructionsOverride: instructions }),
   clearPromptedShare: () => set({ promptedShare: false }),
+  setGraderError: (graderError) => set({ graderError }),
+  setEngineBooting: (engineBooting) => set({ engineBooting }),
 }));

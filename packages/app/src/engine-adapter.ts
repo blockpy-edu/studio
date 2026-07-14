@@ -46,8 +46,12 @@ export interface EngineAdapterOptions {
   assetsBase?: string;
   /** Wall-clock limit per run (legacy student default 5000 ms). */
   wallMs?: number;
-  /** Called when the engine starts/finishes booting (spinner hooks). */
-  onBootStateChange?: (booting: boolean) => void;
+  /**
+   * Called when a one-time setup wait starts/finishes (LD-37): the Pyodide
+   * boot on the first Run and the Pedal wheel install on the first grading.
+   * `label` is the user-facing message for the wait ("Starting Python…").
+   */
+  onBootStateChange?: (booting: boolean, label?: string) => void;
   /**
    * FALLBACK instructor grading script (`!on_run.py`) for callers without a
    * VFS. When the chrome passes a per-run `RunOptions.onRun` (the live VFS
@@ -99,8 +103,12 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
   return {
     async run(code: string, handlers: RunHandlers, runOptions?: RunOptions): Promise<RunOutcome> {
       const engine = ensureClient();
-      if (!booted) {
-        options.onBootStateChange?.(true);
+      const isBootRun = !booted;
+      if (isBootRun) {
+        options.onBootStateChange?.(
+          true,
+          'Starting Python — one-time setup, may take a little while…',
+        );
         // System message: footer status + dev console, not the student
         // console.
         handlers.system?.('Loading Python engine…');
@@ -169,7 +177,21 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
           const gradeOptions: RunOptions | undefined = typedInputs.length
             ? { ...runOptions, inputs: [...(runOptions?.inputs ?? []), ...typedInputs] }
             : runOptions;
-          const graded = await gradeWithPedal(engine, code, onRun, handlers, gradeOptions);
+          // The first grading job downloads the Pedal wheels — the second
+          // one-time wait the indicator must cover (LD-37).
+          const firstGrade = !pedalReady;
+          if (firstGrade) {
+            options.onBootStateChange?.(
+              true,
+              'Loading the feedback engine — one-time setup, may take a little while…',
+            );
+          }
+          let graded: RunOutcome;
+          try {
+            graded = await gradeWithPedal(engine, code, onRun, handlers, gradeOptions);
+          } finally {
+            if (firstGrade) options.onBootStateChange?.(false);
+          }
           return {
             ...graded,
             error: studentError ?? graded.error,
@@ -205,6 +227,9 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
         };
       } finally {
         activeJobId = null;
+        // A fatal boot failure (worker death) throws before the success
+        // path flips `booted` — never leave the indicator stuck (LD-37).
+        if (isBootRun && !booted) options.onBootStateChange?.(false);
       }
     },
 
@@ -292,9 +317,11 @@ function shapePedalFeedback(
   errorLine: number | null;
 } {
   if (feedback.system_error) {
-    // Fail-soft grader crash (§10.1): log for instructors, generic category.
+    // Fail-soft grader crash (§10.1): log for instructors, generic category;
+    // the full traceback also feeds the bug-icon dialog (LD-36).
     console.error('Pedal system_error:', feedback.system_error);
     handlers.system?.(feedback.system_error);
+    handlers.systemError?.(feedback.system_error);
   }
   // System messages (on_run.js:90-95): console_log/console_debug → the
   // instructor-only dev console.
@@ -376,6 +403,10 @@ async function gradeWithPedal(
     },
   );
   if (!result.success || !result.feedback) {
+    // Second internal-error source (PedalEnvironmentError: wheel install,
+    // environment setup) — the traceback feeds the bug-icon dialog too.
+    const detail = result.error?.traceback || result.error?.message;
+    if (detail) handlers.systemError?.(detail);
     return {
       error: result.error?.message ?? 'Grading failed.',
       feedback: {

@@ -589,4 +589,159 @@ blockKeyboardNav`). §16.3 frames this as best-effort: the plugin's
     bar keeps exact legacy layout. The bottom bar instance stays pure
     legacy. Group-less pages fall back to a plain, non-sticky right-aligned
     strip so instructor mode stays reachable.
+
+## LD-35 — Unanswered quiz questions grade as incorrect (Milestone 7.0; server-team flag)
+
+- **Legacy/server:** `process_quiz` SKIPS questions whose answer is absent —
+  the server's own `# Hack` (quizzes.py:72-76) — excluding their points
+  from the total and never forcing `total_correct = False`. A blank
+  question could therefore ride an otherwise-correct submission to
+  `correct: true` (the maintainer-reported T/F false-correct). Only a
+  fully-empty submission tripped the `questions_checked` guard.
+- **Studio (local grading engine, quizzer/grading.ts):** every question
+  PRESENTED in the attempt grades — an absent answer grades as the type's
+  EMPTY answer (`defaultAnswer(question, undefined)`) and is therefore
+  incorrect with its points counted. Questions pooled OUT of the attempt
+  stay excluded: `processQuiz` takes `visible`/`seed` options
+  (`selectVisibleQuestions` recomputes the shown set), and without attempt
+  context, pooled questions with absent answers keep the legacy exclusion
+  (a `hiddenAnswers` stash is positive evidence of hiddenness). The
+  `checkQuizQuestion` T/F branch is also hardened: `String()` coercion can
+  no longer alias an undefined answer against an unauthored `correct`
+  ('undefined' === 'undefined' was a silent false PASS where the server
+  would crash on `None.lower()`); unauthored checks never grade correct;
+  `wrong` feedback falls back to "Incorrect" instead of stringified
+  undefined.
+- **Scope/interim divergence (risk R13):** the client engine governs the
+  quiz editor's Try It local grading and the static demo. REAL submissions
+  are graded server-side and still hit the skip hack until the server
+  mirrors this fix in quizzes.py:72-76 — server-team flag filed with this
+  entry. Visible-but-blank questions were already `''`-prefilled by Studio
+  (documents.ts) and graded incorrect on both sides; only absent keys
+  change.
+
+## LD-36 — Pink bug icon made real: internal-grading-error dialog (Milestone 7.1)
+
+- **Legacy:** the quick-menu `.blockpy-student-error` bug icon existed in
+  the markup (interface.js:181) but was DEAD — no click or visible
+  binding; the only reference ever `.hide()` it (feedback.js:269).
+  Grader crash tracebacks were reachable only via instructor dialogs.
+- **Studio:** internal grading errors (Pedal `system_error` from the
+  fail-soft, pedal-env.py, plus PedalEnvironmentError/grading-job
+  failures) set a store slot that renders the icon — faint pink
+  (opacity 0.55, full on hover/focus) in the legacy top-right quick-menu
+  spot — and clicking opens a Dialog with the full traceback in the
+  standard `<pre.blockpy-printer-traceback>`. Visible to ALL roles: the
+  generic "Internal Grading Error" badge already shows to students, and
+  the dialog lets them attach details when reporting a broken grader.
+  Cleared at run start (parity with the legacy per-grade hide). The
+  dev-console/footer routing of the same text is kept as a supplement.
+- **Wire impact:** none (presentation; existing logging paths unchanged).
+
+## LD-37 — Engine one-time-setup indicator (Milestone 7.3)
+
+- **Legacy:** no analog — Skulpt loaded with the page. In Studio, the
+  first Run's Pyodide download (10-30 s) and the first grading's Pedal
+  wheel install previously surfaced only as an orange Stop button plus a
+  small footer message: it read as a hang.
+- **Studio:** the adapter's boot-state hook (now carrying a user-facing
+  label) drives a store slot: the Run button shows a spinner +
+  "Loading…" (title = the full message) and the student console shows a
+  status row ("Starting Python — one-time setup…", reused LD-32 spinner)
+  until the wait ends; the Pedal wheel install drives the same indicator
+  with its own message; a fatal boot failure clears it. Ruling: this is
+  chrome, not routed system output — the dev-console rule (system
+  messages never in the student console) is untouched, and the
+  footer/dev-console text flows exactly as before.
+- **Wire impact:** none.
+
+## LD-38 — Feedback rating pinned bottom-right in both states (Milestone 7.6)
+
+- **Legacy (replicated by Studio until now):** the EXPANDED "Rate this
+  Feedback" row was in-flow at the end of the feedback column
+  (`text-align: right` only), so it floated up under short messages and
+  scrolled away under long ones, while the COLLAPSED "Rate" chip was
+  absolutely pinned bottom-right (feedback.js template) — two different
+  positions for the same affordance.
+- **Studio:** the pane body (label + message + positives) scrolls inside
+  an inner wrapper (`.blockpy-feedback-body`, flex:1) and the rating
+  renders as a pinned footer row (`.blockpy-feedback-response`) aligned
+  bottom-right in BOTH states — always visible, never overlapping
+  content. Usability rationale per B6: a control that changes position
+  with its own state is harder to find; bottom-right (the collapsed
+  position) wins.
+- **Wire impact:** none (X-Rating logging unchanged).
+
+## LD-39 — Toolbar upload/download work locally; upload does NOT auto-run (Milestone 7.4)
+
+- **Legacy:** Upload read the chosen file into the current editor
+  (`.ipynb` via convertIpynbToPython, python.js:161-181), logged
+  X-File.Upload, then IMMEDIATELY ran the program (python.js:462).
+  Download saved the current file (answer.py under the sluggified
+  assignment name, text/x-python) after logging X-File.Download.
+- **Studio:** both buttons are real again (they shipped as disabled
+  stubs). Upload targets the ACTIVE tab through the normal change path
+  (VFS write + autosave + dirty), converts `.ipynb` (unparseable
+  notebooks fall back to raw text), refuses read-only files (D3-A), and
+  — the delta — does NOT auto-run: the maintainer spec is "just work
+  locally", and running on upload surprised more than it helped.
+  Download replicates the legacy naming/mimetype rules
+  (chrome/file-transfer.ts); the obsolete msSaveOrOpenBlob arm is
+  dropped. Both log the legacy X-File.Upload/X-File.Download events.
+- **Wire impact:** the events fire as in legacy; no new endpoints.
+
+## LD-40 — Quiz font-size stepper (Milestone 7.6; Studio extension)
+
+- **Legacy:** no analog — quiz text was fixed at the Bootstrap default.
+- **Studio:** an A−/A+ stepper on the quiz surface steps the question
+  cards through 1 / 1.15 / 1.3 / 1.5 rem via a `--quizzer-font-size`
+  CSS var (inline blanks/dropdowns inherit, so they scale too).
+  Persisted per-user globally under `BLOCKPY_display.quizFontSize`
+  (the established key family), storage-denied-guarded.
+- **Wire impact:** none.
+
+## LD-41 — Textbook chapter headers expand/collapse (Milestone 7.8; Studio extension)
+
+- **Legacy:** sidebar header rows were inert BY DESIGN — the click
+  binding attached only `if item.reading` (textbook.html:63-66); pure
+  chapter titles rendered disabled-secondary and did nothing.
+- **Studio:** rows with children get a chevron and toggle their subtree;
+  clicking a header-only row toggles it too (header+reading rows keep
+  opening their reading — legacy semantics — with the chevron as the
+  separate collapse affordance). Default expanded = the legacy flat
+  look; per-session state; `aria-expanded` reported. Companion
+  diagnosability fix: instructor views annotate Missing Reading rows
+  with WHY ("could not resolve <url> — is the by_url endpoint published
+  (LD-16)?") instead of a silent disabled row.
+- **Wire impact:** none.
+
+## LD-42 — Working fork flow for non-owned assignments (Milestone 7.9)
+
+- **Legacy:** `save_assignment` failures with `response.forkable` opened
+  OFFER_FORK (server.js:657-661) — but the dialog's three buttons had NO
+  click handlers (dialog.js:161-190 renders HTML only): the flow
+  dead-ended at the prompt. The editor template's `forkAssignment` URL
+  points at `blockpy.fork_assignment` (editor.html:205), a half-finished
+  route that never returns the fork's id (blockpy.py:1139-1178).
+- **Studio:** the full loop works. `save_assignment` responses carrying
+  `forkable: true` (helpers.py:55-60 — the user is an instructor in
+  their own course but not the assignment's) open the OFFER_FORK port
+  with WORKING handlers: fork this assignment (optional new URL;
+  collision surfaces the server message) → `ApiClient.forkAssignment`
+  (wire contract of the WORKING `/assignments/fork`,
+  assignments.py:133-178, which forks into the caller's course) → on a
+  response with the fork's id, the app navigates to the fork through
+  the host dispatch. Proactively, instructor views of a non-owned
+  assignment (decoded `course_id` vs the context course — the decoder
+  now surfaces owner/course/forked ids) show a notice with the fork
+  affordance BEFORE the first rejected save. Capability-detected.
+- **Server-team flags:** (1) repoint the published `forkAssignment` URL
+  at `url_for('assignments.fork')` — against the current half-finished
+  route the client fail-softs ("fork request failed") because no id
+  comes back; (2) "Fork entire assignment group" needs a route a
+  NON-owner may call (`assignment_group/fork` requires instructorship
+  in the OWNING course and forks into it, assignment_groups.py:47-68) —
+  the button ships only when that exists; (3) instructor-file
+  `save_file` failures carry no `forkable` flag (blockpy.py:275-288) —
+  the proactive notice covers that path client-side.
 - **Wire impact:** none — client-side chrome only.

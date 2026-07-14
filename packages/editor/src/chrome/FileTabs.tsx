@@ -110,19 +110,6 @@ export function FileTabs({
           announced via aria-current instead. */}
       <ul className="nav nav-tabs">
         <li className="nav-item">
-          {/* File-tree rail toggle (M3.7; Studio extension, default off). */}
-          <button
-            type="button"
-            className={
-              'btn btn-sm btn-outline-secondary blockpy-toggle-filetree' +
-              (fileTree ? ' active' : '')
-            }
-            aria-pressed={fileTree}
-            title="Toggle file tree"
-            onClick={toggleFileTree}
-          >
-            <Icon name="fileTree" />
-          </button>{' '}
           <strong>View: </strong>
         </li>
         {tabs.map((tab) => (
@@ -148,6 +135,23 @@ export function FileTabs({
           </li>
         ))}
         {addVisible && <AddNewMenu vfs={vfs} instructor={instructor} onAdd={onSelect} />}
+        <li className="nav-item">
+          {/* File-tree rail toggle (M3.7; Studio extension, default off).
+              Lives at the RIGHT end beside Add New so the file-management
+              affordances read as one cluster (M7.4). */}
+          <button
+            type="button"
+            className={
+              'btn btn-sm btn-outline-secondary blockpy-toggle-filetree' +
+              (fileTree ? ' active' : '')
+            }
+            aria-pressed={fileTree}
+            title="Toggle file tree"
+            onClick={toggleFileTree}
+          >
+            <Icon name="fileTree" />
+          </button>
+        </li>
       </ul>
     </div>
   );

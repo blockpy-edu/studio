@@ -7,8 +7,9 @@
  * "View as instructor" checkbox (graders), fullscreen toggle, Edit Queued
  * Inputs dialog (dialog.js EDIT_INPUTS — feeds compat-mode `inputsPrefill`),
  * Toggle Images, Get Shareable Link (hidden without a share URL, like
- * legacy `canShare`), the pink bug icon (rendered but `display:none` — dead
- * in legacy too: only ever `.hide()`, feedback.js:269), and the wall clock
+ * legacy `canShare`), the pink bug icon (dead in legacy — only ever
+ * `.hide()`, feedback.js:269 — made REAL as LD-36: appears on internal
+ * grading errors and opens the traceback dialog), and the wall clock
  * (`has_clock`; A4 §6 documents the inverted `showClock` naming — behavior
  * ported, names not).
  *
@@ -120,6 +121,13 @@ export function QuickMenu(props: QuickMenuProps) {
   const store = useEditorChromeStore;
   const dirty = useEditorChromeStore((state) => state.dirtySubmission);
   const theme = useEditorChromeStore((state) => state.theme);
+  // LD-36: internal grading error → faint pink bug icon + traceback dialog.
+  const graderError = useEditorChromeStore((state) => state.graderError);
+  const [graderErrorOpen, setGraderErrorOpen] = useState(false);
+  useEffect(() => {
+    // A cleared/replaced error closes a stale dialog.
+    if (graderError === null) setGraderErrorOpen(false);
+  }, [graderError]);
 
   // Track browser fullscreen so the icon flips even on Esc exits.
   useEffect(() => {
@@ -306,11 +314,38 @@ export function QuickMenu(props: QuickMenuProps) {
           <Icon name="share" />
         </button>
       )}
-      {/* Dead in legacy: display:none, only ever .hide() (feedback.js:269). */}
-      <span className="blockpy-student-error">
-        <Icon name="bug" />
-      </span>
+      {/* LD-36: the legacy-dead bug icon (interface.js:181, only ever
+          .hide()) made real — appears (faint pink) while an internal grading
+          error is recorded; clicking opens the traceback dialog. Visible to
+          ALL roles: a student can pull the traceback when reporting a broken
+          grader (the generic "Internal Grading Error" badge already shows). */}
+      {graderError !== null && (
+        <button
+          type="button"
+          className="blockpy-student-error"
+          onClick={() => setGraderErrorOpen(true)}
+          title="An internal error occurred while grading. Click for details."
+          aria-label="Show internal grading error details"
+        >
+          <Icon name="bug" />
+        </button>
+      )}
       {props.hasClock && <span className="blockpy-menu-clock">{clockText}</span>}
+
+      <Dialog
+        title="Internal Grading Error"
+        visible={graderErrorOpen}
+        onClose={() => setGraderErrorOpen(false)}
+        onOkay={() => setGraderErrorOpen(false)}
+        okayLabel="Close"
+      >
+        <p>
+          Something went wrong inside this assignment&apos;s grading script — this is a problem with
+          the assignment, not with your code. Consider reporting it to your instructor along with
+          the details below.
+        </p>
+        <pre className="blockpy-printer-traceback">{graderError ?? ''}</pre>
+      </Dialog>
 
       <Dialog
         title="Edit Remembered Inputs"

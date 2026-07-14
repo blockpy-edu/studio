@@ -10,6 +10,23 @@
   cursor: default;
 }
 
+/* LD-41 (M7.8): chapter rows with children expand/collapse. */
+.book-item .book-item-chevron {
+  display: inline-block;
+  width: 1em;
+  cursor: pointer;
+  user-select: none;
+}
+
+.book-item.disabled .book-item-chevron {
+  cursor: pointer; /* the chevron stays interactive on "disabled" headers */
+}
+
+.book-item .book-item-missing-hint {
+  font-style: italic;
+  opacity: 0.8;
+}
+
 @media (max-width: 768px) {
   .textbook-navigation {
     height: 300px;

@@ -106,10 +106,27 @@ export function Textbook(props: TextbookProps) {
   const [draftInstructions, setDraftInstructions] = useState('');
   const [draftSettings, setDraftSettings] = useState('');
   const [reloadNonce, setReloadNonce] = useState(0);
+  // LD-41: collapsed sidebar sections (keys are stable render paths);
+  // default expanded, per-session only.
+  const [collapsedKeys, setCollapsedKeys] = useState<Set<string>>(new Set());
+  const toggleCollapsed = (key: string) =>
+    setCollapsedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
   const propsRef = useRef(props);
   propsRef.current = props;
   const loadedRef = useRef<LoadedTextbook | null>(null);
   loadedRef.current = loaded;
+  // Instructor flag, readable from renderItem (defined before the early
+  // return, where the later `instructor` const is out of scope).
+  const instructorRef = useRef(false);
+  instructorRef.current = props.isInstructor?.() === true;
 
   // -- load + client-side rehydration ---------------------------------------
   useEffect(() => {
@@ -221,6 +238,12 @@ export function Textbook(props: TextbookProps) {
   }, [updateTitle]);
 
   // -- sidebar (the textbook_item macro, textbook.html:60-81) -----------------
+  // LD-41 (M7.8): chapter rows with children expand/collapse. Legacy header
+  // rows were inert by design (click bound only `if item.reading`,
+  // textbook.html:63-66) — clicking a chapter title now toggles its subtree
+  // instead of doing nothing. Default expanded (the legacy flat look);
+  // per-session state. Header+reading rows keep opening their reading
+  // (legacy semantics) and get a separate chevron for collapsing.
   const renderItem = (item: TextbookItem, indent: number, key: string): ReactNode => {
     const reading = item.reading;
     const clickable = reading !== null && !reading.missing && reading.id !== null;
@@ -232,19 +255,63 @@ export function Textbook(props: TextbookProps) {
         : ' disabled list-group-item-secondary';
     const label = item.header ?? reading?.name ?? null;
     const active = clickable && reading!.id === page?.id;
+    const hasChildren = item.content.length > 0;
+    const isCollapsed = hasChildren && collapsedKeys.has(key);
+    // A row is interactive when it opens a reading OR toggles a subtree.
+    const togglesOnly = !clickable && hasChildren && label !== null;
+    // Instructor diagnosability (M7.8): a missing reading says WHY instead
+    // of sitting silently disabled (LD-16 — url refs need the by_url
+    // endpoint published, or the ref itself is bad).
+    const missingHint =
+      instructorRef.current && reading?.missing
+        ? `Could not resolve "${reading.url}" — is the assignments/by_url endpoint published (LD-16), and does the URL match an assignment?`
+        : undefined;
     return (
       <div key={key}>
         {label !== null && (
           <div
             className={`list-group-item list-group-item-action book-item${classStyle}${active ? ' active' : ''}`}
             style={{ paddingLeft: `${5 + indent * 8}px` }}
-            role={clickable ? 'button' : undefined}
-            onClick={clickable ? () => openReading(reading!) : undefined}
+            role={clickable || togglesOnly ? 'button' : undefined}
+            aria-expanded={hasChildren ? !isCollapsed : undefined}
+            title={missingHint}
+            onClick={
+              clickable
+                ? () => openReading(reading!)
+                : togglesOnly
+                  ? () => toggleCollapsed(key)
+                  : undefined
+            }
           >
+            {hasChildren && (
+              <span
+                className="book-item-chevron"
+                role="button"
+                tabIndex={0}
+                aria-label={isCollapsed ? 'Expand section' : 'Collapse section'}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  toggleCollapsed(key);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    toggleCollapsed(key);
+                  }
+                }}
+              >
+                {isCollapsed ? '▸' : '▾'}
+              </span>
+            )}{' '}
             {label}
+            {missingHint && (
+              <small className="book-item-missing-hint"> (unresolved — LD-16?)</small>
+            )}
           </div>
         )}
-        {item.content.map((child, index) => renderItem(child, indent + 1, `${key}-${index}`))}
+        {!isCollapsed &&
+          item.content.map((child, index) => renderItem(child, indent + 1, `${key}-${index}`))}
       </div>
     );
   };

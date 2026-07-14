@@ -84,6 +84,7 @@ function demoLoadResponse(record: DemoAssignmentRecord): unknown {
 
 /** The slice of an assignment record quiz grading needs. */
 export interface DemoQuizRecord {
+  id: number;
   instructions: string;
   on_run: string | null;
 }

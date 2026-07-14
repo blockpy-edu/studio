@@ -15,6 +15,25 @@ afterEach(() => {
   useEditorChromeStore.getState().cancelConsoleInput();
   useEditorChromeStore.getState().clearConsole();
   useEditorChromeStore.getState().setQueuedInputs([]);
+  useEditorChromeStore.getState().setEngineBooting(null);
+});
+
+describe('Console engine-boot banner (LD-37)', () => {
+  it('shows the one-time-setup status while engineBooting is set', () => {
+    const view = render(<Console />);
+    expect(view.container.querySelector('.blockpy-console-booting')).toBeNull();
+    act(() => {
+      useEditorChromeStore.getState().setEngineBooting('Starting Python — one-time setup…');
+    });
+    const banner = view.container.querySelector('.blockpy-console-booting');
+    expect(banner).not.toBeNull();
+    expect(banner!.textContent).toContain('Starting Python');
+    expect(banner!.querySelector('.blockpy-loading-spinner')).not.toBeNull();
+    act(() => {
+      useEditorChromeStore.getState().setEngineBooting(null);
+    });
+    expect(view.container.querySelector('.blockpy-console-booting')).toBeNull();
+  });
 });
 
 describe('Console input() line', () => {

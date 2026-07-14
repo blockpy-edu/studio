@@ -257,6 +257,19 @@ class CstConverter {
         return [{ _astname: 'Break', ...loc }];
       case 'ContinueStatement':
         return [{ _astname: 'Continue', ...loc }];
+      case 'StatementGroup': {
+        // Semicolon-joined simple statements (`a = 1; b = 2`) — the grammar
+        // wraps them in one StatementGroup node (M7.5). Flatten into
+        // separate statements sharing the line, exactly the shape Skulpt
+        // gave BlockMirror (two same-lineno statements → stacked blocks);
+        // the return trip normalizes `;` to newlines, as legacy did.
+        const out: ir.Stmt[] = [];
+        for (const child of this.childrenOf(node)) {
+          if (child.name === ';') continue;
+          out.push(...this.statement(child));
+        }
+        return out;
+      }
       default:
         this.fail(node, `unsupported statement ${node.name}`);
     }

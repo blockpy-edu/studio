@@ -360,8 +360,20 @@ class StudioRuntime:
             for frame, lineno in traceback.walk_tb(exc.__traceback__):
                 if frame.f_code.co_filename == filename:
                     line = lineno
+        # Students must never see the runtime harness frames. This module is
+        # loaded via runPython (co_filename "<exec>"), so the caught exception
+        # opens with our own run/evaluate frame — drop every leading harness
+        # frame before formatting (the student's <module> frame comes right
+        # after; a SyntaxError from compile() has ONLY harness frames and
+        # formats fine with tb=None from its own attributes).
+        tb = exc.__traceback__
+        while tb is not None and tb.tb_frame.f_code.co_filename == '<exec>':
+            tb = tb.tb_next
+        parts = traceback.format_exception(type(exc), exc, tb)
+        # Non-leading harness frames (e.g. the trace-limit tracer at the tail)
+        # can't be dropped by the walk above — filter their formatted entries.
         formatted = ''.join(
-            traceback.format_exception(type(exc), exc, exc.__traceback__),
+            part for part in parts if not part.startswith('  File "<exec>"')
         )
         student_line = None if line is None else line - prefix_lines
         return {

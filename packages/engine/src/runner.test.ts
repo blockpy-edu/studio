@@ -55,6 +55,27 @@ describe('student.run', () => {
     expect(result.error?.studentLine).toBe(1);
   });
 
+  it('student tracebacks never leak the <exec> harness frames (M7.1)', async () => {
+    const runtime = await runner.execute(job({ code: 'def f():\n    return 1 / 0\nf()\n' }));
+    expect(runtime.error?.traceback).toContain('answer.py');
+    expect(runtime.error?.traceback).not.toContain('<exec>');
+    const syntax = await runner.execute(job({ code: 'def broken(:\n    pass' }));
+    expect(syntax.error?.traceback).not.toContain('<exec>');
+    const evalError = await runner.execute(job({ phase: 'student.eval', code: '1 / 0' }));
+    expect(evalError.error?.traceback).not.toContain('<exec>');
+    // The tracer raises TraceLimitError from a harness frame at the TAIL of
+    // the chain — the formatted-parts filter must catch it too.
+    const traced = await runner.execute(
+      job({
+        code: 'for i in range(100000):\n    x = i\n',
+        trace: true,
+        limits: { traceSteps: 20 },
+      }),
+    );
+    expect(traced.error?.type).toBe('TraceLimitError');
+    expect(traced.error?.traceback).not.toContain('<exec>');
+  });
+
   it('feeds scripted inputs and raises EOFError when exhausted', async () => {
     const ok = await runner.execute(
       job({ code: 'name = input("Who? ")\nprint("Hi", name)', inputsPrefill: ['Ada'] }),

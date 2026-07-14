@@ -118,6 +118,9 @@ export function Console({ size = 'col-md-6', onEvaluate, onShowDev }: ConsolePro
   const devUnseen = useEditorChromeStore((state) => state.devUnseen);
   const renderImages = useEditorChromeStore((state) => state.renderImages);
   const pendingInput = useEditorChromeStore((state) => state.pendingInput);
+  // LD-37: one-time engine/wheel download status shown IN the console so
+  // the first Run doesn't read as a hang.
+  const engineBooting = useEditorChromeStore((state) => state.engineBooting);
   const [expression, setExpression] = useState('');
   const [inputValue, setInputValue] = useState('');
   const printerRef = useRef<HTMLDivElement>(null);
@@ -131,7 +134,7 @@ export function Console({ size = 'col-md-6', onEvaluate, onShowDev }: ConsolePro
   useEffect(() => {
     const printer = printerRef.current;
     if (printer) printer.scrollTop = printer.scrollHeight;
-  }, [entries, evalState, pendingInput]);
+  }, [entries, evalState, pendingInput, engineBooting]);
 
   // Legacy focuses the input as soon as the evaluate line renders.
   useEffect(() => {
@@ -173,6 +176,12 @@ export function Console({ size = 'col-md-6', onEvaluate, onShowDev }: ConsolePro
         {entries.map((entry, i) => (
           <div key={i}>{entryBody(entry, renderImages)}</div>
         ))}
+        {engineBooting !== null && (
+          <div className="blockpy-printer-output blockpy-console-booting" role="status">
+            <span className="blockpy-loading-spinner" aria-hidden="true" />
+            <span>{engineBooting}</span>
+          </div>
+        )}
         {pendingInput !== null && (
           <div className="blockpy-printer-output blockpy-console-input-live">
             {pendingInput !== '' && (

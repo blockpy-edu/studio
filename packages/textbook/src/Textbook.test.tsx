@@ -98,6 +98,37 @@ describe('Textbook (§11.4)', () => {
     expect(document.title).toBe('Basics - Sample Book - BlockPy Textbook');
   });
 
+  it('LD-41: chapter headers expand/collapse their subtree', async () => {
+    render(
+      <Textbook
+        assignmentId={105}
+        loadAssignment={load()}
+        renderReading={(id: number) => <div>READER {id}</div>}
+        resolveAssignment={resolver}
+      />,
+    );
+    const header = await screen.findByText('Chapter 1) Introduction');
+    // Default expanded — children visible, aria-expanded reports it.
+    expect(header.getAttribute('aria-expanded')).toBe('true');
+    expect(screen.queryByText('Primer')).not.toBeNull();
+    // Clicking the header (legacy-inert) now collapses the subtree.
+    fireEvent.click(header);
+    expect(header.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByText('Primer')).toBeNull();
+    expect(screen.queryByText('Basics')).toBeNull();
+    // ...and expands it back.
+    fireEvent.click(header);
+    expect(screen.queryByText('Primer')).not.toBeNull();
+    // Nested sections collapse independently via their chevron, without
+    // navigating anywhere.
+    const partA = screen.getByText('Part A');
+    const chevron = partA.querySelector('.book-item-chevron')!;
+    fireEvent.click(chevron);
+    expect(screen.queryByText('Basics')).toBeNull();
+    expect(screen.queryByText('Primer')).not.toBeNull(); // sibling untouched
+    expect(screen.queryByText('READER 301')).toBeNull(); // no navigation
+  });
+
   it('honors a ?page= deep link (by url, assignments.py:100-112)', async () => {
     window.history.replaceState(null, '', '/?page=basics_read');
     render(
