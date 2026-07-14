@@ -722,6 +722,82 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
   });
 });
 
+// Interactive input() (spec §6.5): with no queued inputs, the run SUSPENDS
+// (JSPI) on a console textbox + Enter button and resumes with what the
+// user types — the legacy Skulpt behavior the scripted-inputs strategy
+// couldn't cover. Same CDN opt-in as the run test above.
+test('interactive input() suspends on a console textbox and resumes (JSPI)', async ({ page }) => {
+  test.skip(!process.env.PYODIDE_E2E, 'set PYODIDE_E2E=1 to run');
+  test.setTimeout(300_000);
+  await page.goto('/');
+  const content = page.locator('.cm-editor .cm-content').first();
+  await content.click();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.type(
+    'animal = input("What is your favorite animal?")\nprint("You chose", animal)',
+  );
+  await page.locator('button.blockpy-run').click();
+  // Python is suspended: prompt + live textbox + Enter in the printer.
+  const live = page.locator('.blockpy-console-input-live');
+  await expect(live).toBeVisible({ timeout: 240_000 });
+  await expect(live).toContainText('What is your favorite animal?');
+  await live.locator('input').fill('penguin');
+  await live.locator('input').press('Enter');
+  // The run resumes; the line freezes into history, disabled, keeping the value.
+  await expect(page.locator('.blockpy-printer')).toContainText('You chose penguin', {
+    timeout: 60_000,
+  });
+  await expect(
+    page.locator('.blockpy-printer .blockpy-console-input input[disabled]').first(),
+  ).toHaveValue('penguin');
+  await expect(page.locator('button.blockpy-run')).not.toHaveClass(/blockpy-run-running/, {
+    timeout: 120_000,
+  });
+  // Re-running an interactive program PROMPTS AGAIN — the previous answer is
+  // not silently replayed (it never enters the queued-inputs model). Guards
+  // the regression where a live answer folded into queuedInputs.
+  await page.locator('button.blockpy-run').click();
+  await expect(live).toBeVisible({ timeout: 60_000 });
+  await live.locator('input').fill('walrus');
+  await live.locator('input').press('Enter');
+  await expect(page.locator('.blockpy-printer')).toContainText('You chose walrus', {
+    timeout: 60_000,
+  });
+});
+
+// A fatal Pyodide error (unbounded recursion) must not hang the UI, and the
+// worker must self-heal so the NEXT run works — this is the crash the input
+// work exposed (a dead interpreter faulting on the next run's runPython).
+test('a fatal engine crash settles and the worker self-heals (§6.6)', async ({ page }) => {
+  test.skip(!process.env.PYODIDE_E2E, 'set PYODIDE_E2E=1 to run');
+  test.setTimeout(300_000);
+  await page.goto('/');
+  const content = page.locator('.cm-editor .cm-content').first();
+  // Boot the engine on a trivial run first.
+  await content.click();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.type('print("boot")');
+  await page.locator('button.blockpy-run').click();
+  await expect(page.locator('.blockpy-printer')).toContainText('boot', { timeout: 240_000 });
+  // Unbounded recursion → fatal interpreter crash.
+  await content.click();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.type(
+    'import sys\nsys.setrecursionlimit(10**9)\nprint((lambda f: f(f, 10**8))(lambda g, n: g(g, n + 1)))',
+  );
+  await page.locator('button.blockpy-run').click();
+  // The run SETTLES (no infinite hang) despite the dead interpreter.
+  await expect(page.locator('button.blockpy-run')).not.toHaveClass(/blockpy-run-running/, {
+    timeout: 90_000,
+  });
+  // Self-heal: the next run works on a fresh interpreter.
+  await content.click();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.type('print("alive", 6 * 7)');
+  await page.locator('button.blockpy-run').click();
+  await expect(page.locator('.blockpy-printer')).toContainText('alive 42', { timeout: 120_000 });
+});
+
 test('focused editor mode: enter grows the editor, drawer serves feedback, Esc restores (M4.2)', async ({
   page,
 }) => {

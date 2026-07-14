@@ -57,9 +57,33 @@ function FrozenEvalLine({ expression }: { expression: string }) {
   );
 }
 
+/** A frozen (already-answered) input() line — legacy ConsoleLineInput after
+ *  submit: prompt text, then the disabled textbox + Enter button. */
+function FrozenInputLine({ prompt, value }: { prompt: string; value: string }) {
+  return (
+    <div className="blockpy-printer-output">
+      {prompt !== '' && (
+        <>
+          <samp>{prompt}</samp>
+          <br />
+        </>
+      )}
+      <div className="blockpy-console-input">
+        <input type="text" value={value} disabled readOnly />
+        <button type="button" disabled>
+          Enter
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function entryBody(entry: ConsoleEntry, renderImages: boolean) {
   if (entry.kind === 'eval') {
     return <FrozenEvalLine expression={entry.text} />;
+  }
+  if (entry.kind === 'input-prompt') {
+    return <FrozenInputLine prompt={entry.text} value={entry.value ?? ''} />;
   }
   if (entry.kind === 'image') {
     // Legacy quick-menu Toggle Images: off = the image stays "as text code".
@@ -93,9 +117,12 @@ export function Console({ size = 'col-md-6', onEvaluate, onShowDev }: ConsolePro
   const evalState = useEditorChromeStore((state) => state.evalState);
   const devUnseen = useEditorChromeStore((state) => state.devUnseen);
   const renderImages = useEditorChromeStore((state) => state.renderImages);
+  const pendingInput = useEditorChromeStore((state) => state.pendingInput);
   const [expression, setExpression] = useState('');
+  const [inputValue, setInputValue] = useState('');
   const printerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const stdinRef = useRef<HTMLInputElement>(null);
   const store = useEditorChromeStore;
 
   const evalVisible = onEvaluate !== undefined && evalState !== 'hidden';
@@ -104,12 +131,26 @@ export function Console({ size = 'col-md-6', onEvaluate, onShowDev }: ConsolePro
   useEffect(() => {
     const printer = printerRef.current;
     if (printer) printer.scrollTop = printer.scrollHeight;
-  }, [entries, evalState]);
+  }, [entries, evalState, pendingInput]);
 
   // Legacy focuses the input as soon as the evaluate line renders.
   useEffect(() => {
     if (evalState === 'input') inputRef.current?.focus();
   }, [evalState]);
+
+  // The input() line grabs focus when Python suspends on it (§6.5).
+  useEffect(() => {
+    if (pendingInput !== null) {
+      setInputValue('');
+      stdinRef.current?.focus();
+    }
+  }, [pendingInput]);
+
+  const submitInput = () => {
+    // Empty submissions are valid input() results (just pressing Enter).
+    store.getState().submitConsoleInput(inputValue);
+    setInputValue('');
+  };
 
   const submit = () => {
     const trimmed = expression.trim();
@@ -132,6 +173,31 @@ export function Console({ size = 'col-md-6', onEvaluate, onShowDev }: ConsolePro
         {entries.map((entry, i) => (
           <div key={i}>{entryBody(entry, renderImages)}</div>
         ))}
+        {pendingInput !== null && (
+          <div className="blockpy-printer-output blockpy-console-input-live">
+            {pendingInput !== '' && (
+              <>
+                <samp>{pendingInput}</samp>
+                <br />
+              </>
+            )}
+            <div className="blockpy-console-input">
+              <input
+                ref={stdinRef}
+                type="text"
+                aria-label={pendingInput === '' ? 'Program input' : pendingInput}
+                value={inputValue}
+                onChange={(event) => setInputValue(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') submitInput();
+                }}
+              />
+              <button type="button" onClick={submitInput}>
+                Enter
+              </button>
+            </div>
+          </div>
+        )}
         {evalVisible && evalState === 'input' && (
           <div className="blockpy-printer-output">
             <samp>Evaluate:</samp>

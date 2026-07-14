@@ -107,6 +107,10 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
       }
       const jobId = `harness-run-${++jobCounter}`;
       activeJobId = jobId;
+      // Interactive input() (spec §6.5): values the user types during the
+      // run — collected so the grading pass replays the SAME stdin the
+      // student run consumed (legacy execution.input()).
+      const typedInputs: string[] = [];
       try {
         const result = await engine.run(
           {
@@ -118,14 +122,26 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
             filename: 'answer.py',
             trace: runOptions?.trace ?? false,
             allowRealRequests: runOptions?.allowRealRequests,
-            // Queued inputs from the quick-menu dialog (compat-mode input
-            // strategy, M1.3.4: the UI collects stdin up front).
+            // Queued inputs from the quick-menu dialog replay first
+            // (M1.3.4); when they run dry AND the caller has an input UI,
+            // the run suspends on the console input line instead of
+            // raising EOFError.
             inputsPrefill: runOptions?.inputs,
+            interactiveInput: handlers.onInput !== undefined,
             limits: { wallMs: options.wallMs ?? 5000 },
           },
           {
             onStdout: (chunk) => handlers.stdout(chunk),
             onStderr: (chunk) => handlers.stderr(chunk),
+            ...(handlers.onInput
+              ? {
+                  onInput: async (prompt: string) => {
+                    const value = await handlers.onInput!(prompt);
+                    typedInputs.push(value);
+                    return value;
+                  },
+                }
+              : {}),
           },
         );
         if (!booted) {
@@ -147,7 +163,13 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
         // reach Pedal, whose own set_source → run captures them as feedback.
         // Only the disable_feedback setting skips grading.
         if (onRun && onRun.trim() !== '' && !runOptions?.disableFeedback) {
-          const graded = await gradeWithPedal(engine, code, onRun, handlers, runOptions);
+          // The grading sandbox replays queued inputs PLUS whatever the
+          // user typed interactively during the run (legacy parity: the
+          // sandbox sees the same stdin the student saw).
+          const gradeOptions: RunOptions | undefined = typedInputs.length
+            ? { ...runOptions, inputs: [...(runOptions?.inputs ?? []), ...typedInputs] }
+            : runOptions;
+          const graded = await gradeWithPedal(engine, code, onRun, handlers, gradeOptions);
           return {
             ...graded,
             error: studentError ?? graded.error,

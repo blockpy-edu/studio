@@ -229,10 +229,19 @@ class StudioRuntime:
 
     # -- execution ------------------------------------------------------------
 
+    @staticmethod
+    def can_suspend():
+        """True when JSPI is available, so run_sync can suspend at input()."""
+        try:
+            from pyodide.ffi import can_run_sync
+            return bool(can_run_sync())
+        except Exception:  # noqa: BLE001 - non-Pyodide/no-JSPI hosts
+            return False
+
     def run(self, code, filename='answer.py', prefix='', suffix='',
             inputs=None, mode='exec', extract_result=False,
             trace=False, trace_limit=None, on_stdout=None, on_stderr=None,
-            allow_real_requests=False):
+            allow_real_requests=False, on_input=None):
         full = (prefix or '') + code + (suffix or '')
         prefix_lines = (prefix or '').count('\n')
         # JS null arrives as JsNull (not None) — normalize scalar options.
@@ -243,13 +252,27 @@ class StudioRuntime:
         module.__dict__['__file__'] = filename
 
         input_values = iter(inputs or [])
+        interactive = callable(on_input) and self.can_suspend()
 
         def scripted_input(prompt=''):
-            print(prompt, end='')
+            # Queued inputs replay first (legacy Edit Queued Inputs); the
+            # prompt echoes to stdout exactly as before.
             try:
-                return next(input_values)
+                value = next(input_values)
             except StopIteration:
-                raise EOFError('No scripted input available') from None
+                value = None
+            if value is not None:
+                print(prompt, end='')
+                return value
+            if interactive:
+                # Interactive input (spec §6.5): JSPI suspends this
+                # synchronous call while the console shows a textbox. The
+                # prompt is NOT echoed to stdout — the console's input line
+                # displays (and then freezes with) it, legacy-style.
+                from pyodide.ffi import run_sync
+                return str(run_sync(on_input(str(prompt))))
+            print(prompt, end='')
+            raise EOFError('No scripted input available')
 
         stdout, stderr = _Tee(on_stdout), _Tee(on_stderr)
         steps = []

@@ -40,6 +40,14 @@ export interface EngineJob {
   /** Scripted stdin (sample-input replay, Pedal input scripting). */
   inputsPrefill?: string[];
   /**
+   * Interactive input() (spec §6.5): when scripted inputs run dry, the
+   * worker suspends the run via JSPI and posts 'input-request'; the client
+   * answers with 'input-response' once the console collects a line. Set
+   * only when the client actually has an input UI wired — otherwise the
+   * legacy EOFError fallback applies (and always applies without JSPI).
+   */
+  interactiveInput?: boolean;
+  /**
    * wallMs: client-side watchdog (compat hard stop = worker termination).
    * traceSteps: instruction limit enforced by the tracer when trace is on
    * (legacy `execLimit` maps here, §6.2).

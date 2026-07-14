@@ -24,6 +24,13 @@ export interface EnginePort {
 export interface RunCallbacks {
   onStdout?: (chunk: string) => void;
   onStderr?: (chunk: string) => void;
+  /**
+   * Interactive input() (spec §6.5): resolves with the user's line once
+   * the console collects it. The wall-clock watchdog is PAUSED while the
+   * request is outstanding (thinking time is not execution time) and
+   * re-armed fresh when the response is sent.
+   */
+  onInput?: (prompt: string) => Promise<string>;
 }
 
 export interface EngineClientOptions {
@@ -161,8 +168,24 @@ export class EngineClient {
       case 'result':
         if (active?.job.id === message.result.jobId) this.settle(message.result);
         return;
+      case 'input-request': {
+        if (active?.job.id !== message.jobId) return;
+        const onInput = active.callbacks.onInput;
+        if (!onInput) return; // jobs without an input UI never set interactiveInput
+        // Pause the watchdog while the user types (§6.5).
+        active.cancelWatchdog?.();
+        active.cancelWatchdog = null;
+        void onInput(message.prompt).then((value) => {
+          if (this.active !== active || active.settled || !this.port) return;
+          const wallMs = active.job.limits?.wallMs ?? this.options.defaultWallMs;
+          if (wallMs !== undefined) {
+            active.cancelWatchdog = this.schedule(() => this.hardStop('TimeoutError'), wallMs);
+          }
+          this.port.postMessage({ kind: 'input-response', jobId: active.job.id, value });
+        });
+        return;
+      }
       case 'ready':
-      case 'input-request':
         return;
     }
   }

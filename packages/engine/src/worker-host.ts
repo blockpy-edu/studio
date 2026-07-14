@@ -22,6 +22,8 @@ export interface WorkerHostOptions {
 export class WorkerHost {
   private runner: JobRunner | null = null;
   private interrupted = new Set<string>();
+  /** Per-job resolver for the in-flight interactive input() request. */
+  private pendingInputs = new Map<string, (value: string) => void>();
 
   constructor(private options: WorkerHostOptions) {}
 
@@ -33,8 +35,30 @@ export class WorkerHost {
         return;
       }
       case 'run': {
-        if (!this.runner) throw new Error('Engine worker not initialized');
         const { job } = message;
+        if (!this.runner) {
+          // No live interpreter (init never ran, or a prior fatal's reload
+          // failed). Resolve the job rather than throwing into the void.
+          this.options.post({
+            kind: 'result',
+            result: {
+              jobId: job.id,
+              success: false,
+              stdout: '',
+              stderr: '',
+              error: {
+                type: 'EngineError',
+                message: 'Engine worker not initialized',
+                line: null,
+                studentLine: null,
+                traceback: 'Engine worker not initialized\n',
+              },
+              artifacts: {},
+              durationMs: 0,
+            },
+          });
+          return;
+        }
         if (this.interrupted.delete(job.id)) {
           this.options.post({
             kind: 'result',
@@ -56,10 +80,56 @@ export class WorkerHost {
           });
           return;
         }
-        const result = await this.runner.execute(job, {
-          onStdout: (chunk) => this.options.post({ kind: 'stdout', jobId: job.id, chunk }),
-          onStderr: (chunk) => this.options.post({ kind: 'stderr', jobId: job.id, chunk }),
-        });
+        let result: Awaited<ReturnType<JobRunner['execute']>>;
+        try {
+          result = await this.runner.execute(job, {
+            onStdout: (chunk) => this.options.post({ kind: 'stdout', jobId: job.id, chunk }),
+            onStderr: (chunk) => this.options.post({ kind: 'stderr', jobId: job.id, chunk }),
+            // Interactive input() (spec §6.5): the run suspends on this
+            // promise until an 'input-response' arrives for the job.
+            onInput: (prompt) =>
+              new Promise<string>((resolve) => {
+                this.pendingInputs.set(job.id, resolve);
+                this.options.post({ kind: 'input-request', jobId: job.id, prompt });
+              }),
+          });
+        } catch (error) {
+          // A crash inside execute (e.g. a fatal Pyodide error — JSPI stack
+          // exhaustion, unbounded recursion) must still resolve the job,
+          // otherwise the client waits forever. A fatal error leaves the
+          // interpreter DEAD, so reload a fresh runner before the next job
+          // rather than reusing the corpse (which would fault again, often
+          // as "Maximum call stack size exceeded" on the very next
+          // runPython). Reload failures are swallowed — the next run's own
+          // error surfaces them.
+          this.pendingInputs.delete(job.id);
+          const message = error instanceof Error ? error.message : String(error);
+          try {
+            this.runner = await this.options.loadRunner();
+          } catch {
+            this.runner = null; // next 'run' throws "not initialized", handled above
+          }
+          this.options.post({
+            kind: 'result',
+            result: {
+              jobId: job.id,
+              success: false,
+              stdout: '',
+              stderr: '',
+              error: {
+                type: 'EngineError',
+                message,
+                line: null,
+                studentLine: null,
+                traceback: message + '\n',
+              },
+              artifacts: {},
+              durationMs: 0,
+            },
+          });
+          return;
+        }
+        this.pendingInputs.delete(job.id);
         this.options.post({ kind: 'result', result });
         return;
       }
@@ -73,11 +143,14 @@ export class WorkerHost {
         this.options.post({ kind: 'ready', mode: this.options.mode });
         return;
       }
-      case 'input-response':
-        // Interactive stdin lands with the isolated-mode SAB path; compat
-        // interactive input is collected UI-side and replayed via
-        // inputsPrefill (see DEVELOPMENT_PLAN M1.4).
+      case 'input-response': {
+        // Resumes the JSPI-suspended run (spec §6.5). Unknown/stale job
+        // ids are ignored — the run may have been hard-stopped meanwhile.
+        const resolve = this.pendingInputs.get(message.jobId);
+        this.pendingInputs.delete(message.jobId);
+        resolve?.(message.value);
         return;
+      }
     }
   }
 }

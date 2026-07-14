@@ -25,6 +25,13 @@ export interface PyodideLike {
 export interface StreamCallbacks {
   onStdout?: (chunk: string) => void;
   onStderr?: (chunk: string) => void;
+  /**
+   * Interactive input() (spec §6.5): called when scripted inputs run dry
+   * and the job opted in (`interactiveInput`). The returned promise is
+   * awaited by Python via JSPI run_sync — the run stays suspended until
+   * the user submits. Only consulted when the environment can suspend.
+   */
+  onInput?: (prompt: string) => Promise<string>;
 }
 
 interface PyProxy {
@@ -33,6 +40,8 @@ interface PyProxy {
 }
 
 type StreamCallback = ((chunk: string) => void) | null;
+
+type InputCallback = ((prompt: string) => Promise<string>) | null;
 
 interface RuntimeHandle {
   stage_files(files: unknown): void;
@@ -50,10 +59,21 @@ interface RuntimeHandle {
     onStdout: StreamCallback,
     onStderr: StreamCallback,
     allowRealRequests: boolean,
+    onInput: InputCallback,
   ): PyProxy;
   evaluate(expression: string, onStdout: StreamCallback, onStderr: StreamCallback): PyProxy;
   clear_namespace(): void;
 }
+
+/**
+ * JSPI detection + the promising entry point. Interactive input() needs the
+ * whole Python call to enter through `callPromising` so `run_sync` can
+ * suspend the wasm stack while the console collects the user's line; when
+ * JSPI is absent (older browsers, node tests) the plain synchronous call
+ * runs and the runtime falls back to scripted-inputs-then-EOFError.
+ */
+const jspiAvailable = (): boolean =>
+  typeof (WebAssembly as unknown as { Suspending?: unknown }).Suspending === 'function';
 
 interface RuntimePayload {
   error?: {
@@ -222,24 +242,35 @@ export class JobRunner {
 
     const onStdout = streams.onStdout ?? null;
     const onStderr = streams.onStderr ?? null;
+    const onInput = (job.interactiveInput ? streams.onInput : undefined) ?? null;
+    const runArgs = [
+      job.code,
+      job.filename ?? 'answer.py',
+      job.answerPrefix ?? '',
+      job.answerSuffix ?? '',
+      job.inputsPrefill ?? [],
+      'exec',
+      job.phase === 'quiz.preprocess',
+      job.trace ?? false,
+      job.limits?.traceSteps ?? null,
+      onStdout,
+      onStderr,
+      job.allowRealRequests ?? false,
+      onInput,
+    ] as const;
+    // Suspension needs a promising entry (PyCallable.callPromising); the
+    // sync call is the no-JSPI fallback where onInput is never consulted.
+    const runFn = this.runtime.run as unknown as {
+      (...args: unknown[]): PyProxy;
+      callPromising?: (...args: unknown[]) => Promise<PyProxy>;
+    };
     const payload =
       job.phase === 'student.eval' || job.phase === 'instructor.on_eval'
         ? toJsDeep(this.runtime.evaluate(job.code, onStdout, onStderr))
         : toJsDeep(
-            this.runtime.run(
-              job.code,
-              job.filename ?? 'answer.py',
-              job.answerPrefix ?? '',
-              job.answerSuffix ?? '',
-              job.inputsPrefill ?? [],
-              'exec',
-              job.phase === 'quiz.preprocess',
-              job.trace ?? false,
-              job.limits?.traceSteps ?? null,
-              onStdout,
-              onStderr,
-              job.allowRealRequests ?? false,
-            ),
+            onInput !== null && jspiAvailable() && typeof runFn.callPromising === 'function'
+              ? await runFn.callPromising(...runArgs)
+              : runFn(...runArgs),
           );
 
     const artifacts = toJsDeep(this.runtime.collect_artifacts()) as unknown as Record<

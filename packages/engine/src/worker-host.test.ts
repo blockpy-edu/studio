@@ -117,3 +117,17 @@ describe('end-to-end through the worker protocol', () => {
     expect(result.error?.type).toBe('NameError');
   });
 });
+
+describe('interactive input without JSPI (node)', () => {
+  it('falls back to the legacy EOFError when the runtime cannot suspend', async () => {
+    // Node has no WebAssembly.Suspending, so even an interactive job with
+    // an input handler degrades to scripted-inputs-then-EOFError (§6.5).
+    const result = await client.run(
+      job({ code: 'input("What?")', interactiveInput: true, inputsPrefill: [] }),
+      { onInput: () => Promise.resolve('never used') },
+    );
+    expect(result.success).toBe(false);
+    expect(result.error?.type).toBe('EOFError');
+    expect(result.stdout).toBe('What?');
+  });
+});

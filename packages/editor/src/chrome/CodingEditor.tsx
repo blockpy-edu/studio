@@ -60,6 +60,12 @@ export interface RunHandlers {
   stdout(text: string): void;
   stderr(text: string): void;
   /**
+   * Interactive input() (spec §6.5): show an input line in the console and
+   * resolve with what the user submits. The run stays suspended (JSPI)
+   * until then. Absent = the legacy scripted-inputs-then-EOFError model.
+   */
+  onInput?(prompt: string): Promise<string>;
+  /**
    * System/diagnostic messages (engine boot, grader lifecycle) and
    * instructor-code output — NOT student program output. Routed to the
    * footer status area and the instructor-only dev console, never the
@@ -578,6 +584,8 @@ export function CodingEditor(props: CodingEditorProps) {
         {
           stdout: (text) => appendConsole({ kind: 'stdout', text }),
           stderr: (text) => appendConsole({ kind: 'stderr', text }),
+          // input() suspends on the console's input line (§6.5).
+          onInput: (prompt) => store.getState().requestConsoleInput(prompt),
           system: handleSystem,
         },
         {
@@ -689,6 +697,10 @@ export function CodingEditor(props: CodingEditorProps) {
       setRunState('error');
       store.getState().setServerStatus('onExecution', 'failed', String(error));
       appendConsole({ kind: 'stderr', text: String(error) });
+    } finally {
+      // A hard stop (interrupt/timeout) can leave the input line orphaned —
+      // the run it belonged to is gone either way (§6.5).
+      store.getState().cancelConsoleInput();
     }
   }, [
     code,

@@ -113,3 +113,73 @@ describe('EngineClient', () => {
     expect(modes).toEqual(['compat', 'compat']);
   });
 });
+
+describe('EngineClient interactive input (§6.5)', () => {
+  it('pauses the watchdog during input-request and answers input-response', async () => {
+    const posted: ClientToWorker[] = [];
+    let postToClient: ((m: WorkerToClient) => void) | null = null;
+    const factory = (): EnginePort => ({
+      postMessage(message) {
+        posted.push(message);
+        if (message.kind === 'init') {
+          queueMicrotask(() => postToClient?.({ kind: 'ready', mode: 'compat' }));
+        } else if (message.kind === 'run') {
+          queueMicrotask(() =>
+            postToClient?.({ kind: 'input-request', jobId: message.job.id, prompt: 'Name?' }),
+          );
+        } else if (message.kind === 'input-response') {
+          queueMicrotask(() =>
+            postToClient?.({
+              kind: 'result',
+              result: {
+                jobId: message.jobId,
+                success: true,
+                stdout: message.value + '\n',
+                stderr: '',
+                artifacts: {},
+                durationMs: 1,
+              },
+            }),
+          );
+        }
+      },
+      onMessage(callback) {
+        postToClient = callback;
+      },
+      terminate() {},
+    });
+    const watchdogs: Array<() => void> = [];
+    const client = new EngineClient({
+      workerFactory: factory,
+      defaultWallMs: 100,
+      schedule: (fn, ms) => {
+        if (ms > 0) {
+          watchdogs.push(fn);
+          return () => {
+            const index = watchdogs.indexOf(fn);
+            if (index >= 0) watchdogs.splice(index, 1);
+          };
+        }
+        queueMicrotask(fn);
+        return () => {};
+      },
+    });
+    let promptSeen = '';
+    let watchdogsDuringInput = -1;
+    const result = await client.run(job('i1'), {
+      onInput: (prompt) => {
+        promptSeen = prompt;
+        // Thinking time is not execution time: the watchdog is paused.
+        watchdogsDuringInput = watchdogs.length;
+        return Promise.resolve('penguin');
+      },
+    });
+    expect(promptSeen).toBe('Name?');
+    expect(watchdogsDuringInput).toBe(0);
+    expect(posted.find((m) => m.kind === 'input-response')).toMatchObject({
+      jobId: 'i1',
+      value: 'penguin',
+    });
+    expect(result.stdout).toBe('penguin\n');
+  });
+});

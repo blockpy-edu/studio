@@ -11,6 +11,8 @@ export interface ConsoleEntry {
   /** 'eval' = a frozen (submitted) Evaluate line, legacy disabled-input look. */
   kind: 'stdout' | 'stderr' | 'input-prompt' | 'value' | 'image' | 'eval';
   text: string;
+  /** For frozen 'input-prompt' lines: the value the user submitted. */
+  value?: string;
 }
 
 export interface FeedbackState {
@@ -84,6 +86,12 @@ export interface EditorChromeState {
   serverMessage: string;
   /** Queued stdin lines replayed into runs (legacy `execution.input`). */
   queuedInputs: string[];
+  /**
+   * Interactive input() request (spec §6.5): the prompt whose console
+   * input line is currently live, or null. One at a time — the engine is
+   * single-job and Python is suspended while this is set.
+   */
+  pendingInput: string | null;
   /** Clear queued inputs after each run (legacy `display.clearInputs`). */
   clearInputs: boolean;
   /** Render console images vs raw text (legacy `display.renderImages`). */
@@ -168,6 +176,12 @@ export interface EditorChromeState {
   setTraceVisible(visible: boolean): void;
   setServerStatus(endpoint: ServerEndpoint, status: ServerStatusState, message?: string): void;
   setQueuedInputs(inputs: string[]): void;
+  /** Show the console input line; resolves with the submitted value. */
+  requestConsoleInput(prompt: string): Promise<string>;
+  /** Freeze the live input line into history and resume the run. */
+  submitConsoleInput(value: string): void;
+  /** Drop a stale input line (run ended/interrupted); never resolves. */
+  cancelConsoleInput(): void;
   setClearInputs(clear: boolean): void;
   toggleRenderImages(): void;
   toggleAutocomplete(): void;
@@ -267,6 +281,12 @@ function applyThemeAttribute(theme: ThemeName): void {
 const INITIAL_THEME = readStoredTheme();
 applyThemeAttribute(INITIAL_THEME);
 
+/**
+ * Resolver for the live console input line (spec §6.5). Held outside the
+ * state (not serializable); one at a time — the engine is single-job.
+ */
+let consoleInputResolver: ((value: string) => void) | null = null;
+
 export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   pythonMode: 'split',
   historyMode: false,
@@ -279,6 +299,7 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   serverStatus: INITIAL_SERVER_STATUS,
   serverMessage: '',
   queuedInputs: [],
+  pendingInput: null,
   clearInputs: true,
   renderImages: true,
   autocomplete: readStoredFlag(AUTOCOMPLETE_KEY),
@@ -329,6 +350,33 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
           : message.charAt(0).toUpperCase() + message.slice(1),
     })),
   setQueuedInputs: (inputs) => set({ queuedInputs: inputs }),
+  requestConsoleInput: (prompt) =>
+    new Promise<string>((resolve) => {
+      consoleInputResolver = resolve;
+      set({ pendingInput: prompt });
+    }),
+  submitConsoleInput: (value) => {
+    const resolve = consoleInputResolver;
+    consoleInputResolver = null;
+    set((state) => {
+      if (state.pendingInput === null) return state;
+      return {
+        pendingInput: null,
+        // The live line freezes into history (legacy disables the box).
+        console: [...state.console, { kind: 'input-prompt', text: state.pendingInput, value }],
+      };
+      // NB: the typed value is NOT pushed into queuedInputs. queuedInputs is
+      // the pre-scripted Edit-Inputs dialog model; folding live answers into
+      // it makes the NEXT run replay this answer instead of prompting again.
+      // The grading pass gets the live answers separately (engine-adapter
+      // collects them per run and appends them to the Pedal job's inputs).
+    });
+    resolve?.(value);
+  },
+  cancelConsoleInput: () => {
+    consoleInputResolver = null;
+    set({ pendingInput: null });
+  },
   setClearInputs: (clear) => set({ clearInputs: clear }),
   toggleRenderImages: () => set((state) => ({ renderImages: !state.renderImages })),
   toggleAutocomplete: () =>
