@@ -774,3 +774,28 @@ blockKeyboardNav`). §16.3 frames this as best-effort: the plugin's
   the chain - a queued run awaits it).
 - **Wire impact:** none - engine protocol gains the worker→client
   `runner-reloaded` message; no server contract touched.
+
+## LD-44 — Executed source always exists as a real file (2026-07-15)
+
+- **Legacy:** Skulpt executed the editor string directly; `answer.py`
+  existed on the virtual FS only when explicitly staged, and tracebacks
+  carried source lines because Skulpt kept the source string itself.
+- **Studio:** Python 3.13+ recovers traceback and SyntaxError source lines
+  through `linecache`, so executing under a synthetic filename prints
+  line-less tracebacks and (via Pedal 3.0.1's `FakeFrame._lines` rename
+  bug, see skulpt-compat #1) turned every student syntax error into an
+  Internal Grading Error. Studio therefore ALWAYS writes the executed
+  source to its real compile filename before running: the student run
+  writes `answer.py` (prefix+code+suffix, exactly the compiled text;
+  registered in the staged map so artifact diff-back ignores it;
+  linecache cleared per run so same-name reruns never show stale lines),
+  and the grading pass writes the student-view files plus `on_run.py`.
+  Consequences a curriculum author can observe: `open('answer.py')` now
+  succeeds even when the assignment never staged it, and under an
+  instructor `answer_prefix`/`answer_suffix` the on-disk file contains the
+  full wrapped text (line numbers align with tracebacks). Companion shim:
+  `_studio_patch_pedal_traceback()` in pedal-env.py (PEDAL FLAG: upstream
+  the `FakeFrame` fix). Conformance impact: bakery broken-code failures
+  223 → 10 (the remainder are graders importing unavailable modules —
+  `curriculum_ctvt`, `utility`).
+- **Wire impact:** none.

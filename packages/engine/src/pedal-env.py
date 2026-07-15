@@ -24,12 +24,44 @@
 # against the bakery corpus).
 import importlib
 import json
+import linecache
 import os
 import shutil
 import sys
 
 _INSTRUCTOR_PKG = '_instructor'
 _PREFIXES = '!^?&$*#'
+
+
+def _studio_patch_pedal_traceback():
+    """Pedal 3.0.1 on Python 3.13+: SyntaxError feedback crashes.
+
+    CPython renamed FrameSummary._line to _lines (3.13); pedal's
+    _fix_frame_line writes the recovered source to `_lines`, but its own
+    FakeFrame.line property still reads `_line` - so format_line receives
+    None and dies in inject_line ("'NoneType' object has no attribute
+    'split'"), turning EVERY student syntax error into an Internal Grading
+    Error. Until the upstream fix ships (SERVER-TEAM/PEDAL FLAG: make
+    FakeFrame honor the _lines rename + None-guard format_line's 3.13
+    branch), patch FakeFrame.line to fall back _line -> _lines ->
+    linecache (the grading staging below writes the REAL files linecache
+    needs). Idempotent; safe on older pedals/pythons (pure fallback).
+    """
+    from pedal.utilities import exceptions as pedal_exceptions
+
+    fake_frame = pedal_exceptions.FakeFrame
+    if getattr(fake_frame, '_studio_patched', False):
+        return
+
+    def line(self):
+        for value in (self._line, getattr(self, '_lines', None)):
+            if isinstance(value, str):
+                return value
+        text = linecache.getline(self.filename or '', self.lineno or 0)
+        return text.rstrip('\n') if text else ''
+
+    fake_frame.line = property(line)
+    fake_frame._studio_patched = True
 
 
 def _studio_pedal_stage(files):
@@ -188,6 +220,7 @@ def _studio_fail_soft():
 def _studio_pedal_grade(student_code, on_run, files_json, inputs, options_json):
     from pedal.core.report import MAIN_REPORT
 
+    _studio_patch_pedal_traceback()
     MAIN_REPORT.clear()
     options = json.loads(options_json) if options_json else {}
     _studio_pedal_stage(json.loads(files_json) if files_json else {})
@@ -214,6 +247,23 @@ def _studio_pedal_grade(student_code, on_run, files_json, inputs, options_json):
         # view lives on DISK (open() + _instructor imports), not here.
         student_files = dict(options.get('student_files') or {})
         student_files['answer.py'] = student_code
+
+        # Real source files for every compiled name: Python 3.13+ recovers
+        # traceback/SyntaxError source lines through linecache, so grading
+        # against purely-synthetic filenames loses the offending line (and
+        # the FakeFrame patch above falls back to linecache). Written AFTER
+        # the instructor staging so answer.py always carries THIS pass's
+        # student code.
+        for _name, _contents in list(student_files.items()) + [('on_run.py', on_run)]:
+            try:
+                _parent = os.path.dirname(_name)
+                if _parent:
+                    os.makedirs(_parent, exist_ok=True)
+                with open(_name, 'w', encoding='utf-8') as _handle:
+                    _handle.write(_contents)
+            except (OSError, TypeError):
+                pass  # odd names/contents: grading proceeds, lines degrade
+        linecache.clearcache()
 
         # setup_environment = BlockPyEnvironment: HtmlFormatter + verify +
         # (unless skipped) tifa + set_input + start_trace -> run, exactly
@@ -260,6 +310,7 @@ def _studio_pedal_evaluate(evaluation, on_eval, options_json):
     from pedal.core.report import MAIN_REPORT
 
     del options_json  # reserved (parity with _studio_pedal_grade)
+    _studio_patch_pedal_traceback()
     try:
         MAIN_REPORT.feedback.clear()
         from pedal.sandbox.commands import evaluate, get_sandbox

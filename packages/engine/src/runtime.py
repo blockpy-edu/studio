@@ -11,6 +11,7 @@ import builtins
 import contextlib
 import io
 import json
+import linecache
 import os
 import sys
 import traceback
@@ -276,6 +277,24 @@ class StudioRuntime:
                 return str(run_sync(on_input(str(prompt))))
             print(prompt, end='')
             raise EOFError('No scripted input available')
+
+        # The executed source must exist as a REAL file under its compile
+        # filename: Python 3.13+ recovers traceback source lines through
+        # linecache (SyntaxError.text is no longer always carried), so a
+        # synthetic filename yields line-less tracebacks. The staged map is
+        # updated so artifact diff-back never reports the write itself.
+        try:
+            parent = os.path.dirname(filename)
+            if parent:
+                os.makedirs(parent, exist_ok=True)
+            with open(filename, 'w', encoding='utf-8') as handle:
+                handle.write(full)
+            self.staged[filename] = full
+            # Same filename, new contents every run - drop stale cache
+            # entries (MEMFS mtime granularity defeats checkcache).
+            linecache.clearcache()
+        except OSError:
+            pass  # absolute/odd filenames: run anyway, tracebacks degrade
 
         stdout, stderr = _Tee(on_stdout), _Tee(on_stderr)
         steps = []

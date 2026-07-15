@@ -12,13 +12,24 @@ through the Studio Pedal environment (`tools/run-grader-corpus.mjs`,
 
 ## Pedal / grading deltas
 
-1. **Pedal 3.0.1 syntax-error formatter crashes on Python 3.14** when
-   `SyntaxError.text` is `None` (`pedal/utilities/text.py:84 inject_line` →
-   `'NoneType' object has no attribute 'split'`; related `len()` variant in
-   the same path). Hits any assignment whose starting/student code does not
-   parse - 7 of 213 bakery graders. The Studio environment fails soft
-   (`system_error` feedback) instead of crashing the run. **Action: upstream
-   fix to Pedal.**
+1. **Pedal 3.0.1 syntax-error formatter crashes on Python 3.13+** — FIXED
+   in Studio (M7.12, 2026-07-15). Root cause pinned: CPython renamed
+   `FrameSummary._line` → `_lines` (3.13); pedal's `_fix_frame_line` writes
+   the recovered source to `_lines`, but its own `FakeFrame.line` property
+   still reads `_line`, so `format_line` receives `None` and dies in
+   `inject_line` (`'NoneType' object has no attribute 'split'`) — every
+   student syntax error became an Internal Grading Error (223/223 bakery
+   graders on the broken-code conformance pass). Studio fix, two parts:
+   (a) `pedal-env.py` `_studio_patch_pedal_traceback()` makes
+   `FakeFrame.line` fall back `_line` → `_lines` → `linecache`;
+   (b) executed source is always staged as a REAL file under its compile
+   filename (runtime.py writes `answer.py` per run; the grading pass writes
+   the student files + `on_run.py`), because Python 3.13+ recovers
+   traceback/SyntaxError source lines through linecache — synthetic-only
+   filenames print line-less tracebacks even without the crash. **Action:
+   upstream the FakeFrame `_lines` fix (+ a None-guard in `format_line`'s
+   3.13 branch) to Pedal; the shim is version-guarded by an idempotence
+   flag and harmless once fixed.**
 2. **`ast.Str` (and friends) removed in Python 3.12** - graders using the
    deprecated `ast` constant node classes crash (1 bakery grader:
    `bakery_sequences_strings_code_double_mutation`). **Action: curriculum

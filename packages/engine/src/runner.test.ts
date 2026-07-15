@@ -55,6 +55,22 @@ describe('student.run', () => {
     expect(result.error?.studentLine).toBe(1);
   });
 
+  // M7.12: the executed source is staged as a REAL file under its compile
+  // filename - Python 3.13+ recovers traceback source lines via linecache,
+  // so synthetic filenames would print line-less tracebacks.
+  it('runtime tracebacks carry the offending SOURCE LINE (real-file staging)', async () => {
+    const result = await runner.execute(job({ code: 'x = 1\nboom_here = 1 / 0\n' }));
+    expect(result.success).toBe(false);
+    expect(result.error?.traceback).toContain('boom_here = 1 / 0');
+    // The staged write itself is not a run artifact.
+    expect(Object.keys(result.artifacts)).not.toContain('answer.py');
+    // ...and a SECOND run with different code shows ITS line, not a stale
+    // linecache entry for the same filename.
+    const second = await runner.execute(job({ code: 'y = 2\nother_bug = [][0]\n' }));
+    expect(second.error?.traceback).toContain('other_bug = [][0]');
+    expect(second.error?.traceback).not.toContain('boom_here');
+  });
+
   it('student tracebacks never leak the <exec> harness frames (M7.1)', async () => {
     const runtime = await runner.execute(job({ code: 'def f():\n    return 1 / 0\nf()\n' }));
     expect(runtime.error?.traceback).toContain('answer.py');

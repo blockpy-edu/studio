@@ -119,6 +119,27 @@ if not assert_plot('line', [1, 2, 3]):
     expect(result.feedback!.hide_correctness).toBe(false);
   }, 60_000);
 
+  // Pedal 3.0.1 + Python 3.13/3.14 regression (M7.12): the FakeFrame._lines
+  // rename bug turned EVERY student syntax error into an Internal Grading
+  // Error ("'NoneType' object has no attribute 'split'"). The pedal-env
+  // shim + real-file staging must yield proper syntax feedback instead.
+  it('student syntax errors grade as Syntax Error feedback, not system_error', async () => {
+    const result = await runner.execute({
+      id: 'pedal-syntax',
+      phase: 'instructor.on_run',
+      files: {},
+      code: 'print("hi")\ndef broken(:\n',
+      pedal: { onRun: 'from pedal import *\n' },
+    });
+    expect(result.success).toBe(true);
+    expect(result.feedback!.system_error).toBeUndefined();
+    expect(result.feedback!.success).toBe(false);
+    expect(result.feedback!.title).toBe('Syntax Error');
+    // The offending source line is recovered (linecache via the staged
+    // real answer.py / the student_files fallback).
+    expect(result.feedback!.message).toContain('def broken(:');
+  }, 60_000);
+
   it('normal student.run jobs still work on the same runner', async () => {
     const result = await runner.execute({
       id: 'pedal-3',
