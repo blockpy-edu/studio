@@ -18,6 +18,26 @@ import { gradeQuizWire } from './demo-quiz-grader';
 
 const SHOWCASE_KEY = 'showcase';
 
+/**
+ * Groups the vite middleware registered beyond the committed demo bundle
+ * (the FULL bakery course, when courses/bakery_course.json is on disk).
+ * Their assignment payloads stay server-side; the browser only needs the
+ * nav/typeIndex boot data. Empty on the static Pages build (404 → []).
+ */
+let extraGroups: DemoGroup[] = [];
+
+async function fetchExtraGroups(): Promise<DemoGroup[]> {
+  try {
+    const response = await fetch('/api/_dev/groups', { method: 'POST' });
+    if (!response.ok) return [];
+    const data = (await response.json()) as { groups?: DemoGroup[] };
+    const known = new Set(DEMO_GROUPS.map((group) => group.key));
+    return (data.groups ?? []).filter((group) => !known.has(group.key));
+  } catch {
+    return [];
+  }
+}
+
 function readBaseConfig(): BootConfig {
   const configElement = document.querySelector('#blockpy-config');
   if (!configElement?.textContent) {
@@ -107,6 +127,7 @@ function renderGroupPicker(onChange: (key: string) => void): void {
   const options: Array<[string, string]> = [
     [SHOWCASE_KEY, 'Showcase (every surface)'],
     ...DEMO_GROUPS.map((group): [string, string] => [group.key, `Bakery ${group.name}`]),
+    ...extraGroups.map((group): [string, string] => [group.key, `Course ${group.name}`]),
   ];
   for (const [value, text] of options) {
     const option = document.createElement('option');
@@ -150,23 +171,32 @@ function mountGroup(key: string): void {
   // outer #blockpy-root keeps that contract).
   const freshRoot = document.createElement('div');
   root.replaceChildren(freshRoot);
-  const group = DEMO_GROUPS.find((candidate) => candidate.key === key) ?? null;
+  const group =
+    DEMO_GROUPS.find((candidate) => candidate.key === key) ??
+    extraGroups.find((candidate) => candidate.key === key) ??
+    null;
   handle = mountConfig(freshRoot, configForGroup(baseConfig, group), extras);
 }
 
 // The picker bar is part of the dev-shell chrome: one flag
 // (display.devHarness in #blockpy-config) hides it together with the
 // App's "Dev harness - …" header line. ?group= deep links still work.
-if (baseConfig.display.devHarness ?? false) {
-  renderGroupPicker((key) => {
-    const url = new URL(location.href);
-    if (key === SHOWCASE_KEY) url.searchParams.delete('group');
-    else url.searchParams.set('group', key);
-    // The nav writes assignment_id on dispatch; a group swap starts fresh.
-    url.searchParams.delete('assignment_id');
-    history.replaceState(null, '', url);
-    mountGroup(key);
-  });
+// Full-course groups arrive over the wire, so the boot awaits them before
+// deep-link mounting (?group=full_… must resolve on first paint).
+async function start(): Promise<void> {
+  extraGroups = await fetchExtraGroups();
+  if (baseConfig.display.devHarness ?? false) {
+    renderGroupPicker((key) => {
+      const url = new URL(location.href);
+      if (key === SHOWCASE_KEY) url.searchParams.delete('group');
+      else url.searchParams.set('group', key);
+      // The nav writes assignment_id on dispatch; a group swap starts fresh.
+      url.searchParams.delete('assignment_id');
+      history.replaceState(null, '', url);
+      mountGroup(key);
+    });
+  }
+  mountGroup(currentGroupKey());
 }
 
-mountGroup(currentGroupKey());
+void start();

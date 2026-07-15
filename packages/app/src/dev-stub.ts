@@ -59,6 +59,86 @@ for (const group of DEMO_GROUPS) {
 }
 
 /**
+ * Register additional demo groups at runtime. The vite dev middleware uses
+ * this to serve the ENTIRE bakery course from the untracked
+ * courses/bakery_course.json (vite.config.ts) — dev/e2e only; the committed
+ * demo bundle stays the two showcase groups.
+ */
+export function registerDemoGroups(groups: DemoGroup[]): void {
+  for (const group of groups) {
+    if (DEMO_GROUPS.some((existing) => existing.key === group.key)) continue;
+    DEMO_GROUPS.push(group);
+    for (const assignment of group.assignments) {
+      if (!DEMO_ASSIGNMENTS.has(assignment.id)) {
+        DEMO_ASSIGNMENTS.set(assignment.id, assignment);
+      }
+    }
+  }
+}
+
+/** A full blockpy-server course export (courses/bakery_course.json). */
+export interface CourseExport {
+  groups: Array<{ id: number; name: string; url: string }>;
+  assignments: DemoAssignmentRecord[];
+  memberships: Array<{ assignment_group_id: number; assignment_id: number }>;
+}
+
+/** Natural-ish sort key for "1A3.1) Basic Output" style names. */
+const nameKey = (name: string): string =>
+  name.replace(/\d+/g, (digits) => digits.padStart(6, '0')).toLowerCase();
+
+/**
+ * Pure port of tools/extract-demo-groups.mjs group shaping: course export →
+ * DemoGroups (name-sorted; export positions are all 0 — see the tool's
+ * ordering note). Keys are `<keyPrefix><group url>`.
+ */
+export function buildDemoGroups(course: CourseExport, keyPrefix = 'full_'): DemoGroup[] {
+  const byId = new Map(course.assignments.map((assignment) => [assignment.id, assignment]));
+  return course.groups
+    .map((group) => {
+      const members = course.memberships
+        .filter((membership) => membership.assignment_group_id === group.id)
+        .map((membership) => byId.get(membership.assignment_id))
+        .filter((assignment): assignment is DemoAssignmentRecord => assignment !== undefined)
+        .sort((a, b) => nameKey(a.name).localeCompare(nameKey(b.name)));
+      const typeIndex: AssignmentTypeIndex = {
+        quiz: [],
+        reading: [],
+        textbook: [],
+        java: [],
+        typescript: [],
+        explain: [],
+        blockpy: [],
+      };
+      const slots = typeIndex as unknown as Record<string, number[]>;
+      for (const assignment of members) {
+        (slots[assignment.type] ?? typeIndex.blockpy).push(assignment.id);
+      }
+      return {
+        key: `${keyPrefix}${group.url}`,
+        id: group.id,
+        name: group.name,
+        url: group.url,
+        typeIndex,
+        nav: members.map((assignment) => ({
+          id: assignment.id,
+          name: assignment.name,
+          url: `#${assignment.id}`,
+          subordinate: assignment.subordinate === true,
+          hidden: assignment.hidden === true,
+          correct: false,
+        })),
+        assignments: members.map((assignment) => {
+          const record = { ...assignment };
+          delete record['owner_id__email'];
+          return record;
+        }),
+      };
+    })
+    .sort((a, b) => nameKey(a.name).localeCompare(nameKey(b.name)));
+}
+
+/**
  * Last-saved answer document per assignment (legacy save_file). The quiz
  * grading path needs it: submit sends only ids, the "server" grades the
  * stored submission.
@@ -709,6 +789,21 @@ const routes: Record<string, (params: URLSearchParams, grader?: DemoQuizGrader) 
   '/api/start_assignment': () => ({ success: true }),
   // Clock "activity" mode total (spec §9.4): 25 minutes of prior sessions.
   '/api/estimate_group_duration': () => ({ success: true, duration: 1500 }),
+  // Dev-harness-only: the registered group list (sans assignment payloads)
+  // so the browser picker can offer full-course groups the middleware
+  // registered from courses/bakery_course.json. Not a blockpy-server route.
+  '/api/_dev/groups': () => ({
+    success: true,
+    groups: DEMO_GROUPS.map(({ key, id, name, url, typeIndex, nav }) => ({
+      key,
+      id,
+      name,
+      url,
+      typeIndex,
+      nav,
+      assignments: [],
+    })),
+  }),
 };
 
 export interface DevStubResponse {

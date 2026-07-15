@@ -2,7 +2,7 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    include: ['packages/*/src/**/*.test.{ts,tsx}'],
+    include: ['packages/*/src/**/*.test.{ts,tsx}', 'conformance/**/*.test.ts'],
     environment: 'node',
     // Chrome tests cold-mount Blockly + CM6 in jsdom; under full-suite
     // parallelism the first mount in a file can exceed the 5 s default on

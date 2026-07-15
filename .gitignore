@@ -11,6 +11,8 @@ coverage/
 # Test artifacts
 playwright-report/
 test-results/
+conformance/bakery/bakery-report.*
+conformance/bakery/ui-report.*
 
 # Unscrubbed recorder output (scrubbed transcripts live in docs/appendices/transcripts/)
 spikes/*.har

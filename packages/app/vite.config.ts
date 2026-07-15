@@ -1,6 +1,15 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
-import { routeDevRequest, type DemoQuizGrader } from './src/dev-stub';
+import {
+  buildDemoGroups,
+  registerDemoGroups,
+  routeDevRequest,
+  type CourseExport,
+  type DemoQuizGrader,
+} from './src/dev-stub';
 
 /**
  * Stub blockpy-server endpoints for the dev harness + smoke tests. The
@@ -12,6 +21,26 @@ function devApi(): Plugin {
   return {
     name: 'blockpy-dev-api',
     configureServer(server) {
+      // FULL bakery course (dev/e2e only): when the untracked course export
+      // exists on disk, register every group so ?group=full_<url> serves
+      // real curriculum — the bakery UI walker (e2e/bakery-walk.spec.ts)
+      // drives these. The committed demo bundle stays small.
+      const coursePath = join(
+        dirname(fileURLToPath(import.meta.url)),
+        '..',
+        '..',
+        'courses',
+        'bakery_course.json',
+      );
+      if (existsSync(coursePath)) {
+        try {
+          const course = JSON.parse(readFileSync(coursePath, 'utf8')) as CourseExport;
+          registerDemoGroups(buildDemoGroups(course));
+          server.config.logger.info(`blockpy-dev-api: registered full bakery course`);
+        } catch (error) {
+          server.config.logger.warn(`blockpy-dev-api: course export unreadable: ${String(error)}`);
+        }
+      }
       // The quiz grader imports quizzer TS - node can't execute that from
       // the config bundle, so vite's own transform pipeline loads it.
       let graderPromise: Promise<DemoQuizGrader> | null = null;

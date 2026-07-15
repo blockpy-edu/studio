@@ -352,7 +352,9 @@ export function QuestionView(props: QuestionViewProps) {
   })();
 
   return (
-    <div className="card m-4 quizzer-question-card">
+    // data-question-id: stable automation/deep-link hook (the editor card
+    // has the same attribute) - the bakery UI walker fills answers by id.
+    <div className="card m-4 quizzer-question-card" data-question-id={question.id}>
       <div className="quizzer-question card-body">
         <span className="float-right">
           <StatusSquare status={status} indexId={index} anchor />

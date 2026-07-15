@@ -1,0 +1,11 @@
+{
+  "_comment": "Known-good solutions for bakery assignments that do not ship a !correct.py, keyed by assignment url. Grown as the conformance report's solution-missing queue is worked through; every entry is validated by the conformance suite itself (solution must grade success). Entries that STILL fail are deliberate probes documenting assignments that can never grade correct.",
+  "solutions": {
+    "bakery_intro_console_code_basic_output": "print(\"Python is great!\")\n",
+    "bakery_intro_console_code_now_you_print": "print(\"This is programming!\")\n",
+    "print_input": "print(input(\"What is your favorite animal?\"))\n",
+    "bakery_intro_values_print_literals": "print(7)\nprint(\"triangle\")\nprint(.01)\n",
+    "bakery_intro_math_code_print_ops": "print(60 * 24)\nprint(12 * 5280)\nprint(123434 % 60)\nprint(400 ** 2)\n",
+    "bakery_intro_eval_code_quick_calc": "2+3\nprint(4+5)\n"
+  }
+}
