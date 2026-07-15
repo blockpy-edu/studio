@@ -798,6 +798,66 @@ test('a fatal engine crash settles and the worker self-heals (§6.6)', async ({ 
   await expect(page.locator('.blockpy-printer')).toContainText('alive 42', { timeout: 120_000 });
 });
 
+// A fatal crash inside the GRADING pass (the Pedal cait recursion bug that
+// motivated §6.6 recovery): executePedal fail-softs the job, so only the
+// post-job stack canary notices the dead interpreter. The student sees the
+// internal-error feedback (+ LD-36 bug icon) and the NEXT run must work.
+test('a grader fatal is absorbed and the next run works (§6.6 canary)', async ({ page }) => {
+  test.skip(!process.env.PYODIDE_E2E, 'set PYODIDE_E2E=1 to run');
+  test.setTimeout(300_000);
+  await page.goto('/');
+  const content = page.locator('.cm-editor .cm-content').first();
+  // Boot + first grading pass (installs the Pedal wheels).
+  await content.click();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.type('print("boot")');
+  await page.locator('button.blockpy-run').click();
+  await expect(page.locator('.blockpy-printer')).toContainText('boot', { timeout: 240_000 });
+  await expect(page.locator('button.blockpy-run')).not.toHaveClass(/blockpy-run-running/, {
+    timeout: 240_000,
+  });
+  // Instructor breaks the grader with recursion through C layers (repr of
+  // a deeply nested list) past a raised Python limit — the cait_node-style
+  // failure: plain Python recursion converts to a catchable RecursionError,
+  // but C-layer recursion exhausts the wasm stack for real, fataling the
+  // interpreter DURING grading, not the student run.
+  await page.locator('#blockpy-as-instructor').check();
+  await page.locator('.nav-link', { hasText: 'On Run' }).click();
+  const onRunContent = page.locator('.cm-editor .cm-content').first();
+  await onRunContent.click();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.type(
+    'import sys\nsys.setrecursionlimit(10**9)\nx = []\nfor _ in range(200000):\n    x = [x]\n\nrepr(x)',
+  );
+  await page.locator('.nav-link', { hasText: 'answer.py' }).click();
+  await page.locator('button.blockpy-run').click();
+  // The run itself succeeds; grading fails as an internal error (Pedal
+  // fail-soft when the fatal converts, the adapter's grading-failure path
+  // when it does not) and the traceback lights the bug icon (LD-36).
+  await expect(page.locator('.blockpy-feedback')).toContainText(/Internal (Grading )?Error/, {
+    timeout: 120_000,
+  });
+  await expect(page.locator('.blockpy-quick-menu .blockpy-student-error')).toBeVisible();
+  // Give the canary reload time to finish rebooting the interpreter.
+  await page.waitForTimeout(10_000);
+  // Fix the grader and run again: the fresh interpreter reinstalls Pedal
+  // (pedalReady was reset by runner-reloaded) and grades normally.
+  await page.locator('.nav-link', { hasText: 'On Run' }).click();
+  await onRunContent.click();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.type('from pedal import *\ngently("Healed grader.", label="healed")');
+  await page.locator('.nav-link', { hasText: 'answer.py' }).click();
+  await page.locator('#blockpy-as-instructor').uncheck();
+  await content.click();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.type('print("healed", 6 * 7)');
+  await page.locator('button.blockpy-run').click();
+  await expect(page.locator('.blockpy-printer')).toContainText('healed 42', { timeout: 240_000 });
+  await expect(page.locator('.blockpy-feedback')).toContainText('Healed grader.', {
+    timeout: 240_000,
+  });
+});
+
 test('focused editor mode: enter grows the editor, drawer serves feedback, Esc restores (M4.2)', async ({
   page,
 }) => {

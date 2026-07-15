@@ -102,6 +102,50 @@ describe('EngineClient', () => {
     expect(spawned).toHaveLength(2);
   });
 
+  it('fires onRunnerReload for worker heals AND client respawns (§6.6)', async () => {
+    let reloads = 0;
+    // Worker-side heal: the 'runner-reloaded' message reaches the callback.
+    const { factory } = fakePortFactory({
+      onRun: (message, post) => {
+        post({ kind: 'runner-reloaded' });
+        post({
+          kind: 'result',
+          result: {
+            jobId: message.job.id,
+            success: true,
+            stdout: '',
+            stderr: '',
+            artifacts: {},
+            durationMs: 1,
+          },
+        });
+      },
+    });
+    const client = new EngineClient({
+      workerFactory: factory,
+      onRunnerReload: () => {
+        reloads += 1;
+      },
+    });
+    await client.run(job('healed'));
+    expect(reloads).toBe(1);
+    // Client-side respawn (compat hard stop) discards the interpreter too.
+    const hang = fakePortFactory({ onRun: () => undefined });
+    let respawnReloads = 0;
+    const hardStopClient = new EngineClient({
+      workerFactory: hang.factory,
+      onRunnerReload: () => {
+        respawnReloads += 1;
+      },
+    });
+    expect(respawnReloads).toBe(0); // the FIRST spawn is not a reload
+    const pending = hardStopClient.run(job('stuck'));
+    await new Promise((r) => setTimeout(r, 0));
+    hardStopClient.interrupt('stuck');
+    await pending;
+    expect(respawnReloads).toBe(1);
+  });
+
   it('restartKernel respawns and re-reports the mode', async () => {
     const { factory, spawned } = fakePortFactory({});
     const modes: string[] = [];

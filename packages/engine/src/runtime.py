@@ -19,6 +19,9 @@ import warnings
 
 MOUNT = '/mnt/blockpy'
 TRACE_STORAGE_CAP = 10000
+# Pyodide tunes the recursion limit to the wasm stack at boot; remember it
+# so the health canary scales to platforms with shallow stacks (§6.6).
+BOOT_RECURSION_LIMIT = sys.getrecursionlimit()
 
 # Plot capture (spec 10.2): headless Agg backend — figures are snapshotted
 # into PNGs after each run instead of "shown". Set before matplotlib can be
@@ -349,6 +352,31 @@ class StudioRuntime:
 
     def clear_namespace(self):
         self.last_globals = None
+
+    # -- crash recovery (spec 6.6) ---------------------------------------------
+
+    def stack_canary(self):
+        """Probe wasm stack headroom after a job (§6.6 crash recovery).
+
+        A stack-overflow fatal (unbounded recursion through C layers, e.g. a
+        recursive __getattr__ — pyodide#5959/#5987) can leave the interpreter
+        dead or with a corrupted stack pointer WITHOUT failing the job that
+        caused it (grading fail-softs around it). On a healthy interpreter
+        this probe returns instantly; on a poisoned one it triggers the
+        fatal NOW, JS-side, where the worker host answers by reloading the
+        runner — instead of the fatal landing on the student's next Run.
+        """
+        prev = sys.getrecursionlimit()
+        depth = min(500, BOOT_RECURSION_LIMIT // 2)
+
+        def probe(n):
+            return probe(n - 1) if n else 0
+
+        try:
+            sys.setrecursionlimit(max(prev, depth * 4))
+            return probe(depth)
+        finally:
+            sys.setrecursionlimit(prev)
 
     # -- error shaping (spec 6.3) ----------------------------------------------
 

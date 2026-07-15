@@ -63,6 +63,7 @@ interface RuntimeHandle {
   ): PyProxy;
   evaluate(expression: string, onStdout: StreamCallback, onStderr: StreamCallback): PyProxy;
   clear_namespace(): void;
+  stack_canary(): number;
 }
 
 /**
@@ -124,6 +125,21 @@ export class JobRunner {
   /** Clear the retained REPL namespace (legacy: cleared on new runs). */
   clearNamespace(): void {
     this.runtime.clear_namespace();
+  }
+
+  /**
+   * Post-job stack probe (§6.6 crash recovery): false means the interpreter
+   * is dead (a prior fatal) or its stack is poisoned (a stack-overflow
+   * fatal survived by a fail-soft catch — the canary triggers the deferred
+   * fatal here, inside this try, instead of on the next job).
+   */
+  healthCheck(): boolean {
+    try {
+      this.runtime.stack_canary();
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**

@@ -158,7 +158,14 @@ export type WorkerToClient =
   | { kind: 'stdout'; jobId: string; chunk: string }
   | { kind: 'stderr'; jobId: string; chunk: string }
   | { kind: 'input-request'; jobId: string; prompt: string }
-  | { kind: 'result'; result: EngineResult };
+  | { kind: 'result'; result: EngineResult }
+  /**
+   * Crash recovery (§6.6): the worker replaced a dead/poisoned interpreter
+   * with a fresh one. All interpreter state is gone — installed wheels
+   * (Pedal!), the REPL namespace, staged files. Clients re-arm anything
+   * keyed on "already installed" (the engine adapter resets pedalReady).
+   */
+  | { kind: 'runner-reloaded' };
 
 /**
  * Compat mode is the PRIMARY mode: SharedArrayBuffer is confirmed

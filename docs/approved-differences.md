@@ -745,3 +745,32 @@ blockKeyboardNav`). §16.3 frames this as best-effort: the plugin's
   `save_file` failures carry no `forkable` flag (blockpy.py:275-288) —
   the proactive notice covers that path client-side.
 - **Wire impact:** none — client-side chrome only.
+
+## LD-43 — Engine crash recovery: stack-overflow fatals self-heal (2026-07-15)
+
+- **Legacy:** Skulpt executed as ordinary JS — runaway recursion raised a
+  catchable JS/Skulpt error and the engine survived by construction; there
+  was no "dead interpreter" state to recover from.
+- **Studio:** a wasm stack-overflow fatal (unbounded recursion through C
+  layers — e.g. a recursive `__getattr__`, hit in the wild via Pedal
+  3.0.1's `cait_node.__getattr__` under `prevent_operation`; see
+  pyodide#5959/#5987) kills the Pyodide interpreter but not the worker,
+  and can even poison the interpreter WITHOUT failing the job when a
+  fail-soft catch (grading) swallows it — the fatal then lands on the
+  NEXT run's first `runPython`. Recovery contract (§6.6): (1) every
+  interpreter reload reuses the init `indexURL` (reloading without it
+  resolved `pyodide-lock.json` against the wrong base — the
+  "`<!doctype` is not valid JSON" dead-engine failure); (2) after every
+  job the worker runs a stack canary (`_studio_runtime.stack_canary`,
+  depth scaled to the boot recursion limit) and replaces a dead/poisoned
+  interpreter before the next job; (3) recovered fatals surface as
+  `EngineCrash` with a student-readable message ("usually unbounded
+  recursion… the engine has been restarted"), raw cause kept in the
+  traceback for the dev console; (4) the worker posts `runner-reloaded`
+  (and the client fires it on hard-stop respawns too) so the adapter
+  re-arms the Pedal wheel install (long wall clock + LD-37 indicator).
+  WorkerHost serializes init/run/restart handling so a job posted during
+  a reload never executes against the corpse (input-response bypasses
+  the chain — a queued run awaits it).
+- **Wire impact:** none — engine protocol gains the worker→client
+  `runner-reloaded` message; no server contract touched.

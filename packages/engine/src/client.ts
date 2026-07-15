@@ -39,6 +39,13 @@ export interface EngineClientOptions {
   indexURL?: string;
   /** Reported once per (re)spawn — log as the X-Engine.Mode event (§6.6). */
   onMode?: (mode: EngineMode) => void;
+  /**
+   * Fired whenever the interpreter is replaced with a fresh one — the
+   * worker healing a fatal crash ('runner-reloaded', §6.6) or a client
+   * respawn (hard stop / restart-kernel). Interpreter state (installed
+   * wheels, REPL namespace) is gone; callers reset caches keyed on it.
+   */
+  onRunnerReload?: () => void;
   /** Default wall-clock limit applied when a job has none. */
   defaultWallMs?: number;
   schedule?: (fn: () => void, ms: number) => () => void;
@@ -138,8 +145,13 @@ export class EngineClient {
     { callbacks: RunCallbacks; resolve: (r: EngineResult) => void }
   >();
 
+  private respawned = false;
+
   private spawn(): void {
     this.port?.terminate();
+    // Any respawn after the first spawn discards interpreter state (§6.6).
+    if (this.respawned) this.options.onRunnerReload?.();
+    this.respawned = true;
     const port = this.options.workerFactory();
     this.port = port;
     this.ready = new Promise((resolveReady) => {
@@ -185,6 +197,9 @@ export class EngineClient {
         });
         return;
       }
+      case 'runner-reloaded':
+        this.options.onRunnerReload?.();
+        return;
       case 'ready':
         return;
     }

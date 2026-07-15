@@ -436,6 +436,8 @@ Investigation: Studio has NO fork implementation — only the reserved `forkAssi
 
 **Status (2026-07-14): all ten milestones landed same-day.** LD-35…LD-42 written; A4 gained `enable_autocomplete` (+ back-filled `allow_real_requests`); skulpt-compat documents the `<exec>` strip. Residuals, each tracked on its milestone: the gated `PYODIDE_E2E` boot-indicator assertion, the dark-nav axe extension (both ride the next e2e pass), M7.2 slice-2 keys, and the LD-42 server-team flags (repoint `forkAssignment` at `assignments.fork`; group-fork route; LD-35 server mirror).
 
+**M7.10 — Engine crash recovery (landed 2026-07-15, LD-43).** Field report: second `input()` run fataled ("Maximum call stack size exceeded") after a Pedal 3.0.1 `cait_node.__getattr__` runaway (`prevent_operation`; Pedal fix upstream by maintainer). Root causes fixed in Studio: interpreter reloads dropped the init `indexURL` (the "`<!doctype` is not valid JSON" permanently-dead engine); grading fail-softs swallowed fatals so the corpse met the next run; no defense against poisoned-but-alive interpreters (pyodide#5987). Now: reloads reuse the indexURL, a post-job stack canary replaces dead/poisoned interpreters between jobs, recovered fatals present as `EngineCrash` with a student-readable message, `runner-reloaded` re-arms the Pedal install path (client respawns too), and WorkerHost serializes message handling so queued jobs wait out a reload. Gated e2e: grader-fatal-then-healed-run (§6.6 canary).
+
 ---
 
 ## 9. Cross-cutting workstreams (run through all phases)

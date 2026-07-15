@@ -95,6 +95,12 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
                 }),
           ),
         indexURL: options.indexURL,
+        // Crash recovery (§6.6): a reloaded/respawned interpreter has no
+        // Pedal wheels — the next grading job must get the install-length
+        // wall clock and the LD-37 one-time-setup indicator again.
+        onRunnerReload: () => {
+          pedalReady = false;
+        },
       });
     }
     return client;
@@ -221,7 +227,12 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
           images,
           feedback: {
             category: error?.type === 'SyntaxError' ? 'syntax' : 'runtime',
-            label: `${error?.type ?? 'Error'}${where}`,
+            // EngineCrash = a recovered interpreter fatal (§6.6): the type
+            // name is engine jargon; the message carries the explanation.
+            label:
+              error?.type === 'EngineCrash'
+                ? 'Engine Restarted'
+                : `${error?.type ?? 'Error'}${where}`,
             message: escapeHtml(error?.message ?? ''),
           },
         };
