@@ -1,5 +1,5 @@
 /**
- * Trace / State Explorer — Row 2 right, shown in place of the feedback pane
+ * Trace / State Explorer - Row 2 right, shown in place of the feedback pane
  * (legacy `ui.secondRow.isTraceVisible`; A8 §1 TRACE_HTML markup:
  * `.blockpy-trace.col-md-6` with the step control strip and the
  * Name/Type/Value variables table). Data: the engine's E3 trace buffer.
@@ -102,7 +102,7 @@ export function TraceExplorer({ onStepLine }: TraceExplorerProps) {
               >
                 <Icon name="stepLast" />
               </button>
-              <span className="input-group-text">Line {step?.studentLine ?? '—'}</span>
+              <span className="input-group-text">Line {step?.studentLine ?? '-'}</span>
             </div>
           </div>
           <p>Variables after this step:</p>

@@ -1,5 +1,5 @@
 /**
- * BlockPy chrome — port of the legacy stylesheets (B6 visual parity;
+ * BlockPy chrome - port of the legacy stylesheets (B6 visual parity;
  * layout and color values are NORMATIVE).
  *
  * Sources (see docs/appendices/A8-ui-parity.md for the conformance fixture):
@@ -17,7 +17,7 @@
  */
 
 /* ==========================================================================
-   Part 1 — blockpy.css port (bp.css)
+   Part 1 - blockpy.css port (bp.css)
    ========================================================================== */
 
 /** Entire Page **/
@@ -31,7 +31,7 @@
   padding-bottom: 5px;
 }
 
-/* bp.css:12-18 — percentage heights likely don't bind (A8 §5.8); ported as-is */
+/* bp.css:12-18 - percentage heights likely don't bind (A8 §5.8); ported as-is */
 .blockpy-bottom {
   height: 25%;
 }
@@ -356,7 +356,7 @@
 
 /* Panel title rows (Feedback/Trace/Console): flex, action button pushed
    right. Replaces the clearfix+float pattern whose floated .btn-sm forced
-   the row taller than the baseline-seated title — the "View Trace gap"
+   the row taller than the baseline-seated title - the "View Trace gap"
    (M3.2). */
 .blockpy-panel-header {
   display: flex;
@@ -368,7 +368,7 @@
   margin-left: auto;
 }
 
-/* Filesystem tree rail (M3.7; Studio extension — off by default). */
+/* Filesystem tree rail (M3.7; Studio extension - off by default). */
 .blockpy-file-tree-rail {
   border-right: 1px solid var(--blockpy-border-warm);
 }
@@ -446,7 +446,7 @@
   color: var(--blockpy-delete-maroon);
 }
 
-/* Docs browser panel (M4.3; Studio extension — docs_url). */
+/* Docs browser panel (M4.3; Studio extension - docs_url). */
 .blockpy-docs-rail {
   border-left: 1px solid var(--blockpy-border-warm);
 }
@@ -862,7 +862,7 @@ button.blockpy-run:focus {
   background-color: var(--blockpy-run-running);
 }
 
-/* Defined in legacy but never applied by legacy JS (A8 §5.2) — kept for parity */
+/* Defined in legacy but never applied by legacy JS (A8 §5.2) - kept for parity */
 .blockpy-content button.blockpy-run.blockpy-run-error {
   background-color: var(--blockpy-run-error);
 }
@@ -995,7 +995,7 @@ div.blockpy-blocks.blockpy-editor-menu.col-md-6 {
   color: var(--blockpy-neutral-0);
 }
 
-/* Footer badges carry 12px white text — the Bootstrap-3 brand hues fail
+/* Footer badges carry 12px white text - the Bootstrap-3 brand hues fail
    WCAG AA there (ready green was 2.5:1; audit M6.1, LD-29). Same hue
    families, darkened to >=4.5:1; retrying keeps its light amber with dark
    text instead. The feedback badges (label-*) keep the A8-normative
@@ -1010,7 +1010,7 @@ div.blockpy-blocks.blockpy-editor-menu.col-md-6 {
 
 .blockpy-content .badge.server-status-retrying {
   background-color: var(--blockpy-status-warning);
-  color: #212529; /* white on amber is 1.9:1 — dark text is 7.9:1 */
+  color: #212529; /* white on amber is 1.9:1 - dark text is 7.9:1 */
 }
 
 .blockpy-content .badge.server-status-failed {
@@ -1170,11 +1170,11 @@ div.blockpy-blocks.blockpy-editor-menu.col-md-6 {
 }
 
 /* ==========================================================================
-   Part 2 — bootstrap_retheme.css port (rt.css)
+   Part 2 - bootstrap_retheme.css port (rt.css)
    "Override bad accessibility in Bootstrap"
    ========================================================================== */
 
-/* Typography (rt.css:5-15) — B6 allows fonts to modernize with rationale,
+/* Typography (rt.css:5-15) - B6 allows fonts to modernize with rationale,
    but the 14px/12px hierarchy is layout-relevant (A8 §3.1) */
 body {
   font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -1230,7 +1230,7 @@ body {
   background-color: var(--blockpy-neutral-600);
 }
 
-/* Unscoped in legacy too — zeroes Bootstrap's negative row margins */
+/* Unscoped in legacy too - zeroes Bootstrap's negative row margins */
 .row {
   margin-left: 0px;
   margin-right: 0px;
@@ -1245,7 +1245,7 @@ body {
 }
 
 /* ==========================================================================
-   Part 3 — BlockMirror's own rules (bm.css)
+   Part 3 - BlockMirror's own rules (bm.css)
    ========================================================================== */
 
 /* bm.css:1-4 (CM5; border-left is commented out in the BlockMirror source) */
@@ -1301,7 +1301,7 @@ body {
 }
 
 /* ==========================================================================
-   highlight.js default theme, scoped to .blockpy-content (LD-10 — legacy
+   highlight.js default theme, scoped to .blockpy-content (LD-10 - legacy
    intended hljs highlighting in instructions/feedback but never loaded the
    library; studio bundles it, see chrome/highlight.ts). Values verbatim
    from highlight.js styles/default.css (BSD-3).
@@ -1400,7 +1400,7 @@ body {
   font-weight: bold;
 }
 
-/* Minified editor variant (§8.4) — compact reading-embedded editor.
+/* Minified editor variant (§8.4) - compact reading-embedded editor.
    Two columns: LEFT console above feedback, RIGHT toolbar above the code
    editor; stacks below the legacy 675px responsive breakpoint. The root
    also carries .blockpy-content, so the parchment frame and every scoped

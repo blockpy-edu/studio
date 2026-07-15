@@ -23,7 +23,7 @@ describe('Console engine-boot banner (LD-37)', () => {
     const view = render(<Console />);
     expect(view.container.querySelector('.blockpy-console-booting')).toBeNull();
     act(() => {
-      useEditorChromeStore.getState().setEngineBooting('Starting Python — one-time setup…');
+      useEditorChromeStore.getState().setEngineBooting('Starting Python - one-time setup…');
     });
     const banner = view.container.querySelector('.blockpy-console-booting');
     expect(banner).not.toBeNull();
@@ -54,7 +54,7 @@ describe('Console input() line', () => {
       '.blockpy-console-input input[disabled]',
     );
     expect(frozen?.value).toBe('penguin');
-    // The live answer is NOT folded into queuedInputs — otherwise the next
+    // The live answer is NOT folded into queuedInputs - otherwise the next
     // run would replay it instead of prompting again (grading gets live
     // answers separately, via the engine adapter).
     expect(useEditorChromeStore.getState().queuedInputs).toEqual([]);

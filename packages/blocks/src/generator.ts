@@ -1,5 +1,5 @@
 /**
- * Python code generator — Blockly's stock python generator with the
+ * Python code generator - Blockly's stock python generator with the
  * BlockMirror customizations applied (port of legacy `blockly_shims.js`).
  *
  * The customizations, verbatim from legacy:
@@ -10,7 +10,7 @@
  *  - `scrubNakedValue` keeps naked top-level expressions bare (no newline),
  *  - case-SENSITIVE variable naming (Blockly's Names DB lowercases name keys
  *    and compares case-insensitively by default, which would rename `dog`
- *    vs `Dog`; legacy patched both — reimplemented here against the
+ *    vs `Dog`; legacy patched both - reimplemented here against the
  *    Blockly 11 `Names` internals: Map-of-Maps db + dbReverse).
  */
 import * as Blockly from 'blockly/core';
@@ -21,7 +21,7 @@ export interface LegacyPythonGenerator extends PythonGenerator {
   blank: string;
   /** Modules already imported this generation pass. */
   imported_: Record<string, string>;
-  // Deprecated Blockly ORDER_ aliases — still present at runtime in v11 and
+  // Deprecated Blockly ORDER_ aliases - still present at runtime in v11 and
   // used verbatim by the ported legacy generators.
   ORDER_ATOMIC: number;
   ORDER_COLLECTION: number;
@@ -122,7 +122,7 @@ export function installGeneratorShims(): void {
  * internals (db: Map<type, Map<key, safeName>>).
  */
 function installCaseSensitiveNames(): void {
-  // Standalone shape (not an intersection with Blockly.Names — its private
+  // Standalone shape (not an intersection with Blockly.Names - its private
   // members would reduce the intersection to `never`).
   interface NamesInternals {
     db: Map<string, Map<string, string>>;

@@ -1,5 +1,5 @@
 /**
- * @blockpy/vfs — Layered virtual file system with the legacy filename
+ * @blockpy/vfs - Layered virtual file system with the legacy filename
  * adapter (spec §7). Conformance authority: docs/appendices/A1-filename-prefixes.md.
  */
 export {

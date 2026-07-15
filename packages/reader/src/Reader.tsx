@@ -1,15 +1,15 @@
 /**
- * Reading assignment component (spec §11.2) — port of the server-frontend
+ * Reading assignment component (spec §11.2) - port of the server-frontend
  * `<reader>` knockout component (blockpy-server frontend/components/
  * reader/reader.ts + reader.html).
  *
  * Pinned legacy semantics (A7 §4):
  *   - load ⇒ correct: `markRead()` fires as soon as the assignment +
- *     submission pair arrives — no scroll/dwell/video gate (reader.ts:
+ *     submission pair arrives - no scroll/dwell/video gate (reader.ts:
  *     154-156). Anonymous loads (no submission) never mark.
  *   - scroll/video engagement is telemetry only: escalating read pings
  *     (30 s · count) through the lti.fetchWindowSize postMessage loop,
- *     HTML5 video events, YouTube state changes, and tab visibility — all
+ *     HTML5 video events, YouTube state changes, and tab visibility - all
  *     `Resource.View`/`reading` events.
  *   - exam gate: `settings.start_timer_button` hides the group selector for
  *     unstarted students until "I am ready to start the exam!" posts
@@ -75,7 +75,7 @@ export interface MarkReadResponse {
 
 export interface ReaderProps {
   assignmentId: number;
-  /** The reading keeps its own loaded pair — legacy posts loadAssignment
+  /** The reading keeps its own loaded pair - legacy posts loadAssignment
    *  without adopting into the editor model (reader.ts:137-171). */
   loadAssignment: (assignmentId: number) => Promise<ReaderLoadResult | null>;
   /** updateSubmission {status: 1, correct: true} with the READING's ids
@@ -100,12 +100,12 @@ export interface ReaderProps {
   isInstructor?: () => boolean;
   /** POST blockpy/start_assignment (exam timer, reader.ts:109-135). */
   startAssignment?: (assignmentId: number, dateStartedIso: string) => Promise<{ success: boolean }>;
-  /** Fired on load and after a successful exam start — the app routes this
+  /** Fired on load and after a successful exam start - the app routes this
    *  into the navigation store's time-limit checker (legacy: the reader IS
    *  the AssignmentInterface running handleTimeCheck on its own pair). */
   onTimeLimitInfo?: (info: ReaderTimeLimitInfo) => void;
   /** Rendered above another assignment (§11.2); popout hidden by legacy
-   *  usage patterns is NOT implied — asPreamble only changes composition. */
+   *  usage patterns is NOT implied - asPreamble only changes composition. */
   asPreamble?: boolean;
 }
 
@@ -162,7 +162,7 @@ export function Reader(props: ReaderProps) {
     try {
       window.top?.postMessage({ subject: 'lti.fetchWindowSize' }, '*');
     } catch {
-      // Cross-origin top without postMessage access — ping loop just stops.
+      // Cross-origin top without postMessage access - ping loop just stops.
     }
   }, []);
 

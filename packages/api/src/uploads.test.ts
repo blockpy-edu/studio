@@ -71,7 +71,7 @@ describe('multipart uploads transport (server.js FormData paths)', () => {
     expect(fields['contents']).toBeInstanceOf(Blob);
     expect(fields['assignment_id']).toBe('101'); // base payload rides along
     expect(fields['delete']).toBeUndefined();
-    // Browser must set the multipart boundary — no Content-Type header.
+    // Browser must set the multipart boundary - no Content-Type header.
     expect(calls[0]!.headers['Content-Type']).toBeUndefined();
     expect(calls[0]!.headers['Authorization']).toBe('Bearer tok-1');
   });

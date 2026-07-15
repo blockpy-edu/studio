@@ -1,4 +1,4 @@
-/** Port of legacy `ast/ast_Import.js` — handles Import AND ImportFrom. */
+/** Port of legacy `ast/ast_Import.js` - handles Import AND ImportFrom. */
 // TODO: direct imports are not variables, because you can do stuff like:
 //         import os.path
 //       What should the variable be? Blockly will mangle it, but we should really be
@@ -112,7 +112,7 @@ defineBlock('ast_Import', {
 generator.forBlock['ast_Import'] = function (block) {
   const typed = block as ImportBlock;
   // Optional from part
-  // (Legacy read `this.from_`/`this.regulars_` — Blockly invokes forBlock
+  // (Legacy read `this.from_`/`this.regulars_` - Blockly invokes forBlock
   // with the block as `this`, so they are the same object as `block`.)
   let from = '';
   if (typed.from_) {

@@ -1,10 +1,10 @@
 /**
- * Local upload/download helpers (M7.4, LD-39) — ports of the legacy toolbar
+ * Local upload/download helpers (M7.4, LD-39) - ports of the legacy toolbar
  * flows: `uploadFile`/`downloadFile`/`sluggify` (abstract_editor.js:3-35)
  * and `convertIpynbToPython` (editor/python.js:161-181). Purely local: the
  * upload writes into the editor, the download saves the current code; no
  * server round trip. LD-39 delta: legacy auto-ran after upload
- * (python.js:462) — Studio does not.
+ * (python.js:462) - Studio does not.
  */
 
 interface IpynbCell {

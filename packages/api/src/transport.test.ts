@@ -121,7 +121,7 @@ describe('IP-change detection (LD-2c)', () => {
   });
 });
 
-describe('getJson (M4.7 — the GET-only /assignments/by_url route)', () => {
+describe('getJson (M4.7 - the GET-only /assignments/by_url route)', () => {
   it('builds the query string, sends the Bearer header, parses the envelope', async () => {
     let captured: { url: string; method?: string; headers?: Record<string, string> } | undefined;
     const fetch: FetchLike = async (url, init) => {

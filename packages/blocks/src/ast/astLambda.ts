@@ -71,7 +71,7 @@ registerConverter(
 
     let parsedArgs = 0;
     if (args !== null) {
-      // Legacy called `this.parseArgs(args, values, node.lineno)` — three
+      // Legacy called `this.parseArgs(args, values, node.lineno)` - three
       // args, leaving `ast_FunctionDef.js`'s fourth `node` parameter
       // undefined.
       parsedArgs = parseArgs.call(this, args, values, node.lineno);

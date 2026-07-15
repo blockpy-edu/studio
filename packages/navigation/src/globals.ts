@@ -1,10 +1,10 @@
 /**
- * Navigation compatibility globals (spec §15.3) — `URL_MAP`, `INDICES`,
+ * Navigation compatibility globals (spec §15.3) - `URL_MAP`, `INDICES`,
  * `FIRST_ID`, `LAST_ID`, `FULL_SELECTOR_DIV`, `loadNavigation()`, as the
  * assignment_groups.html macro defines them (:27-38, :40, :204). Course-
  * level scripts in the wild poke these; when the app owns the navigation
  * (no template macro on the page) it publishes them so those scripts don't
- * crash. Documented as DEPRECATED — new content should use
+ * crash. Documented as DEPRECATED - new content should use
  * `altAssignmentChangingFunction`/`markCorrect`.
  *
  * Every global is published only if currently undefined: on unmodified

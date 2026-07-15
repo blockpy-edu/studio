@@ -54,7 +54,7 @@ test('quick menu, footer, and highlighted instructions render per A8', async ({ 
   await expect(menu.locator('[title="Edit Inputs"]')).toBeVisible();
   await expect(menu.locator('[title="Toggle Images"]')).toBeVisible();
   await expect(menu.locator('.blockpy-menu-clock')).toHaveText(/^\d{1,2}:\d{2}(am|pm)$/);
-  // Pink bug icon stays dead (display:none) — legacy parity.
+  // Pink bug icon stays dead (display:none) - legacy parity.
   await expect(menu.locator('.blockpy-student-error')).toBeHidden();
   // Footer (Row 5): the boot load marks Assignment ready (legacy
   // _postBlocking lifecycle); untouched endpoints stay offline.
@@ -76,7 +76,7 @@ test('quick menu, footer, and highlighted instructions render per A8', async ({ 
 test('view-swap button toggles full and minified editors, code round-trips', async ({ page }) => {
   await page.goto('/');
   await page.locator('.blocklySvg').first().waitFor();
-  // Swap to the minified variant: compact chrome only — no file tabs,
+  // Swap to the minified variant: compact chrome only - no file tabs,
   // instructions, feedback, or footer; CM6 text editor + Run/Reset.
   await page.getByRole('button', { name: 'Switch to minified editor' }).click();
   await expect(page.locator('.blockpy-minified')).toBeVisible();
@@ -107,7 +107,7 @@ test('view-swap button toggles full and minified editors, code round-trips', asy
   expect(feedbackBox.y).toBeGreaterThanOrEqual(consoleBox.y + consoleBox.height - 1);
   expect(editorBox.y).toBeGreaterThanOrEqual(toolbarBox.y + toolbarBox.height - 1);
   await expect(page.locator('.blockpy-minified-feedback')).toContainText('Ready');
-  // Edit in minified, swap back — the full editor picks the change up from
+  // Edit in minified, swap back - the full editor picks the change up from
   // the VFS.
   const miniContent = page.locator('.blockpy-minified .cm-content');
   await miniContent.click();
@@ -329,7 +329,7 @@ test('reading assignment: content, load⇒correct, runnable block (§11.2)', asy
 test('quiz assignment: attempt lifecycle, autosave, server grading (§11.3)', async ({ page }) => {
   await page.goto('/');
   await page.locator('.blocklySvg').first().waitFor();
-  // Quiz 102 is subordinate (not in the nav selector) — dispatch through
+  // Quiz 102 is subordinate (not in the nav selector) - dispatch through
   // the host global, like the legacy loadAssignmentWrapper path.
   await page.evaluate(() =>
     (
@@ -343,13 +343,13 @@ test('quiz assignment: attempt lifecycle, autosave, server grading (§11.3)', as
   await expect(quiz.getByText('3 attempts left.').first()).toBeVisible();
   await expect(quiz.getByText('Variables can change.')).toHaveCount(0);
   await quiz.getByRole('button', { name: 'Start Quiz' }).first().click();
-  // ATTEMPTING: questions render — 2 fixed + 1 of the 2-question pool.
+  // ATTEMPTING: questions render - 2 fixed + 1 of the 2-question pool.
   await expect(quiz.getByText('Quiz In Progress!').first()).toBeVisible();
   await expect(quiz.locator('.quizzer-question-card')).toHaveCount(3);
   await expect(quiz.getByText('Variables can change.')).toBeVisible();
   // Answer + autosave: the save_file POST carries the QUIZ's ids and the
   // whole submission JSON document.
-  // Match the ANSWER save by content — the Start-triggered attempt save
+  // Match the ANSWER save by content - the Start-triggered attempt save
   // races with this listener ('+' is a space in urlencoded bodies).
   const decodeForm = (body: string) => decodeURIComponent(body.replace(/\+/g, ' '));
   const savePost = page.waitForRequest(
@@ -378,7 +378,7 @@ test('quiz assignment: attempt lifecycle, autosave, server grading (§11.3)', as
   await expect(quiz.getByText(/You have completed the quiz/).first()).toBeVisible();
   await expect(quiz.getByText('Right!')).toBeVisible();
   await expect(quiz.locator('.quizzer-feedback.bg-success').first()).toBeVisible();
-  // markCorrect(102): subordinate id — the numerator bumps with no ✔
+  // markCorrect(102): subordinate id - the numerator bumps with no ✔
   // anywhere (the legacy unknown-option quirk, A7 §2).
   const header = page.locator('.assignment-selector-div').first();
   await expect(header.locator('.completion-rate')).toHaveText('1');
@@ -397,7 +397,7 @@ test('persistent instructor mode reaches the quiz editor from any surface', asyn
   await page.goto('/');
   await page.locator('.blocklySvg').first().waitFor();
   // The icon toggle lives at the far right of the TOP group-nav bar
-  // (LD-34) — it survives switching to a quiz surface.
+  // (LD-34) - it survives switching to a quiz surface.
   const toggle = page.locator('#blockpy-instructor-mode');
   await expect(toggle).toBeVisible();
   await expect(toggle).toHaveAttribute('aria-pressed', 'false');
@@ -414,7 +414,7 @@ test('persistent instructor mode reaches the quiz editor from any surface', asyn
   const editor = page.locator('.quizzer-quiz-editor');
   await expect(editor).toBeVisible();
   await expect(editor.getByRole('button', { name: 'Save Quiz' })).toBeVisible();
-  // Live validation flags the calculated_question demo — the latest engine
+  // Live validation flags the calculated_question demo - the latest engine
   // (bakery quiz_check) dropped it from the valid type list.
   await expect(page.locator('.quizzer-editor-issue-count')).toContainText('1 issue (1 error)');
   await expect(editor.locator('[data-question-id="legacy1"] .quizzer-editor-issues')).toContainText(
@@ -442,7 +442,7 @@ test('textbook: sidebar composition opens readings through the reader (§11.4)',
   await page.goto('/');
   await page.locator('.blocklySvg').first().waitFor();
   // The reading auto-opens as the textbook's first page and marks ITSELF
-  // read (the textbook never marks correct — legacy no-op markCorrect).
+  // read (the textbook never marks correct - legacy no-op markCorrect).
   const markReadPost = page.waitForRequest(
     (request) =>
       request.url().includes('update_submission') &&
@@ -461,7 +461,7 @@ test('textbook: sidebar composition opens readings through the reader (§11.4)',
   const chapter = textbook.locator('.book-item', { hasText: 'Chapter 1) Variables' });
   await expect(chapter).toHaveClass(/disabled/);
   // Nested one level under the chapter: NO info accent (top-level readings
-  // only, textbook.html:62) — but active as the open page.
+  // only, textbook.html:62) - but active as the open page.
   const readingItem = textbook.locator('.book-item', { hasText: 'Reading: Variables' });
   await expect(readingItem).toHaveClass(/active/);
   await expect(readingItem).not.toHaveClass(/list-group-item-info/);
@@ -552,7 +552,7 @@ test('History mode: toolbar + merge diff + Use adopts the old version', async ({
   await expect(page.locator('.cm-mergeView')).toBeVisible();
   await expect(page.locator('.blockpy-python-blockmirror')).toHaveCount(0);
   await expect(historyButton).toHaveClass(/active/);
-  // Step back to the middle version (a = 0 / b = a + 1 / print(a)) — the
+  // Step back to the middle version (a = 0 / b = a + 1 / print(a)) - the
   // diff's left side shows the historical code.
   await page.getByRole('button', { name: 'Previous' }).click();
   await expect(page.locator('.cm-mergeView')).toContainText('b = a + 1');
@@ -592,7 +592,7 @@ test('Run boots the engine lazily; system messages go to status + dev console', 
   await expect(page.locator('.blockpy-console-toggle')).toContainText('Console');
 });
 
-// Full Pyodide execution downloads Pyodide + Pedal wheels from CDNs — opt in
+// Full Pyodide execution downloads Pyodide + Pedal wheels from CDNs - opt in
 // locally with PYODIDE_E2E=1 (not part of the default suite).
 test('real Pyodide run executes, grades with Pedal, and shows Complete', async ({ page }) => {
   test.skip(!process.env.PYODIDE_E2E, 'set PYODIDE_E2E=1 to run');
@@ -682,7 +682,7 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
   await page.locator('button.blockpy-run').click();
   await expect(page.locator('.blockpy-printer')).toContainText('France,Paris', { timeout: 60_000 });
   await expect(page.locator('button.blockpy-run')).not.toHaveClass(/blockpy-run-running/);
-  // Queued inputs (quick-menu dialog) replay into input() — the compat-mode
+  // Queued inputs (quick-menu dialog) replay into input() - the compat-mode
   // stdin strategy (M1.3.4 → inputsPrefill).
   await page.locator('[title="Edit Inputs"]').click();
   await page.locator('textarea.blockpy-input-list').fill('Ada');
@@ -724,7 +724,7 @@ test('real Pyodide run executes, grades with Pedal, and shows Complete', async (
 
 // Interactive input() (spec §6.5): with no queued inputs, the run SUSPENDS
 // (JSPI) on a console textbox + Enter button and resumes with what the
-// user types — the legacy Skulpt behavior the scripted-inputs strategy
+// user types - the legacy Skulpt behavior the scripted-inputs strategy
 // couldn't cover. Same CDN opt-in as the run test above.
 test('interactive input() suspends on a console textbox and resumes (JSPI)', async ({ page }) => {
   test.skip(!process.env.PYODIDE_E2E, 'set PYODIDE_E2E=1 to run');
@@ -753,7 +753,7 @@ test('interactive input() suspends on a console textbox and resumes (JSPI)', asy
   await expect(page.locator('button.blockpy-run')).not.toHaveClass(/blockpy-run-running/, {
     timeout: 120_000,
   });
-  // Re-running an interactive program PROMPTS AGAIN — the previous answer is
+  // Re-running an interactive program PROMPTS AGAIN - the previous answer is
   // not silently replayed (it never enters the queued-inputs model). Guards
   // the regression where a live answer folded into queuedInputs.
   await page.locator('button.blockpy-run').click();
@@ -766,7 +766,7 @@ test('interactive input() suspends on a console textbox and resumes (JSPI)', asy
 });
 
 // A fatal Pyodide error (unbounded recursion) must not hang the UI, and the
-// worker must self-heal so the NEXT run works — this is the crash the input
+// worker must self-heal so the NEXT run works - this is the crash the input
 // work exposed (a dead interpreter faulting on the next run's runPython).
 test('a fatal engine crash settles and the worker self-heals (§6.6)', async ({ page }) => {
   test.skip(!process.env.PYODIDE_E2E, 'set PYODIDE_E2E=1 to run');
@@ -817,7 +817,7 @@ test('a grader fatal is absorbed and the next run works (§6.6 canary)', async (
     timeout: 240_000,
   });
   // Instructor breaks the grader with recursion through C layers (repr of
-  // a deeply nested list) past a raised Python limit — the cait_node-style
+  // a deeply nested list) past a raised Python limit - the cait_node-style
   // failure: plain Python recursion converts to a catchable RecursionError,
   // but C-layer recursion exhausts the wasm stack for real, fataling the
   // interpreter DURING grading, not the student run.
@@ -863,7 +863,7 @@ test('focused editor mode: enter grows the editor, drawer serves feedback, Esc r
 }) => {
   await page.goto('/');
   await page.locator('.blocklySvg').first().waitFor();
-  // Measure the CM6 surface (the blockmirror wrapper collapses — floated/
+  // Measure the CM6 surface (the blockmirror wrapper collapses - floated/
   // absolute children), which tracks the configured editor height.
   const editorBefore = (await page
     .locator('.blockpy-python-blockmirror .cm-editor')
@@ -991,7 +991,7 @@ test('harness chrome hides behind display.devHarness (?devharness=false)', async
   await page.goto('/?devharness=false');
   await page.locator('.blocklySvg').first().waitFor();
   await expect(page.locator('#blockpy-dev-group')).toHaveCount(0);
-  await expect(page.getByText(/Dev harness —/)).toHaveCount(0);
+  await expect(page.getByText(/Dev harness -/)).toHaveCount(0);
   await expect(page.locator('.blockpy-view-swap')).toHaveCount(0);
   // The editor itself is untouched.
   await expect(page.getByRole('button', { name: 'Run' }).first()).toBeVisible();
@@ -1007,7 +1007,7 @@ test('harness group picker swaps to the real bakery curriculum (demo)', async ({
   await picker.selectOption('bakery_1a');
   const nav = page.locator('.assignment-selector-div').first().locator('select');
   await expect(nav.locator('option', { hasText: '1A3.1) Basic Output' })).toHaveCount(1);
-  // The group opens on its first assignment — a real bakery quiz.
+  // The group opens on its first assignment - a real bakery quiz.
   await expect(page.getByRole('button', { name: 'Start Quiz' }).first()).toBeVisible();
   // Its subordinate reading (settings.readingId url slug, resolved through
   // GET /api/assignments/by_url) renders in full ABOVE the quiz for

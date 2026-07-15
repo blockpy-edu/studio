@@ -3,7 +3,7 @@
  * The editor owns its DOM; React owns the mount point and prop plumbing.
  *
  * Construction-time configuration (toolbox, height, renderer, …) is captured
- * on first render — remounting is the way to change it, matching how legacy
+ * on first render - remounting is the way to change it, matching how legacy
  * BlockPy rebuilt BlockMirror. `mode`, `code`, and `readOnly` are live props.
  */
 import { useEffect, useRef } from 'react';
@@ -79,7 +79,7 @@ export function DualEditorView(props: DualEditorViewProps) {
     }
   }, [props.readOnly]);
 
-  // Themes are a global user preference (M4.1) — every editor instance
+  // Themes are a global user preference (M4.1) - every editor instance
   // (coding + minified) follows the store, no per-mount prop needed. Runs
   // on mount too (declared after the construction effect), so a persisted
   // dark/win2000 choice applies to fresh editors.

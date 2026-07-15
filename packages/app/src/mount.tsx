@@ -9,8 +9,8 @@ export type { MountExtras } from './studio-handle';
 /**
  * Core mount: a resolved BootConfig straight onto an element. Returns the
  * imperative handle the legacy shim's BlockPy facade drives (§15.1).
- * The `settings-*` query params are merged LAST over config.settings —
- * spec §15.2 — so a pasted debug URL overrides any server-emitted value.
+ * The `settings-*` query params are merged LAST over config.settings -
+ * spec §15.2 - so a pasted debug URL overrides any server-emitted value.
  */
 export function mountConfig(
   rootElement: HTMLElement,

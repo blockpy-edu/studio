@@ -1,5 +1,5 @@
 /**
- * Bootstrap 4.6 subset — the studio does not ship Bootstrap, but the legacy
+ * Bootstrap 4.6 subset - the studio does not ship Bootstrap, but the legacy
  * BlockPy markup depends on these Bootstrap-4 classes for its layout
  * (docs/appendices/A8-ui-parity.md §5 open question 1: resolution is to PIN
  * the Bootstrap 4.6 default values).
@@ -8,7 +8,7 @@
  * classes the legacy markup uses are included; the only responsive
  * breakpoint kept is `md` at 768px for the grid columns in use.
  *
- * Load order: BEFORE blockpy.css — the legacy retheme overrides some of
+ * Load order: BEFORE blockpy.css - the legacy retheme overrides some of
  * these rules (e.g. .btn-outline-secondary) by source order/specificity,
  * so these stay at stock Bootstrap specificity.
  */
@@ -92,7 +92,7 @@
 
 /* col-sm-* used by the Make-New-File dialog form grid (AddNewMenu). These
    were missing from the subset, so the dialog's labels/inputs rendered as
-   unsized flex children — the "Add New menu messed-up layout" (M3.3). */
+   unsized flex children - the "Add New menu messed-up layout" (M3.3). */
 .col-sm-2,
 .col-sm-4,
 .col-sm-10,
@@ -386,7 +386,7 @@
 
 /* --------------------------------------------------------------------------
    Nav tabs (.nav, .nav-tabs, .nav-item, .nav-link)
-   Baseline only — blockpy.css re-skins .nav-link entirely.
+   Baseline only - blockpy.css re-skins .nav-link entirely.
    -------------------------------------------------------------------------- */
 
 .nav {
@@ -449,7 +449,7 @@
    Dropdowns (.dropdown, .dropdown-toggle, .dropdown-menu, .dropdown-item)
    NOTE: Bootstrap 4 has no `.caret` rule (it was Bootstrap 3); the legacy
    markup's <span class="caret"> renders nothing, and the visible arrow
-   comes from .dropdown-toggle::after below — pinned faithfully.
+   comes from .dropdown-toggle::after below - pinned faithfully.
    -------------------------------------------------------------------------- */
 
 .dropdown {
@@ -812,7 +812,7 @@ textarea.form-control {
 
 /* --------------------------------------------------------------------------
    Reader/quizzer additions (M2.3/M2.4): the legacy pages load full
-   Bootstrap 4, so their markup uses classes the editor never needed —
+   Bootstrap 4, so their markup uses classes the editor never needed -
    cards, contextual backgrounds/text, alerts, buttons, grid columns, and
    spacing. Values are stock Bootstrap 4.
    -------------------------------------------------------------------------- */
@@ -1014,7 +1014,7 @@ textarea.form-control {
 }
 
 /* --------------------------------------------------------------------------
-   Modal (.modal family) — used by the legacy dialog port (chrome/Dialog.tsx,
+   Modal (.modal family) - used by the legacy dialog port (chrome/Dialog.tsx,
    legacy DIALOG_HTML dialog.js:3-26). Values verbatim from Bootstrap v4.6;
    the .show/.fade transitions are dropped (the React port mounts/unmounts).
    -------------------------------------------------------------------------- */
@@ -1116,7 +1116,7 @@ textarea.form-control {
 }
 
 /* --------------------------------------------------------------------------
-   Inline form (.form-inline) — used by the history toolbar
+   Inline form (.form-inline) - used by the history toolbar
    (history.js HISTORY_TOOLBAR_HTML). Values verbatim from Bootstrap v4.6.
    -------------------------------------------------------------------------- */
 

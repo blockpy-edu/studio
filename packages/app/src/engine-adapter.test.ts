@@ -1,5 +1,5 @@
 /**
- * M3.2: the grading pass chains after EVERY run (legacy engine.js:109-124 —
+ * M3.2: the grading pass chains after EVERY run (legacy engine.js:109-124 -
  * `failure()` resolves), so student syntax/runtime errors reach Pedal as
  * feedback while the raw traceback still surfaces on the student console.
  * Only `disable_feedback` skips grading.

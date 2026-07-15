@@ -8,7 +8,7 @@ import type { AssignmentTypeIndex, BootConfig, LegacyUrlMap } from './boot-confi
 
 /**
  * The `settings-*` query-parameter loop (spec §15.2, editor.html:287-291):
- * prefix stripped, value kept as the RAW STRING — the Jinja loop passes
+ * prefix stripped, value kept as the RAW STRING - the Jinja loop passes
  * `request.args` values through `tojson` verbatim and the legacy client
  * coerces per key (A4), so JSON-parsing here would change behavior.
  * Applied LAST, over every other BootConfig source.
@@ -25,7 +25,7 @@ export function settingsFromSearch(search: string): Record<string, string> {
 
 /**
  * editor.html declares the type-index lists as top-level `const`
- * (editor.html:193-199), which lands in the global LEXICAL environment —
+ * (editor.html:193-199), which lands in the global LEXICAL environment -
  * visible to later classic scripts but NOT a `window` property. Probe
  * `window` first (covers `var`/assignment variants), then indirect eval
  * (reaches lexical bindings); a CSP that blocks eval degrades to undefined.
@@ -110,7 +110,7 @@ export function bootConfigFromLegacyGlobals(source: LegacyGlobalsSource): BootCo
       typeIndex,
     },
     display: {
-      // editor.html:277 — instructor display is derived from the role.
+      // editor.html:277 - instructor display is derived from the role.
       instructor: role === 'owner' || role === 'grader',
       readOnly: flag(params.get('read_only')),
       embed: flag(params.get('embed')),

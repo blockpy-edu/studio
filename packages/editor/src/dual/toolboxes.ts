@@ -44,7 +44,7 @@ export type ToolboxSpec = string | ToolboxEntry[];
  */
 export const EXTRA_TOOLS: Record<string, string> = {};
 
-/** Shared category constants — port of legacy `TOOLBOX_CATEGORY`. */
+/** Shared category constants - port of legacy `TOOLBOX_CATEGORY`. */
 export const TOOLBOX_CATEGORY = {
   VARIABLES: { name: 'Variables', colour: 'VARIABLES', custom: 'VARIABLE' },
   DECISIONS: {
@@ -117,7 +117,7 @@ export const TOOLBOX_CATEGORY = {
 } satisfies Record<string, ToolboxEntry>;
 
 /**
- * Named toolbox presets — port of legacy
+ * Named toolbox presets - port of legacy
  * `BlockMirrorBlockEditor.prototype.TOOLBOXES`.
  */
 export const TOOLBOXES: Record<string, ToolboxEntry[]> = {
@@ -248,7 +248,7 @@ export const TOOLBOXES: Record<string, ToolboxEntry[]> = {
         'if ___: pass',
         'if ___: pass\nelse: pass',
         // match/case (M3.6, Studio addition): only the `full` preset grows
-        // it — the legacy presets are B6 parity fixtures and stay verbatim.
+        // it - the legacy presets are B6 parity fixtures and stay verbatim.
         'match ___:\n    case _:\n        pass',
         'for ___ in ___: pass',
         'while ___: pass',

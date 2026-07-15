@@ -1,5 +1,5 @@
 /**
- * Quiz assignment component (spec §11.3) — port of the server-frontend
+ * Quiz assignment component (spec §11.3) - port of the server-frontend
  * `<quizzer>` knockout component (frontend/components/quizzes/quizzer.ts +
  * quiz_ui.ts). Grading stays SERVER-side: submit posts updateSubmission
  * `{status: 0, correct: false}` and the server's regrade_if_quiz →
@@ -9,7 +9,7 @@
  *   - attempt lifecycle READY → ATTEMPTING → COMPLETED, derived from
  *     `attempting`/`count` (quiz.ts:158-161); inputs disabled unless
  *     attempting; Start increments count, clears feedback, re-runs pool
- *     selection, saves — but does NOT clear answers (quizzer.ts:184-193).
+ *     selection, saves - but does NOT clear answers (quizzer.ts:184-193).
  *   - pool membership seeded: SEED = submission id, ATTEMPT = id + count,
  *     NONE = 0 (quiz.ts:271-287); instructors can edit the seed.
  *   - attempts left = attemptLimit + mulligans - count (quiz.ts:163-173).
@@ -63,7 +63,7 @@ export interface QuizzerAssignment {
   instructions: string;
   /** Assignment settings JSON (time_limit etc.). */
   settings: string;
-  /** The checks document (assignment.on_run) — blanked for students,
+  /** The checks document (assignment.on_run) - blanked for students,
    *  present for instructors; the quiz editor edits it. */
   onRun?: string;
 }
@@ -113,7 +113,7 @@ export interface QuizzerProps {
     studentTimeLimit: string | null;
     dateStarted: string | null;
   }) => void;
-  /** Persist the two quiz documents (!instructions.md + !on_run.py) —
+  /** Persist the two quiz documents (!instructions.md + !on_run.py) -
    *  enables the instructor Quiz Editor view. */
   saveQuizAssignment?: (
     assignmentId: number,
@@ -126,7 +126,7 @@ interface LoadedQuiz {
   assignment: QuizzerAssignment;
   submission: QuizzerSubmission | null;
   instructions: QuizInstructions;
-  /** The parsed stored document — unknown fields round-trip from here. */
+  /** The parsed stored document - unknown fields round-trip from here. */
   baseDoc: QuizSubmission;
 }
 
@@ -175,7 +175,7 @@ function writeStoredFontStep(index: number): void {
   try {
     localStorage.setItem(QUIZ_FONT_KEY, String(QUIZ_FONT_STEPS[index]));
   } catch {
-    // Storage unavailable (sandboxed iframe) — the size still applies.
+    // Storage unavailable (sandboxed iframe) - the size still applies.
   }
 }
 
@@ -198,7 +198,7 @@ export function Quizzer(props: QuizzerProps) {
   // workflow; "Actual Quiz" shows the student surface.
   const [editorView, setEditorView] = useState<'quiz' | 'editor' | null>(null);
   const [reloadNonce, setReloadNonce] = useState(0);
-  // Quiz font size step (M7.6, LD-40) — persisted per user.
+  // Quiz font size step (M7.6, LD-40) - persisted per user.
   const [fontStep, setFontStep] = useState(readStoredFontStep);
   const stepFont = (delta: number) => {
     const next = Math.max(0, Math.min(QUIZ_FONT_STEPS.length - 1, fontStep + delta));
@@ -243,7 +243,7 @@ export function Quizzer(props: QuizzerProps) {
       JSON.stringify(buildDocument(), null, 2),
     )
       .then(() => setIsDirty(false))
-      .catch(() => undefined); // stays dirty — submit remains blocked
+      .catch(() => undefined); // stays dirty - submit remains blocked
   }, [buildDocument]);
 
   // -- load (quizzer.ts:112-141 + quiz.ts:190-236) --------------------------------
@@ -324,7 +324,7 @@ export function Quizzer(props: QuizzerProps) {
     };
   }, [props.assignmentId, reloadNonce]);
 
-  // Tab-visibility telemetry (assignment_interface.ts:134-138 — all types).
+  // Tab-visibility telemetry (assignment_interface.ts:134-138 - all types).
   useEffect(() => {
     const onVisibility = () =>
       propsRef.current.logEvent?.(
@@ -349,7 +349,7 @@ export function Quizzer(props: QuizzerProps) {
       if (TEXT_TYPES.has(type)) {
         saveTimerRef.current = setTimeout(saveSubmission, 400);
       } else {
-        // Radios/checkboxes/selects autosave immediately (no rate limit) —
+        // Radios/checkboxes/selects autosave immediately (no rate limit) -
         // scheduled as a microtask so the state update lands first.
         saveTimerRef.current = setTimeout(saveSubmission, 0);
       }
@@ -614,7 +614,7 @@ export function Quizzer(props: QuizzerProps) {
       }
     >
       {viewToggle}
-      {/* Quiz font size stepper (M7.6, LD-40) — per-user, persisted. */}
+      {/* Quiz font size stepper (M7.6, LD-40) - per-user, persisted. */}
       <div className="quizzer-font-controls" role="group" aria-label="Quiz text size">
         <button
           type="button"

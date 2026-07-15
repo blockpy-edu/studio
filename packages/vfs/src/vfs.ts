@@ -110,7 +110,7 @@ export class Vfs {
   /**
    * Magic-name capability checks (M3.7 / LD-21). Legacy context: Delete
    * existed but rename was DEAD (files.js:518-528 references an undefined
-   * variable) and namespace was only chosen at creation — Studio ships
+   * variable) and namespace was only chosen at creation - Studio ships
    * working versions; magic names stay immovable/unrenamable
    * (UNRENAMABLE_FILES, files.js:234).
    */
@@ -124,7 +124,7 @@ export class Vfs {
   }
 
   /**
-   * Rename within the same space (LD-21; additive — legacy rename was dead
+   * Rename within the same space (LD-21; additive - legacy rename was dead
    * code). Refuses magic names and clobbering an existing target.
    */
   rename(legacyName: string, newBasename: string): boolean {
@@ -143,7 +143,7 @@ export class Vfs {
   }
 
   /**
-   * Move a file to another namespace, keeping the basename (M3.7; net-new —
+   * Move a file to another namespace, keeping the basename (M3.7; net-new -
    * legacy chose the namespace only at creation). Same guards as rename.
    */
   changeSpace(legacyName: string, targetSpace: Space): boolean {
@@ -218,7 +218,7 @@ export class Vfs {
   /**
    * The engine-staging view: every basename reachable through the role's
    * search order (A1 §4a), resolved to its winning contents and keyed by
-   * PREFIX-STRIPPED basename — exactly what `EngineJob.files` /
+   * PREFIX-STRIPPED basename - exactly what `EngineJob.files` /
    * `PedalGradeOptions.files` stage into the run's working directory.
    * Remote files are URLs, not contents, so they are not staged here.
    */
@@ -226,7 +226,7 @@ export class Vfs {
     const order = role === 'instructor' ? INSTRUCTOR_EVERYWHERE_ORDER : STUDENT_ORDER;
     const staged: Record<string, string> = {};
     // Remote files are consulted LAST in every search order (A1 §4a), so
-    // their fetched contents stage at the lowest priority — any local space
+    // their fetched contents stage at the lowest priority - any local space
     // overwrites them below.
     for (const [basename, contents] of this.remoteContents) {
       staged[basename] = contents;

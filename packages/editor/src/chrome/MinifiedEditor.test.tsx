@@ -93,7 +93,7 @@ describe('MinifiedEditor (§8.4)', () => {
 
   it('10 editors mount + unmount without leaking Blockly workspaces (§16.3 memory)', () => {
     // The §16.3 budget line: one ENGINE per page regardless of nested
-    // editor count (the engine is the App's single RunController — editors
+    // editor count (the engine is the App's single RunController - editors
     // only receive it), and N editors must release their resources on
     // unmount. Workspace registry growth is the observable jsdom proxy for
     // the leak half; heap numbers belong to the e2e canary.

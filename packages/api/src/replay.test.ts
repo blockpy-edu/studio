@@ -1,5 +1,5 @@
 /**
- * Golden-transcript replay harness — first cut of the G3 gate (spec §16.2).
+ * Golden-transcript replay harness - first cut of the G3 gate (spec §16.2).
  * For every request the LEGACY client made in the recorded session (A5),
  * assert that our client, given the same inputs, produces the same field
  * set on the wire. Field VALUES for context fields are also compared where
@@ -112,7 +112,7 @@ describe('G3 replay: request field parity with the legacy transcript', () => {
       const { client, sent } = recordingClient(transcriptContext(entry));
       await client.saveFile(legacy.get('filename')!, legacy.get('code')!);
       const ours = sent[0]!.body;
-      // legacy save_file omits assignment_version/part_id — ours includes the
+      // legacy save_file omits assignment_version/part_id - ours includes the
       // full base payload; extra base fields are harmless (server reads by
       // name) but tracked here so any change is deliberate:
       expectSameFields(ours, legacy, { allowMissing: ['assignment_version', 'part_id'] });

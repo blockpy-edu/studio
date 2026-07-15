@@ -1,10 +1,10 @@
 /**
- * Text → Blockly-XML orchestrator — port of legacy `text_to_blocks.js`
+ * Text → Blockly-XML orchestrator - port of legacy `text_to_blocks.js`
  * (`BlockMirrorTextToBlocks`), with the Skulpt parser replaced by the Lezer
  * CST → AST-IR pipeline (`cst/to-ast.ts`, maintainer decision, spike S2).
  *
- * The body/comment/peer layout logic is ported statement-for-statement —
- * including its quirks — because the §16.1.2 round-trip corpus asserts the
+ * The body/comment/peer layout logic is ported statement-for-statement -
+ * including its quirks - because the §16.1.2 round-trip corpus asserts the
  * exact block layout it produces (peer grouping on skipped lines, comment
  * level matching by `column / 4`, trailing-comment handling).
  */
@@ -181,7 +181,7 @@ export class TextToBlocksConverter {
         this.recursiveMeasure(node.orelse[i], next);
       }
     }
-    // match/case (M3.6): case bodies measure like sibling `body` chains —
+    // match/case (M3.6): case bodies measure like sibling `body` chains -
     // a statement's extent runs to the next statement, the next case's
     // header line, or the match's own successor for the final case.
     if ('cases' in node) {
@@ -324,7 +324,7 @@ export class TextToBlocksConverter {
     }
 
     // Dead bookkeeping in legacy too (text_to_blocks.js:199-221 increments
-    // it, nothing reads it) — kept for port shape, `_`-marked as unused.
+    // it, nothing reads it) - kept for port shape, `_`-marked as unused.
     let _lineNumberInBody = 0;
     let lineNumberInProgram: number = 0;
     let previousLineInProgram: number | null = null;

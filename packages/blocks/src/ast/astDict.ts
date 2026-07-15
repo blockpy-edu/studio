@@ -234,7 +234,7 @@ registerConverter('Dict', function (this: TextToBlocksConverter, node: ir.Dict, 
   const elements: Record<string, Element | null> = {};
   for (let i = 0; i < keys.length; i++) {
     // NOTE: a `null` key entry (a `**expansion`) was not handled by legacy
-    // either — `this.convert(null, ...)` throws, and the statement falls
+    // either - `this.convert(null, ...)` throws, and the statement falls
     // back to a raw block.
     const key = keys[i]!;
     const value = values[i]!;

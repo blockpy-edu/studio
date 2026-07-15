@@ -1,5 +1,5 @@
 /**
- * Quiz document handling — ports of quiz.ts's parse/fill/serialize layer
+ * Quiz document handling - ports of quiz.ts's parse/fill/serialize layer
  * (blockpy-server frontend/components/quizzes/quiz.ts) plus the seeded
  * randomness utilities (frontend/utilities/random.ts:1-29).
  */
@@ -18,7 +18,7 @@ export const EMPTY_QUIZ_SUBMISSION: QuizSubmission = {
   feedback: {},
 };
 
-/** quiz.ts:83-96 — defaults without clobbering unknown fields. */
+/** quiz.ts:83-96 - defaults without clobbering unknown fields. */
 export function fillInMissingQuizSubmissionFields(doc: QuizSubmission): QuizSubmission {
   doc.studentAnswers ??= {};
   doc.feedback ??= {};
@@ -29,7 +29,7 @@ export function fillInMissingQuizSubmissionFields(doc: QuizSubmission): QuizSubm
   return doc;
 }
 
-/** quiz.ts:98-114 — note the backfill default poolRandomness is ATTEMPT
+/** quiz.ts:98-114 - note the backfill default poolRandomness is ATTEMPT
  *  (the empty template says SEED; A3 open q. 5 freezes the backfill). */
 export function fillInMissingQuizInstructionFields(doc: QuizInstructions): QuizInstructions {
   doc.questions ??= {};
@@ -222,7 +222,7 @@ export function buildSubmissionDocument(options: {
       hiddenAnswers[questionId] = answer;
     }
   }
-  // Strip the prior hiddenAnswers before spreading — a fully-restored map
+  // Strip the prior hiddenAnswers before spreading - a fully-restored map
   // must disappear, not resurrect through the base document.
   const { hiddenAnswers: priorHidden, ...rest } = base;
   void priorHidden;

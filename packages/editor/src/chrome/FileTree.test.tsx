@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * M3.7: the filesystem tree rail — namespace buckets, role visibility,
+ * M3.7: the filesystem tree rail - namespace buckets, role visibility,
  * instructor prefixes, and the LD-21 action gating (magic names immovable).
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';

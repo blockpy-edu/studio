@@ -1,4 +1,4 @@
-/** Port of legacy `ast/ast_Assign.js` — reference example for PORTING.md. */
+/** Port of legacy `ast/ast_Assign.js` - reference example for PORTING.md. */
 import * as Blockly from 'blockly/core';
 import { COLOR } from '../colors';
 import { generator } from '../generator';

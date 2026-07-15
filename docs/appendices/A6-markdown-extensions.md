@@ -1,4 +1,4 @@
-# Appendix A6 — Markdown/HTML Rendering Pipelines (Legacy Inventory)
+# Appendix A6 - Markdown/HTML Rendering Pipelines (Legacy Inventory)
 
 Status: verified against legacy sources on 2026-07-10.
 Sources: `blockpy` client repo (`c:/Users/acbar/Projects/blockpy-edu/blockpy`), server repo (`c:/Users/acbar/Projects/blockpy-server`). All paths below are relative to those repo roots.
@@ -14,7 +14,7 @@ There are **two distinct pipelines**, not one. The client's instructions pane us
 - The single markdown utility is defined at `blockpy/src/blockpy.js:1236-1241`:
   ```js
   this.utilities = {
-      markdown: (text) => text ? EasyMDE.prototype.markdown(text) : "<p></p>"
+    markdown: (text) => (text ? EasyMDE.prototype.markdown(text) : '<p></p>'),
   };
   ```
   Note it is called on **`EasyMDE.prototype`** with no instance, so `this.options` is `undefined` inside EasyMDE's `markdown()`. Consequences (from the bundled EasyMDE source, `blockpy-server/static/libs/easymde/easymde.min.js`, `prototype.markdown=function(e){...}`):
@@ -33,8 +33,8 @@ Computed observable `ui.instructions.current` at `blockpy/src/blockpy.js:551-563
    - Pool sections are split on the HTML-comment separator regex `/<!-{4,}# .+ #-{4,}>/` (`pools.js:5`), one section chosen by `1 + (seed % (pools.length-2))` (`pools.js:8-10`), keeping the header (index 0) and footer (last) sections (`pools.js:12-20`).
    - Instructors get an appended italic notice about the randomized pool (`pools.js:35-37`).
 3. `self.utilities.markdown(raw)` → HTML string (`blockpy.js:562`).
-4. Injected into the DOM with a raw Knockout `html:` binding — `<div class='blockpy-instructions' data-bind="html: ui.instructions.current">` (`blockpy/src/interface.js:111-114`). **No sanitization at any stage**; arbitrary instructor HTML (including `<script>`) passes through.
-5. Syntax highlighting is applied *after* render, debounced 400 ms, by a subscription that runs `window.hljs.highlightBlock(block)` over `.blockpy-instructions pre code` (`blockpy/src/interface.js:36-48`). `hljs` is the page-global highlight.js from `blockpy-server/controllers/assets.py:25-26` (`libs/highlight/highlight.min.js` + `highlightjs-line-numbers.min.js`).
+4. Injected into the DOM with a raw Knockout `html:` binding - `<div class='blockpy-instructions' data-bind="html: ui.instructions.current">` (`blockpy/src/interface.js:111-114`). **No sanitization at any stage**; arbitrary instructor HTML (including `<script>`) passes through.
+5. Syntax highlighting is applied _after_ render, debounced 400 ms, by a subscription that runs `window.hljs.highlightBlock(block)` over `.blockpy-instructions pre code` (`blockpy/src/interface.js:36-48`). `hljs` is the page-global highlight.js from `blockpy-server/controllers/assets.py:25-26` (`libs/highlight/highlight.min.js` + `highlightjs-line-numbers.min.js`).
 
 The same `utilities.markdown` also renders the feedback pane message (with `hljs.highlightBlock` on its code blocks) at `blockpy/src/feedback.js:213-219`.
 
@@ -58,24 +58,24 @@ Defined once at `blockpy-server/frontend/services/plugins.ts:192-260` and shared
 
 ```ts
 export let md: MarkdownIt = new MarkdownIt({
-    html: true,          // raw HTML allowed — no sanitization
+    html: true,          // raw HTML allowed - no sanitization
     highlight: function (str, lang, langAttrs) { ... }
 })
 ```
 
 - `html: true` (`plugins.ts:193`): instructor HTML passes through unsanitized.
 - highlight.js is configured for `["python", "javascript", "typescript", "r"]` auto-detection (`plugins.ts:151-153`) but `md`'s `highlight` callback accepts any language hljs knows (`plugins.ts:196-197`).
-- No LaTeX plugin, no markdown-it-container (a comment at `reader/reader.ts:5-7` shows markdown-it-container was *planned* for BlockPy regions, but the shipped mechanism is the fenced-code `langAttrs` scheme below).
+- No LaTeX plugin, no markdown-it-container (a comment at `reader/reader.ts:5-7` shows markdown-it-container was _planned_ for BlockPy regions, but the shipped mechanism is the fenced-code `langAttrs` scheme below).
 
 ### 2.2 The `highlight` callback: how a code block is marked runnable
 
 `plugins.ts:194-243`. Behavior keys off the fence's language and its **info-string attributes** (`langAttrs` = anything after the language on the ``` line):
 
-- **`python` with a non-empty `langAttrs`** (e.g. ```` ```python part1 ````): the attrs string is the **Part ID**. Emits (`plugins.ts:198-209`):
+- **`python` with a non-empty `langAttrs`** (e.g. ` ```python part1 `): the attrs string is the **Part ID**. Emits (`plugins.ts:198-209`):
   1. `<pre class="reader-launch-blockpy" data-part-id="{attrs}">` containing hljs-highlighted code;
   2. a hidden `<div style="display: none">{raw source}</div>`;
   3. `<div data-bind="blockPyEditor: {partId: '{attrs}', launched: false, assignment..., submission...}"></div>`.
-  A `python` fence **without** attrs takes the same code path but with an empty `launchBlockpy` class and `partId: ''`, and the `blockPyEditor` binding refuses to add a Run button when `partId` is falsy (`plugins.ts:353`) — so **runnable = python fence + non-empty part-ID attr**.
+     A `python` fence **without** attrs takes the same code path but with an empty `launchBlockpy` class and `partId: ''`, and the `blockPyEditor` binding refuses to add a Run button when `partId` is falsy (`plugins.ts:353`) - so **runnable = python fence + non-empty part-ID attr**.
 - **`typescript` / `ts` / `r` with attrs**: same scheme but class `reader-launch-kettle` and a `kettleLauncher` binding (`plugins.ts:213-225`).
 - **Any other recognized language**: plain hljs-highlighted `<pre><code class="language-... hljs">` (`plugins.ts:229-239`).
 - **Unrecognized language / no language**: escaped via `md.utils.escapeHtml` in `<pre class="hljs"><code>` (`plugins.ts:242`).
@@ -84,7 +84,7 @@ export let md: MarkdownIt = new MarkdownIt({
 
 - `ko.bindingHandlers.blockPyEditor` (`plugins.ts:350-368`): renders a `Run` button (`btn blockpy-run`, fa-play icon) before the placeholder; on click it hides itself, reads the raw source from the hidden sibling div (`$(element).prev().prev().text()`, `plugins.ts:359`), hides the highlighted `<pre>` (`plugins.ts:362`), and calls `launchBlockPy`.
 - `launchBlockPy` (`plugins.ts:317-348`) instantiates a full `blockpy.BlockPy` in place with:
-  - `urls` = `window.$blockPyUrls` **minus** `saveAssignment`, `updateSubmission`, `updateSubmissionStatus` (`plugins.ts:321-326`) — embedded editors can save code (`saveFile` survives) but can never flip submission correctness;
+  - `urls` = `window.$blockPyUrls` **minus** `saveAssignment`, `updateSubmission`, `updateSubmissionStatus` (`plugins.ts:321-326`) - embedded editors can save code (`saveFile` survives) but can never flip submission correctness;
   - `partId`, `"assignment.settings.small_layout": "true"`, `"display.python.mode": "text"`, and the block's source as `submission.code` (`plugins.ts:328-332`);
   - if a partId is present, it synthesizes assignment/submission data with `injectCodePart` so only that Part's region of `answer.py` is edited (`plugins.ts:334-342`, part splitting per `##### Part <id>` headers, `plugins.ts:284-314`);
   - every instance is pushed to `window.$ALL_BLOCKPY_EDITORS` (`plugins.ts:262`, `343`).
@@ -96,7 +96,7 @@ export let md: MarkdownIt = new MarkdownIt({
 A custom core rule `replace-link` (`plugins.ts:244-260`) rewrites `link_open` `href` and `image` `src` tokens: any URL **not** starting with `http` is passed through `env.downloadUrl` (`plugins.ts:188-190`). The `markdowned` binding supplies the env (`plugins.ts:264-282`): when an assignment is in scope, relative paths become
 `{$URL_ROOT}blockpy/download_file?placement=assignment&directory={assignmentId}&filename={link}` (`plugins.ts:271-273`); otherwise links pass through unchanged.
 
-The `markdowned` binding also calls `ko.applyBindingsToDescendants` after setting `innerHTML` (`plugins.ts:276`) — this is what activates the `blockPyEditor`/`kettleLauncher` bindings emitted by the highlight callback. It sets `controlsDescendantBindings: true` (`plugins.ts:265-267`).
+The `markdowned` binding also calls `ko.applyBindingsToDescendants` after setting `innerHTML` (`plugins.ts:276`) - this is what activates the `blockPyEditor`/`kettleLauncher` bindings emitted by the highlight callback. It sets `controlsDescendantBindings: true` (`plugins.ts:265-267`).
 
 ### 2.5 Images
 
@@ -114,31 +114,31 @@ Videos are **not** embedded through markdown; they come from the reading's `sett
 
 ### 2.7 Reader instructions persistence
 
-The reader saves its content as the assignment file `!instructions.md` through `saveFile` (`reader/reader.ts:374-382`); instructor editing uses the `markdowneditor` Knockout binding, which is a real EasyMDE instance with `renderingConfig.codeSyntaxHighlighting: true` (`plugins.ts:105-120`) — note that this **editor preview** therefore highlights code via marked/hljs, while the **student-facing render** goes through the markdown-it pipeline above.
+The reader saves its content as the assignment file `!instructions.md` through `saveFile` (`reader/reader.ts:374-382`); instructor editing uses the `markdowneditor` Knockout binding, which is a real EasyMDE instance with `renderingConfig.codeSyntaxHighlighting: true` (`plugins.ts:105-120`) - note that this **editor preview** therefore highlights code via marked/hljs, while the **student-facing render** goes through the markdown-it pipeline above.
 
 ---
 
 ## 3. Side-by-side summary
 
-| Aspect | Client instructions pane | Server reader/quiz content |
-|---|---|---|
-| Library | `marked` (inside EasyMDE, page global) — `blockpy.js:1239`, `assets.py:31` | `markdown-it` — `plugins.ts:192` |
-| Raw HTML | allowed (KO `html:` binding, `interface.js:112-114`) | allowed (`html: true`, `plugins.ts:193`) |
-| Sanitization | none | none |
-| Line breaks | `breaks: true` forced (EasyMDE default path) | markdown-it default (`breaks` not set → false) |
-| Syntax highlighting | post-render hljs, 400 ms debounce (`interface.js:38-48`) | in-render hljs via `highlight` callback (`plugins.ts:194-243`) |
-| Link rewriting | `target="_blank"` added by EasyMDE post-processing | relative href/src → `download_file` endpoint (`plugins.ts:244-260`) |
-| Runnable code | n/a | ```` ```python <partId> ```` → Run-button BlockPy; `ts`/`r` → Kettle (`plugins.ts:198-225`) |
-| LaTeX/MathJax/KaTeX | none | none |
-| Templating | instruction pools (`pools.js:27-39`) + `##### Part` extraction (`utilities.js:230-262`) | `##### Part` injection for runnable blocks (`plugins.ts:284-314`) |
+| Aspect              | Client instructions pane                                                                | Server reader/quiz content                                                            |
+| ------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Library             | `marked` (inside EasyMDE, page global) - `blockpy.js:1239`, `assets.py:31`              | `markdown-it` - `plugins.ts:192`                                                      |
+| Raw HTML            | allowed (KO `html:` binding, `interface.js:112-114`)                                    | allowed (`html: true`, `plugins.ts:193`)                                              |
+| Sanitization        | none                                                                                    | none                                                                                  |
+| Line breaks         | `breaks: true` forced (EasyMDE default path)                                            | markdown-it default (`breaks` not set → false)                                        |
+| Syntax highlighting | post-render hljs, 400 ms debounce (`interface.js:38-48`)                                | in-render hljs via `highlight` callback (`plugins.ts:194-243`)                        |
+| Link rewriting      | `target="_blank"` added by EasyMDE post-processing                                      | relative href/src → `download_file` endpoint (`plugins.ts:244-260`)                   |
+| Runnable code       | n/a                                                                                     | ` ```python <partId> ` → Run-button BlockPy; `ts`/`r` → Kettle (`plugins.ts:198-225`) |
+| LaTeX/MathJax/KaTeX | none                                                                                    | none                                                                                  |
+| Templating          | instruction pools (`pools.js:27-39`) + `##### Part` extraction (`utilities.js:230-262`) | `##### Part` injection for runnable blocks (`plugins.ts:284-314`)                     |
 
 ---
 
 ## Open questions
 
 1. **Unify or preserve the split?** The rewrite must decide whether to keep two renderers (bug-for-bug) or one. Observable differences that could bite: `breaks:true` vs markdown-it's default `breaks:false` (single newlines become `<br>` in instructions but not in readings), and `target="_blank"` injection (instructions only).
-2. **Sanitization policy.** Legacy has none in either pipeline (instructor-authored content is fully trusted, including `<script>`). README §11.1 says "sanitized HTML" — that is *not* legacy behavior; adopting sanitization is a deliberate (probably desirable) break that needs an explicit allowlist decision and a check against existing course content (some courses likely rely on `<script>`/`<style>`/iframes in instructions).
-3. **markdown-it options drift.** `linkify` and `typographer` are left at defaults (off) — confirm no course content depends on autolinking behavior differences vs marked (marked autolinks GFM-style URLs; markdown-it with `linkify:false` does not).
+2. **Sanitization policy.** Legacy has none in either pipeline (instructor-authored content is fully trusted, including `<script>`). README §11.1 says "sanitized HTML" - that is _not_ legacy behavior; adopting sanitization is a deliberate (probably desirable) break that needs an explicit allowlist decision and a check against existing course content (some courses likely rely on `<script>`/`<style>`/iframes in instructions).
+3. **markdown-it options drift.** `linkify` and `typographer` are left at defaults (off) - confirm no course content depends on autolinking behavior differences vs marked (marked autolinks GFM-style URLs; markdown-it with `linkify:false` does not).
 4. **The `langAttrs` part-ID contract** is positional and unvalidated ("hopefully folks don't try to get fancy with that", `plugins.ts:195`). The rewrite should freeze the exact grammar: everything after the language word in the fence info string is the part ID, verbatim.
 5. **Marked/EasyMDE and markdown-it versions** are whatever is vendored in `blockpy-server/static/libs/easymde/easymde.min.js` and the frontend's package-lock; pin the exact versions when building conformance fixtures (rendering differences across marked versions are real, e.g. header-id generation).
-6. **Quiz question text** uses the same `markdowned` binding (`quizzes/questions_ui.html`) — meaning a quiz question can technically embed a runnable python block. Decide whether the rewrite preserves that accidental capability.
+6. **Quiz question text** uses the same `markdowned` binding (`quizzes/questions_ui.html`) - meaning a quiz question can technically embed a runnable python block. Decide whether the rewrite preserves that accidental capability.

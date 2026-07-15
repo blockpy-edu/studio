@@ -57,7 +57,7 @@ function harness(overrides: Partial<SubmissionSyncOptions> = {}, urls?: Record<s
   const flushTimers = async () => {
     while (scheduled.length) {
       scheduled.shift()!.fn();
-      // The POST rides Transport's own setTimeout(0) — yield a macrotask.
+      // The POST rides Transport's own setTimeout(0) - yield a macrotask.
       await new Promise((resolve) => setTimeout(resolve, 0));
     }
   };
@@ -196,7 +196,7 @@ describe('§14.3 grading sequence (on_run.js:164-175, server.js:663-693)', () =>
     expect(posted[1]!.body.get('correct')).toBe('false'); // raw this-run
   });
 
-  it('markCorrect fires when correct && !hide — EVEN on server failure', async () => {
+  it('markCorrect fires when correct && !hide - EVEN on server failure', async () => {
     const { sync, markCorrect, setResponse } = harness();
     setResponse({ success: false, message: 'nope' });
     await sync.handleGraded({ success: true, score: 1, hideCorrectness: false });

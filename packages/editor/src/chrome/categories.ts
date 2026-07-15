@@ -1,5 +1,5 @@
 /**
- * Pedal feedback category → badge class / display text mapping — port of
+ * Pedal feedback category → badge class / display text mapping - port of
  * legacy `blockpy.js:724-783` (A8 §4.5). Class names are legacy CSS hooks
  * (spec §9.6); colors live in styles/blockpy.css.
  */
@@ -26,7 +26,7 @@ const MAPPING: Record<string, CategoryPresentation> = {
     displayText: 'Algorithm Error',
   },
   // Pedal 3's ACTUAL literal for TIFA/analyzer feedback is `algorithmic`
-  // (pedal/core/feedback_category.py) — the missing-badge bug (M3.2).
+  // (pedal/core/feedback_category.py) - the missing-badge bug (M3.2).
   algorithmic: {
     badgeClass: 'label-semantic-error',
     displayText: 'Algorithm Error',
@@ -39,7 +39,7 @@ const MAPPING: Record<string, CategoryPresentation> = {
   complete: { badgeClass: 'label-problem-complete', displayText: 'Complete' },
   instructions: { badgeClass: 'label-instructions', displayText: 'Instructions' },
   'no errors': { badgeClass: 'label-no-errors', displayText: 'No errors' },
-  // Categories legacy left badge-less (fell to label-none) — ledger LD-19.
+  // Categories legacy left badge-less (fell to label-none) - ledger LD-19.
   // Names are the Pedal 3 literals (pedal/core/feedback_category.py);
   // badge classes reuse the existing legacy color hooks.
   mistakes: { badgeClass: 'label-semantic-error', displayText: 'Mistake' },

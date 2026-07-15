@@ -1,5 +1,5 @@
 /**
- * @blockpy/navigation — assignment-group navigation header/footer, the
+ * @blockpy/navigation - assignment-group navigation header/footer, the
  * markCorrect store, the time-spent clock, and the exam countdown (spec §9).
  */
 export { GroupNav, type GroupNavProps } from './GroupNav';

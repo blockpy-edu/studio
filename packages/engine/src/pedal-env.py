@@ -1,4 +1,4 @@
-# The Pedal "blockpy environment" contract for Studio (spec 10.1) — a
+# The Pedal "blockpy environment" contract for Studio (spec 10.1) - a
 # faithful port of the legacy instructor wrappers:
 #   blockpy/src/engine/on_run.js   WRAP_INSTRUCTOR_CODE  (grading pass)
 #   blockpy/src/engine/on_eval.js  WRAP_INSTRUCTOR_CODE  (console-eval pass)
@@ -59,7 +59,7 @@ def _studio_pedal_stage(files):
 
 
 # The names legacy preloaded into the instructor script's namespace
-# (on_run.js:33-36 / on_eval.js:15-18) — graders may use parse_program and
+# (on_run.js:33-36 / on_eval.js:15-18) - graders may use parse_program and
 # the sandbox/core commands without importing them.
 _INSTRUCTOR_PRELUDE = (
     'from pedal.cait.cait_api import parse_program\n'
@@ -133,7 +133,7 @@ def _studio_pedal_resolve():
             })
 
     # First error line (feedback.js:155-165 findFirstErrorLine reads
-    # DATA['location'].line) — drives the editor-error-line highlight.
+    # DATA['location'].line) - drives the editor-error-line highlight.
     line = None
     try:
         data = final.data
@@ -168,7 +168,7 @@ def _studio_pedal_resolve():
 
 def _studio_fail_soft():
     # Grader or Pedal-internal crash (e.g. Pedal 3.0.1's syntax-error
-    # formatter breaks on Python 3.14 when SyntaxError.text is None —
+    # formatter breaks on Python 3.14 when SyntaxError.text is None -
     # see docs/appendices/skulpt-compat.md). Surface a renderable
     # system-error feedback instead of killing the run; the client logs
     # it as X-System.Error (legacy pathway).
@@ -194,7 +194,7 @@ def _studio_pedal_grade(student_code, on_run, files_json, inputs, options_json):
 
     try:
         # bakery's module-level student_tests ledger lives in site-packages
-        # and survives across runs — legacy reset it every grading pass
+        # and survives across runs - legacy reset it every grading pass
         # (on_run.js:30-31). Optional: bakery may not be installed.
         try:
             from bakery import student_tests
@@ -232,7 +232,7 @@ def _studio_pedal_grade(student_code, on_run, files_json, inputs, options_json):
         # Pool-question seed = submission id (on_run.js:43-45). LEGACY BUG
         # FIXED (ledger LD-22): legacy called set_seed BEFORE
         # setup_environment, whose report.clear() erased the stored seed
-        # (report['questions']['seed']) — pools were never actually seeded.
+        # (report['questions']['seed']) - pools were never actually seeded.
         # Seeding AFTER setup makes it stick.
         seed = options.get('seed')
         if seed is not None and seed != '':
@@ -253,7 +253,7 @@ def _studio_pedal_grade(student_code, on_run, files_json, inputs, options_json):
 def _studio_pedal_evaluate(evaluation, on_eval, options_json):
     # Console-evaluation grading (on_eval.js): KEEP the last grading pass's
     # report and sandbox; clear the presented feedback (legacy "backed up"
-    # MAIN_REPORT.feedback into a local it never read again — the effective
+    # MAIN_REPORT.feedback into a local it never read again - the effective
     # behavior is a plain clear, on_eval.js:20-24); pedal-`evaluate` the
     # console expression inside the student's sandbox; exec the instructor's
     # on_eval script; re-resolve.

@@ -1,7 +1,7 @@
 /**
  * Pure pixel-grid model for the sprite editor (M4.5; STUDIO EXTENSION,
  * LD-27). Cells are CSS `rgba(r,g,b,a)` strings; '' = transparent. All
- * canvas/DOM work stays in the component — these helpers are pure over
+ * canvas/DOM work stays in the component - these helpers are pure over
  * ImageData-shaped objects so they unit-test without a canvas backend.
  */
 

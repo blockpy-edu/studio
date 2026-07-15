@@ -1,5 +1,5 @@
 /**
- * @blockpy/blocks — Blockly Python block set, generator, and CST→workspace
+ * @blockpy/blocks - Blockly Python block set, generator, and CST→workspace
  * builder (spec §8.3). Importing this package registers the full block set.
  */
 import './ast';

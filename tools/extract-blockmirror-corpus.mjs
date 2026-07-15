@@ -15,19 +15,15 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
-const blockMirrorRoot =
-  process.argv[2] ?? 'c:/Users/acbar/Projects/blockpy-edu/BlockMirror';
+const blockMirrorRoot = process.argv[2] ?? 'c:/Users/acbar/Projects/blockpy-edu/BlockMirror';
 const sourcePath = join(blockMirrorRoot, 'test', 'simple.html');
-const outPath = join(
-  repoRoot,
-  'packages/blocks/test/fixtures/blockmirror-corpus.json',
-);
+const outPath = join(repoRoot, 'packages/blocks/test/fixtures/blockmirror-corpus.json');
 
 const html = readFileSync(sourcePath, 'utf8');
 const match = html.match(/var TESTS = (\[[\s\S]*?\n {8}\]);/);
 if (!match) throw new Error(`Could not locate the TESTS array in ${sourcePath}`);
 // Trusted local test data (JS strings, template literals, concatenations,
-// // comments) — evaluate the array literal as-is.
+// // comments) - evaluate the array literal as-is.
 const corpus = new Function(`return ${match[1]};`)();
 
 mkdirSync(dirname(outPath), { recursive: true });

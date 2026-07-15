@@ -1,5 +1,5 @@
 /**
- * @blockpy/reader — reading assignments: markdown/HTML content, runnable
+ * @blockpy/reader - reading assignments: markdown/HTML content, runnable
  * code blocks, load⇒correct completion, and engagement telemetry
  * (spec §11.2).
  */

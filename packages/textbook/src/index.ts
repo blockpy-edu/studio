@@ -1,7 +1,7 @@
 /**
- * @blockpy/textbook — chaptered reading navigation (spec §11.4), a thin
+ * @blockpy/textbook - chaptered reading navigation (spec §11.4), a thin
  * composition over `reader` following templates/blockpy/textbook.html
- * (M2.5 decision; the legacy knockout component shipped unfinished —
+ * (M2.5 decision; the legacy knockout component shipped unfinished -
  * ledger LD-15).
  */
 export { Textbook } from './Textbook';

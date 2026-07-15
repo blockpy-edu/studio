@@ -136,7 +136,7 @@ generator.forBlock['ast_StrChar'] = function (block) {
     case '\t':
       return ["'\\t'", generator.ORDER_ATOMIC];
   }
-  // Legacy fell off the end (returning undefined) for any other value —
+  // Legacy fell off the end (returning undefined) for any other value -
   // unreachable through the dropdown.
   return undefined as unknown as null;
 };
@@ -227,13 +227,13 @@ export function dedent(text: string, levels: number, isDocString: boolean): stri
 }
 
 // Image-URL detection table, verbatim from legacy `text_editor.js`
-// (`BlockMirrorTextEditor.REGEX_PATTERNS`) — the converter shared the text
+// (`BlockMirrorTextEditor.REGEX_PATTERNS`) - the converter shared the text
 // editor's table. NOTE for the future text editor port: these regexes (and
 // the 'constructor'/'string'/'none' keys) belong to it as well.
 // The dangling `\2` (its quote group lives in the FIRST alternative only)
 // and the redundant escapes are legacy quirks: an unset backreference
 // matches empty, which is what lets the blob:/data: alternatives match at
-// all. Ported byte-for-byte — do not "fix".
+// all. Ported byte-for-byte - do not "fix".
 /* eslint-disable no-useless-backreference, no-useless-escape */
 const STRING_IMAGE_URL =
   /((["'])(?:https?:\/\/[-a-zA-Z0-9@:%._\/\+~#=]+(?:png|jpg|jpeg|gif|svg)+)|(?:blob:null\/[A-Fa-f0-9-]+)|(?:data:image\/(?:png|jpg|jpeg|gif|svg\+xml|webp|bmp)(?:;charset=utf-8)?;base64,(?:[A-Za-z0-9]|[+/])+={0,2})\2)/g;
@@ -254,7 +254,7 @@ registerConverter(
     // Legacy read `this.blockMirror.configuration.imageDetection`, which
     // `block_mirror.js` defaulted to 'string'; same default applied here.
     // (With 'none' the table yields `false` and `.test` throws a TypeError,
-    // exactly as legacy did — the statement then falls back to a raw block.)
+    // exactly as legacy did - the statement then falls back to a raw block.)
     const imageDetection =
       (this.configuration as { imageDetection?: string }).imageDetection || 'string';
     const regex = REGEX_PATTERNS[imageDetection] as RegExp;

@@ -173,7 +173,7 @@ defineBlock('ast_FunctionDef', {
   updateShape_: function (this: FunctionDefBlock) {
     // Set up decorators and parameters
     // (`as` keeps the nested-closure alias out of no-this-alias, as legacy's
-    // `as any` did — the type is unchanged.)
+    // `as any` did - the type is unchanged.)
     const block = this as FunctionDefBlock;
     (
       [
@@ -366,7 +366,7 @@ generator.forBlock['ast_FunctionDef'] = function (block) {
 };
 
 /**
- * Legacy `BlockMirrorTextToBlocks.prototype.parseArg` — exported as a
+ * Legacy `BlockMirrorTextToBlocks.prototype.parseArg` - exported as a
  * standalone helper (call with the converter as `this`); also used by
  * `astLambda`.
  */
@@ -391,7 +391,7 @@ export function parseArg(
 }
 
 /**
- * Legacy `BlockMirrorTextToBlocks.prototype.parseArgs` — exported as a
+ * Legacy `BlockMirrorTextToBlocks.prototype.parseArgs` - exported as a
  * standalone helper (call with the converter as `this`); also used by
  * `astLambda`, which passes no `node` (matching legacy).
  */
@@ -483,7 +483,7 @@ registerConverter(
   'FunctionDef',
   function (this: TextToBlocksConverter, node: ir.FunctionDef, _parent: unknown) {
     if (node.is_async) {
-      // M3.6: no async block v1 — throwing here triggers convertStatement's
+      // M3.6: no async block v1 - throwing here triggers convertStatement's
       // per-statement ast_Raw fallback (text preserved verbatim).
       throw new Error('async def has no block form (raw fallback)');
     }

@@ -3,7 +3,7 @@
  * `loadAssignmentData_` (blockpy.js:491-539) + `loadSubmission`
  * (blockpy.js:463-489). The legacy client spread these fields across the
  * Knockout model and mirrored them into files (A1 §"model-bound files");
- * Studio writes the files directly — the VFS is the model.
+ * Studio writes the files directly - the VFS is the model.
  */
 import { Vfs } from '@blockpy/vfs';
 import type { DecodedAssignment, DecodedSubmission } from '@blockpy/api';
@@ -50,7 +50,7 @@ export function parseAssignmentSettings(blob: string): Record<string, unknown> {
  * - `answer.py` = submission code; no submission falls back to the starting
  *   code (`loadNoSubmission`, blockpy.js:458-461).
  * - `!on_change.py` / `!on_eval.py` exist only when the assignment
- *   configures them (blockpy.js:512-519) — tab visibility keys off
+ *   configures them (blockpy.js:512-519) - tab visibility keys off
  *   existence (files.js:36-39).
  * - `extra_instructor_files` / `extra_starting_files` / submission
  *   `extra_files` carry their prefixed names verbatim.

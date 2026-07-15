@@ -393,7 +393,7 @@ registerConverter(
             {
               FORMAT_SPEC: format_spec,
               // '' (no conversion) is not a dropdown option, so the field
-              // keeps its default 'plain' value — same net effect as legacy
+              // keeps its default 'plain' value - same net effect as legacy
               // passing Skulpt's undefined here.
               CONVERSION: conversion,
             },

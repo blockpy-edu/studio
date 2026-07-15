@@ -59,7 +59,7 @@ describe('DualTextEditor', () => {
     expect(editor.getCode()).toBe('');
     editor.setMode('text');
     expect(editor.getCode()).toBe('later = True');
-    // The flush is quiet — no sync-loop echo.
+    // The flush is quiet - no sync-loop echo.
     expect(host.changes).toEqual([]);
     editor.dispose();
   });
@@ -132,7 +132,7 @@ describe('DualTextEditor', () => {
     expect(editor.view.state.facet(EditorView.darkTheme)).toBe(false);
     editor.setTheme('dark');
     expect(editor.view.state.facet(EditorView.darkTheme)).toBe(true);
-    // win2000 is a chrome-only skin — the code surface stays light.
+    // win2000 is a chrome-only skin - the code surface stays light.
     editor.setTheme('win2000');
     expect(editor.view.state.facet(EditorView.darkTheme)).toBe(false);
     editor.setTheme('light');

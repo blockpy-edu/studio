@@ -10,7 +10,7 @@
  * button when partId was falsy, plugins.ts:353). Kettle (ts/r) slots stay
  * inert until the M2.5 legacy island. Save/submit endpoints are stripped
  * (the legacy instance dropped saveAssignment/updateSubmission*,
- * plugins.ts:321-326; the minified editor has no persistence at all — the
+ * plugins.ts:321-326; the minified editor has no persistence at all - the
  * part-id saveFile composition is noted in the plan as pending).
  */
 import { useState } from 'react';

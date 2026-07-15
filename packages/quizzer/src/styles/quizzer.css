@@ -1,11 +1,11 @@
 /**
- * Quizzer surface styles (M3.4 — the quizzer previously shipped NO css).
+ * Quizzer surface styles (M3.4 - the quizzer previously shipped NO css).
  *
  * Root cause of both reported sizing bugs: bootstrap-subset.css scopes its
  * `box-sizing: border-box` reset to `.blockpy-content`, and the quiz surface
  * never renders inside one (AssignmentSurface emits no DOM wrapper). Every
- * `.form-control` therefore resolved as content-box — `width: 100%` PLUS
- * padding and border — and overflowed its column. The reset is re-scoped
+ * `.form-control` therefore resolved as content-box - `width: 100%` PLUS
+ * padding and border - and overflowed its column. The reset is re-scoped
  * here to the question card; quizzes deliberately do NOT get wrapped in
  * `.blockpy-content` (that would drag in the parchment frame).
  */
@@ -29,7 +29,7 @@
   vertical-align: baseline;
 }
 
-/* Inline dropdown slots (multiple_dropdowns) — previously rule-less. */
+/* Inline dropdown slots (multiple_dropdowns) - previously rule-less. */
 .quizzer-inline-select {
   display: inline-block;
   width: auto;

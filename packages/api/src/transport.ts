@@ -3,12 +3,12 @@
  * (A2 §1-2), with the D2-B fixes (ledger LD-2b/LD-2c):
  *
  * - per-request POST, `application/x-www-form-urlencoded` (never JSON)
- * - auth: `Authorization: Bearer <accessToken>` header ONLY — the access
+ * - auth: `Authorization: Bearer <accessToken>` header ONLY - the access
  *   token is never a body parameter (A2 §1.1)
  * - transport failures retry with unbounded linear backoff (+2000 ms/try,
  *   legacy FAIL_DELAY); logical failures (`success: false`) do NOT retry
  * - offline queue: max 200 entries, oldest trimmed, exact-duplicate payloads
- *   not enqueued twice, flushed LIFO on boot — all legacy semantics — but
+ *   not enqueued twice, flushed LIFO on boot - all legacy semantics - but
  *   dequeue removes ONE entry (legacy's `splice(index)` wiped the tail,
  *   LD-2b) and IP-change detection works on the retry path (LD-2c).
  */
@@ -22,7 +22,7 @@ export interface LegacyResponse {
 
 export type FetchLike = (
   url: string,
-  // GET has no body — it exists solely for /assignments/by_url (M4.7).
+  // GET has no body - it exists solely for /assignments/by_url (M4.7).
   init: { method: 'POST' | 'GET'; headers: Record<string, string>; body?: string | FormData },
 ) => Promise<{ ok: boolean; json(): Promise<unknown>; text?(): Promise<string> }>;
 
@@ -102,7 +102,7 @@ export class Transport {
 
   /**
    * Plain GET with query params (M4.7): the `/assignments/by_url` route is
-   * GET-only (assignments.py:341-342) — the only legacy endpoint we call
+   * GET-only (assignments.py:341-342) - the only legacy endpoint we call
    * that refuses POST. No retry loop; resolution failures are cosmetic
    * (Missing Reading style) so callers fail soft.
    */
@@ -216,7 +216,7 @@ export class Transport {
     this.storage.setItem(QUEUE_KEY, JSON.stringify(queue));
   }
 
-  /** Enqueue (dedupe exact payloads; trim oldest past 200 — legacy). */
+  /** Enqueue (dedupe exact payloads; trim oldest past 200 - legacy). */
   enqueue(payload: WirePayload): void {
     const entry = JSON.stringify(payload);
     const queue = this.readQueue();

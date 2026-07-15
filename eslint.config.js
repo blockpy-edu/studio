@@ -16,7 +16,7 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    // Node scripts (spikes, tooling) — plain JS run outside the browser.
+    // Node scripts (spikes, tooling) - plain JS run outside the browser.
     files: ['**/*.mjs'],
     languageOptions: {
       globals: {

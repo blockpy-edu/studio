@@ -55,7 +55,7 @@ describe('pipeline smoke', () => {
     const converter = new TextToBlocksConverter();
     const result = converter.convertSource('__main__.py', 'b = ');
     // Legacy chops the bad line, reaches empty source, and returns without
-    // an error — the whole input lands in the ast_Raw block.
+    // an error - the whole input lands in the ast_Raw block.
     expect(result.error).toBeNull();
     expect(result.xml).toContain('ast_Raw');
     expect(result.xml).not.toContain('ast_Assign');

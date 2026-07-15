@@ -1,11 +1,11 @@
 /**
- * The frozen event-identifier registry (spec §14.4, appendix A2 — the
+ * The frozen event-identifier registry (spec §14.4, appendix A2 - the
  * review-gate deliverable). Per decision D2, this is the ONE place event
  * identifiers live, with a deprecation system so the research team can
  * track data-quality boundaries in docs and code.
  *
  * Sources: appendix A2 §3 (BlockPy client), §4 (server frontend),
- * §5 (server-fabricated — the studio client must NOT emit those).
+ * §5 (server-fabricated - the studio client must NOT emit those).
  */
 
 export type EventStatus =
@@ -34,7 +34,7 @@ export interface EventDefinition {
 }
 
 export const EVENT_REGISTRY: readonly EventDefinition[] = [
-  // --- BlockPy client (editor) — A2 §3 ------------------------------------
+  // --- BlockPy client (editor) - A2 §3 ------------------------------------
   { eventType: 'Compile', status: 'live', trigger: 'Run clicked / console eval begins' },
   {
     eventType: 'Compile.Error',
@@ -117,7 +117,7 @@ export const EVENT_REGISTRY: readonly EventDefinition[] = [
       note: 'Legacy detection was dead on the _postRetry path (LD-2c); coverage is complete only from Studio onward.',
     },
   },
-  // --- Server frontend (reader/kettle/explain/timers) — A2 §4 -------------
+  // --- Server frontend (reader/kettle/explain/timers) - A2 §4 -------------
   {
     eventType: 'Resource.View',
     category: 'reading',
@@ -152,7 +152,7 @@ export const EVENT_REGISTRY: readonly EventDefinition[] = [
     trigger:
       'ONLY the Explain tool upload emits this client-side; all other File.Edit rows are server-fabricated from save_file (A2 §5)',
   },
-  // --- Dead legacy families — never fired; do not resurrect ---------------
+  // --- Dead legacy families - never fired; do not resurrect ---------------
   {
     eventType: 'Session.End',
     status: 'dead',
@@ -169,7 +169,7 @@ export const EVENT_REGISTRY: readonly EventDefinition[] = [
     status: 'dead',
     trigger: 'Legacy BlockPyToolbar module was never imported',
   },
-  // --- Server-fabricated — the studio client must NOT emit these ----------
+  // --- Server-fabricated - the studio client must NOT emit these ----------
   {
     eventType: 'Session.Start',
     status: 'server',

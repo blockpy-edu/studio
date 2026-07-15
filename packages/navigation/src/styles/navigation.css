@@ -1,6 +1,6 @@
 /*
  * The assignment_group_header macro's inline style block, verbatim
- * (blockpy-server templates/helpers/assignment_groups.html:10-23) — the
+ * (blockpy-server templates/helpers/assignment_groups.html:10-23) - the
  * warning-yellow row is called out as layout-relevant in spec §9.6.
  */
 
@@ -9,7 +9,7 @@
  * (layout.html:295) with Bootstrap's global border-box reboot, and the
  * blockpy stylesheet zeroes the row's negative gutters (unscoped in legacy
  * too). The app shell has neither wrapper: the header carries the container
- * padding itself, and the border-box reboot is re-scoped here — without it
+ * padding itself, and the border-box reboot is re-scoped here - without it
  * the col-md-12's own padding inflates past the viewport (horizontal
  * scroll).
  */
@@ -36,7 +36,7 @@
 }
 
 /*
- * Option status colors — the legacy editor page's inline style block
+ * Option status colors - the legacy editor page's inline style block
  * (editor_includes.html:31-41); §9.6 lists these classes as CSS hooks.
  */
 .correct-submission {
@@ -53,7 +53,7 @@
 
 /*
  * White nav buttons; :not(.btn-success) keeps the legacy markCorrect
- * restyle visible — Next turns (and stays) green after any correct mark,
+ * restyle visible - Next turns (and stays) green after any correct mark,
  * including the end-of-group green-but-disabled state (A7 §2).
  */
 .assignment-selector-btn:not(.btn-success) {
@@ -69,7 +69,7 @@
 /*
  * Dark theme (M7.7, amends LD-23): the nav renders OUTSIDE .blockpy-content
  * and its colors above are hardcoded, so the M4.1 token overrides never
- * reached it — every rule needs an explicit dark variant. data-theme is
+ * reached it - every rule needs an explicit dark variant. data-theme is
  * already global on :root (store.ts applyThemeAttribute); values follow the
  * themes.css dark ramp. Win2000 deliberately stays editor-scoped.
  */

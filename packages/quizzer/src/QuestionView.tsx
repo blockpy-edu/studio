@@ -1,12 +1,12 @@
 /**
- * One quiz question card — the React port of questions_ui.html plus the
+ * One quiz question card - the React port of questions_ui.html plus the
  * `makeBody` blank-injection (quiz.ts:315-346) and the status square
  * (quizzer_question_status.ts). Bodies/choices render through the reader
  * markdown pipeline (the legacy `markdowned` binding is the same
  * markdown-it instance for quizzes, A6 §2).
  *
  * Blank placeholders ([blank_id] in dropdown/fill-in bodies) become slot
- * spans in the rendered HTML; controlled inputs portal into them — the
+ * spans in the rendered HTML; controlled inputs portal into them - the
  * same hydration pattern the reader uses for runnable fences.
  *
  * LD-1: matching/dropdown option shuffles are SEEDED (submission-id(+
@@ -27,7 +27,7 @@ import type {
   StudentAnswer,
 } from './types';
 
-/** questions.ts:4 — negative lookbehind/ahead keep \[escapes] and [links](…). */
+/** questions.ts:4 - negative lookbehind/ahead keep \[escapes] and [links](…). */
 const matchKeyInBrackets = (key: string) =>
   new RegExp(String.raw`(?<!\\)(\[${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\])(?!\()`);
 
@@ -149,7 +149,7 @@ export function QuestionView(props: QuestionViewProps) {
   const bodyHtml = useMemo(() => renderMarkdown(preparedBody), [renderMarkdown, preparedBody]);
 
   // Students only see question content once an attempt exists
-  // (questions_ui.html:25) — the slot scan must re-run when the body
+  // (questions_ui.html:25) - the slot scan must re-run when the body
   // first mounts, not just when its HTML changes.
   const contentVisible = !asStudent || props.attemptCount > 0;
 
@@ -165,7 +165,7 @@ export function QuestionView(props: QuestionViewProps) {
     );
   }, [bodyHtml, contentVisible]);
 
-  // Seeded option orders (LD-1) — stable per (question, seed) pair.
+  // Seeded option orders (LD-1) - stable per (question, seed) pair.
   const dropdownOptions = useMemo(() => {
     if (question.type !== 'multiple_dropdowns_question') return {};
     const answers = (question.answers ?? {}) as Record<string, string[]>;

@@ -1,10 +1,10 @@
 /**
- * Docs browser panel (M4.3; STUDIO EXTENSION, LD-25 — no legacy analog).
+ * Docs browser panel (M4.3; STUDIO EXTENSION, LD-25 - no legacy analog).
  * A collapsible right-hand panel beside the editor rendering a course
  * reference document from the assignment's `docs_url` setting (raw string
  * per A4 semantics; typically identical across a course).
  *
- * - Fetched once per SESSION per URL (module cache) — instructors host the
+ * - Fetched once per SESSION per URL (module cache) - instructors host the
  *   file; a reload picks up edits.
  * - Rendered through the existing marked + hljs pipeline (A6 parity rules:
  *   breaks, raw HTML unsanitized per D4-A, target=_blank links, 400 ms
@@ -34,7 +34,7 @@ function fetchDocs(url: string): Promise<string> {
       }
       return response.text();
     });
-    // Failures don't poison the session cache — a re-open retries.
+    // Failures don't poison the session cache - a re-open retries.
     cached.catch(() => DOCS_CACHE.delete(url));
     DOCS_CACHE.set(url, cached);
   }

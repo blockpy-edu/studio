@@ -4,12 +4,12 @@
  * Legacy renders reader/quiz content with markdown-it (blockpy-server
  * frontend/services/plugins.ts:192-260); the rewrite unifies on `marked`
  * (the instructions pane's library) while replicating the markdown-it
- * pipeline's observable behaviors — ledger LD-13 documents the known
+ * pipeline's observable behaviors - ledger LD-13 documents the known
  * deltas. Replicated exactly:
  *
  *   - `html: true`, no sanitization (D4-A legacy parity);
  *   - `breaks` OFF (markdown-it default; the instructions pane forces
- *     breaks:true — the two pipelines really differ here, A6 §3);
+ *     breaks:true - the two pipelines really differ here, A6 §3);
  *   - the `highlight` callback's fence scheme (plugins.ts:194-243):
  *     python + non-empty info-string attrs → runnable structure
  *     (`pre.reader-launch-blockpy[data-part-id]` + hidden raw-source div +
@@ -91,7 +91,7 @@ function renderFence(source: string, info: string): string {
   return '<pre class="hljs"><code>' + escapeHtml(source) + '</code></pre>';
 }
 
-/** `link.startsWith("http")` — the verbatim legacy predicate ("httpfoo"
+/** `link.startsWith("http")` - the verbatim legacy predicate ("httpfoo"
  *  counts as absolute too, plugins.ts:188-190). */
 const rewriteLink = (link: string, env: ReaderRenderEnv): string =>
   link.startsWith('http') ? link : env.downloadUrl(link);

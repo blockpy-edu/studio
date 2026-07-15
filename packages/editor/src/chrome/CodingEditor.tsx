@@ -1,5 +1,5 @@
 /**
- * The coding-problem editor surface — assembles the A8 §1 rows: header/
+ * The coding-problem editor surface - assembles the A8 §1 rows: header/
  * instructions + quick menu (Row 1), console + feedback (Row 2), file tabs
  * (Row 3), the Python toolbar + dual editor (Row 4), and the status footer
  * (Row 5), inside the parchment `.blockpy-content` frame.
@@ -68,7 +68,7 @@ export interface RunHandlers {
   onInput?(prompt: string): Promise<string>;
   /**
    * System/diagnostic messages (engine boot, grader lifecycle) and
-   * instructor-code output — NOT student program output. Routed to the
+   * instructor-code output - NOT student program output. Routed to the
    * footer status area and the instructor-only dev console, never the
    * student console.
    */
@@ -87,7 +87,7 @@ export interface RunOptions {
   /** Queued stdin lines replayed into the run (compat-mode input, M1.3.4). */
   inputs?: string[];
   /**
-   * The instructor grading script for THIS run — the current `!on_run.py`
+   * The instructor grading script for THIS run - the current `!on_run.py`
    * from the VFS, so instructor edits take effect immediately. Empty string
    * = no grader. `undefined` = caller has no VFS; the controller may fall
    * back to a statically configured script.
@@ -95,7 +95,7 @@ export interface RunOptions {
   onRun?: string;
   /**
    * Files staged into the student run's working directory, prefix-stripped
-   * (the student search-order view, A1 §4a — what `open()` can reach).
+   * (the student search-order view, A1 §4a - what `open()` can reach).
    */
   files?: Record<string, string>;
   /** Files staged for the grading job (instructor view; A1 §3). */
@@ -121,7 +121,7 @@ export interface RunOptions {
 /** Graphic extensions served by the ImageEditor tab body (M4.5, LD-27). */
 const IMAGE_FILE = /\.(png|jpe?g|gif|bmp)$/i;
 
-/** Legacy countTestCases tallies — the Intervention `unitTests` block (A2). */
+/** Legacy countTestCases tallies - the Intervention `unitTests` block (A2). */
 export interface UnitTestCounts {
   tests: number;
   feedbacks: number;
@@ -129,7 +129,7 @@ export interface UnitTestCounts {
   feedbackSuccess: number;
 }
 
-/** Resolved grading verdict — the legacy SUCCESS/SCORE/HIDE triple (§14.3). */
+/** Resolved grading verdict - the legacy SUCCESS/SCORE/HIDE triple (§14.3). */
 export interface GradeResult {
   /** RAW success of THIS run (the wire `correct`; monotonic OR is display). */
   success: boolean;
@@ -173,7 +173,7 @@ export interface RunOutcome {
   instructions?: string | null;
   /**
    * First error line from the winning feedback's DATA['location']
-   * (feedback.js findFirstErrorLine) — drives editor-error-line.
+   * (feedback.js findFirstErrorLine) - drives editor-error-line.
    */
   errorLine?: number | null;
 }
@@ -227,7 +227,7 @@ export interface CodingEditorProps {
   /** Legacy `hide_evaluate` setting: never offer the console Evaluate. */
   hideEvaluate?: boolean;
   /**
-   * `enable_autocomplete` ASSIGNMENT setting (M7.2; Studio extension —
+   * `enable_autocomplete` ASSIGNMENT setting (M7.2; Studio extension -
    * default off). Reversed from the M3.3 per-user toggle by maintainer
    * decision 2026-07-14: instructors opt an assignment in via the Settings
    * tab; there is no student-facing toggle.
@@ -235,7 +235,7 @@ export interface CodingEditorProps {
   enableAutocomplete?: boolean;
   /**
    * Legacy `disable_feedback` setting (engine.js:115): skip the instructor
-   * grading pass entirely — runs report only their own success/errors.
+   * grading pass entirely - runs report only their own success/errors.
    */
   disableFeedback?: boolean;
   /** `allow_real_requests` setting (M3.5): real network for `requests`. */
@@ -244,7 +244,7 @@ export interface CodingEditorProps {
   disableTifa?: boolean;
   /** Legacy `disable_instructor_run` setting (grader sandbox not run). */
   disableInstructorRun?: boolean;
-  /** Pool-question seed — legacy currentSeed = poolSeed ?? submission.id. */
+  /** Pool-question seed - legacy currentSeed = poolSeed ?? submission.id. */
   seed?: string;
   /**
    * Assignment-level columns shown in the Settings form (M3.5); the section
@@ -257,7 +257,7 @@ export interface CodingEditorProps {
    */
   onSaveSettings?: (blob: string, fields: AssignmentFields) => void;
   /**
-   * Legacy `hide_files` setting (A4: defaults TRUE) — gates the whole files
+   * Legacy `hide_files` setting (A4: defaults TRUE) - gates the whole files
    * UI for students: the tab strip, the tree rail, and Add New (legacy
    * files.visible/addIsVisible, blockpy.js:913-917).
    */
@@ -272,11 +272,11 @@ export interface CodingEditorProps {
    * History button is enabled only when provided (`isHistoryAvailable`).
    */
   loadHistory?: () => Promise<HistoryEntry[]>;
-  /** `assignment.hidden` — filters X-Submission.LMS rows (history.js). */
+  /** `assignment.hidden` - filters X-Submission.LMS rows (history.js). */
   assignmentHidden?: boolean;
   onCodeChange?: (code: string) => void;
   /**
-   * Any writable file changed through the editor — the autosave hook
+   * Any writable file changed through the editor - the autosave hook
    * (legacy createFileSubscription, server.js:114-134).
    */
   onFileEdit?: (filename: string, contents: string) => void;
@@ -291,19 +291,19 @@ export interface CodingEditorProps {
    * layer runs the §14.3 updateSubmission → markCorrect sequence.
    */
   onGraded?: (grade: GradeResult) => void;
-  /** ProgSnap2 event stream hook (§14.4, A2) — see LogEventFn. */
+  /** ProgSnap2 event stream hook (§14.4, A2) - see LogEventFn. */
   onLogEvent?: LogEventFn;
   /**
-   * Receive the live DualEditor (null on unmount) — the app layer uses
+   * Receive the live DualEditor (null on unmount) - the app layer uses
    * `blockEditor.getPng()` for the updateSubmission image payload (§14.3).
    */
   onEditorReady?: (editor: DualEditor | null) => void;
   /**
-   * Uploaded-files server actions — `images.blockpy` tabs render the
+   * Uploaded-files server actions - `images.blockpy` tabs render the
    * ImagesManager instead of a code editor when provided.
    */
   uploads?: UploadsController;
-  /** Legacy provideRatings (= !assignment.hidden) — feedback thumbs. */
+  /** Legacy provideRatings (= !assignment.hidden) - feedback thumbs. */
   provideRatings?: boolean;
   /**
    * `docs_url` setting (M4.3; STUDIO EXTENSION, LD-25): a markdown
@@ -318,7 +318,7 @@ export interface CodingEditorProps {
   /** Quick-menu wiring (Row 1 right column); `onRun` is supplied here. */
   quickMenu?: Omit<QuickMenuProps, 'onRun'>;
   /**
-   * Footer identity/callbacks (Row 5). The footer always renders — legacy
+   * Footer identity/callbacks (Row 5). The footer always renders - legacy
    * hides it only under `small_layout`, which lands with the settings
    * wiring.
    */
@@ -361,10 +361,10 @@ export function CodingEditor(props: CodingEditorProps) {
   useEffect(() => {
     store.getState().setInstructionsOverride(null);
   }, [store]);
-  // Legacy files.visible (blockpy.js:913-917): the WHOLE files UI — tab
-  // strip, tree rail, Add New — shows for instructors, un-hidden
+  // Legacy files.visible (blockpy.js:913-917): the WHOLE files UI - tab
+  // strip, tree rail, Add New - shows for instructors, un-hidden
   // assignments, or when preload_all_files forces it. hide_files defaults
-  // TRUE (A4 §5), so default student assignments have no files UI (M7.2 —
+  // TRUE (A4 §5), so default student assignments have no files UI (M7.2 -
   // the always-visible strip was the regression).
   const filesVisible =
     (props.instructor ?? false) || !(props.hideFiles ?? true) || (props.preloadAllFiles ?? false);
@@ -558,7 +558,7 @@ export function CodingEditor(props: CodingEditorProps) {
           try {
             contents = convertIpynbToPython(contents);
           } catch {
-            // Unparseable notebook JSON — fall back to the raw text.
+            // Unparseable notebook JSON - fall back to the raw text.
           }
         }
         onLogEvent?.('X-File.Upload', '', '', contents, activeFile);
@@ -588,7 +588,7 @@ export function CodingEditor(props: CodingEditorProps) {
   }, [toolboxSpec]);
 
   // `enable_autocomplete` assignment setting → live CM6 reconfigure (M7.2;
-  // default off — an ASSIGNMENT setting, not a user toggle).
+  // default off - an ASSIGNMENT setting, not a user toggle).
   useEffect(() => {
     editorRef.current?.setAutocomplete(enableAutocomplete ?? false);
   }, [enableAutocomplete]);
@@ -600,7 +600,7 @@ export function CodingEditor(props: CodingEditorProps) {
   }, [keyboardNavOn]);
 
   // System messages (engine boot, grader lifecycle, instructor output) go
-  // to the footer status line + the instructor-only dev console — never the
+  // to the footer status line + the instructor-only dev console - never the
   // student console.
   const handleSystem = useCallback(
     (text: string) => {
@@ -616,7 +616,7 @@ export function CodingEditor(props: CodingEditorProps) {
     const controller = runController;
     const { setRunState, appendConsole, clearConsole, setFeedback } = store.getState();
     clearConsole();
-    // A fresh run clears the previous internal-grading-error state — the bug
+    // A fresh run clears the previous internal-grading-error state - the bug
     // icon disappears until a grader failure sets it again (LD-36; parity
     // with legacy clearing the icon per grade, feedback.js:269).
     store.getState().setGraderError(null);
@@ -630,7 +630,7 @@ export function CodingEditor(props: CodingEditorProps) {
     setRunState('running');
     store.getState().setServerStatus('onExecution', 'active', '');
     // Snapshot the queued inputs for THIS run, then clear the queue
-    // immediately unless reuse is on — legacy clears at run START
+    // immediately unless reuse is on - legacy clears at run START
     // (run.js:37 → configurations.js clearInput), so inputs queued while a
     // run is in flight are never wiped by its completion.
     const runInputs = store.getState().queuedInputs;
@@ -664,9 +664,9 @@ export function CodingEditor(props: CodingEditorProps) {
           disableTifa: disableTifa,
           disableInstructorRun: disableInstructorRun,
           seed: seed,
-          // Grade with the CURRENT !on_run.py — instructor edits to the On
+          // Grade with the CURRENT !on_run.py - instructor edits to the On
           // Run tab apply on the very next run (§7: the VFS is the source
-          // of truth) — and stage the live VFS into both jobs: the student
+          // of truth) - and stage the live VFS into both jobs: the student
           // search-order view for open() etc., the instructor view for
           // grader helper imports (A1 §3/§4a).
           ...(vfs
@@ -766,7 +766,7 @@ export function CodingEditor(props: CodingEditorProps) {
       store.getState().setServerStatus('onExecution', 'failed', String(error));
       appendConsole({ kind: 'stderr', text: String(error) });
     } finally {
-      // A hard stop (interrupt/timeout) can leave the input line orphaned —
+      // A hard stop (interrupt/timeout) can leave the input line orphaned -
       // the run it belonged to is gone either way (§6.5).
       store.getState().cancelConsoleInput();
     }
@@ -818,7 +818,7 @@ export function CodingEditor(props: CodingEditorProps) {
             systemError: (traceback) => store.getState().setGraderError(traceback),
           },
           // on_eval grading (engine.js:146-156): runs only when the
-          // assignment HAS an on_eval script and feedback isn't disabled —
+          // assignment HAS an on_eval script and feedback isn't disabled -
           // the controller enforces both; we supply the live VFS script.
           {
             onEval: vfs ? (vfs.read('!on_eval.py') ?? '') : '',
@@ -830,7 +830,7 @@ export function CodingEditor(props: CodingEditorProps) {
           store.getState().setServerStatus('onExecution', 'ready', '');
           if (outcome.error !== null) {
             appendConsole({ kind: 'stderr', text: outcome.error });
-            // eval.js:57 — eval errors log as Compile.Error.
+            // eval.js:57 - eval errors log as Compile.Error.
             onLogEvent?.('Compile.Error', '', '', outcome.error, 'evaluations');
           } else {
             onLogEvent?.('X-Evaluate.Program', '', '', '', 'evaluations');
@@ -924,7 +924,7 @@ export function CodingEditor(props: CodingEditorProps) {
 
   const handleReset = useCallback(() => {
     // Reset restores answer.py to the starting code (`^starting_code.py`
-    // when a VFS is attached — reset-to-`^` semantics, §7.4).
+    // when a VFS is attached - reset-to-`^` semantics, §7.4).
     const starting = vfs
       ? (vfs.read('^starting_code.py') ?? startingCode ?? '')
       : (startingCode ?? '');
@@ -938,7 +938,7 @@ export function CodingEditor(props: CodingEditorProps) {
     onLogEvent?.('X-File.Reset', '', '', '', 'answer.py');
   }, [startingCode, onLogEvent, vfs, isAnswerFile]);
 
-  // X-View.Change on Blocks/Split/Text toggles (blockpy.js:1071-1075) —
+  // X-View.Change on Blocks/Split/Text toggles (blockpy.js:1071-1075) -
   // logged on changes only, not the initial mode.
   const loggedMode = useRef(pythonMode);
   useEffect(() => {
@@ -1002,7 +1002,7 @@ export function CodingEditor(props: CodingEditorProps) {
         </div>
       )}
       {/* Row 3: the file strip renders only under legacy files.visible
-          (M7.2 — hide_files defaults TRUE, so students see no strip unless
+          (M7.2 - hide_files defaults TRUE, so students see no strip unless
           the assignment opts in or preload_all_files forces it). */}
       {!focusedMode &&
         vfs &&
@@ -1104,7 +1104,7 @@ export function CodingEditor(props: CodingEditorProps) {
             />
           ) : activeFile.endsWith('images.blockpy') && props.uploads ? (
             // Legacy editor dispatch by extension (images.js: extensions
-            // ["images.blockpy"]) — the uploaded-files manager replaces the
+            // ["images.blockpy"]) - the uploaded-files manager replaces the
             // code editor for this tab.
             <ImagesManager uploads={props.uploads} instructor={props.instructor} />
           ) : activeFile === '!assignment_settings.blockpy' ? (
@@ -1160,14 +1160,14 @@ export function CodingEditor(props: CodingEditorProps) {
             <div
               className="blockpy-python-blockmirror"
               // X-Editor.Paste (python.js:238-248) with REAL character
-              // counts — legacy's shadowed `const characters` always
+              // counts - legacy's shadowed `const characters` always
               // logged {characters: 0} (LD-2a; trustworthy from Studio on).
               onPaste={(event) => {
                 let characters = 0;
                 try {
                   characters = event.clipboardData.getData('Text').length;
                 } catch {
-                  // Clipboard unreadable — log the 0 like legacy's catch.
+                  // Clipboard unreadable - log the 0 like legacy's catch.
                 }
                 onLogEvent?.('X-Editor.Paste', '', '', JSON.stringify({ characters }), activeFile);
               }}
@@ -1191,7 +1191,7 @@ export function CodingEditor(props: CodingEditorProps) {
                   </button>
                 )}
               <DualEditorView
-                // Height is construction-time config — the key remounts the
+                // Height is construction-time config - the key remounts the
                 // editor taller for focused mode (code survives via props).
                 key={focusedMode ? 'focused' : 'normal'}
                 mode={isAnswerFile ? pythonMode : 'text'}
@@ -1267,7 +1267,7 @@ export function CodingEditor(props: CodingEditorProps) {
         </div>
       )}
       {/* Focused-mode instructions overlay (M4.2): the pane is hidden, not
-          gone — same markdown pipeline as the Instructions component. Only
+          gone - same markdown pipeline as the Instructions component. Only
           mounted while open (the markdown pass is per-render). */}
       {focusedMode && instructionsOverlay && (
         <Dialog

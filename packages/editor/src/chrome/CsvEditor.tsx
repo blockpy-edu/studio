@@ -13,7 +13,7 @@ export interface CsvEditorProps {
   value: string;
   readOnly?: boolean;
   onChange(next: string): void;
-  /** "Raw text" escape hatch — the caller swaps in the text editor. */
+  /** "Raw text" escape hatch - the caller swaps in the text editor. */
   onRawView(): void;
 }
 

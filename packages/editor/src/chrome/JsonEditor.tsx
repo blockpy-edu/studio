@@ -22,7 +22,7 @@ export interface JsonEditorProps {
   value: string;
   readOnly?: boolean;
   onChange(next: string): void;
-  /** "Raw text" escape hatch — the caller swaps in the text editor. */
+  /** "Raw text" escape hatch - the caller swaps in the text editor. */
   onRawView(): void;
 }
 
@@ -93,7 +93,7 @@ export function JsonEditor({ value, readOnly, onChange, onRawView }: JsonEditorP
           foldGutter(),
           bracketMatching(),
           json(),
-          // Accessible name (WCAG audit M6.1 — axe aria-input-field-name).
+          // Accessible name (WCAG audit M6.1 - axe aria-input-field-name).
           EditorView.contentAttributes.of({ 'aria-label': 'JSON editor' }),
           linter(jsonParseLinter()),
           syntaxHighlighting(defaultHighlightStyle, { fallback: true }),

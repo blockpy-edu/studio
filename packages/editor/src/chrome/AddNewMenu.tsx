@@ -1,11 +1,11 @@
 /**
- * "Add New" file menu — the dropdown at the end of the file tab strip
+ * "Add New" file menu - the dropdown at the end of the file tab strip
  * (files.js FILES_HTML:81-131 + blockpy.js ui.files.add:944-987). Items are
  * hidden once their file has contents; created files open immediately.
  *
  * Instructor menu, quirk-for-quirk:
  *  - URL Data / Images / Toolbox / Tags / Sample Submissions (Tags has NO
- *    click binding in legacy — a dead item, kept dead);
+ *    click binding in legacy - a dead item, kept dead);
  *  - On Change / On Eval (hidden once the file exists at all);
  *  - Answer Prefix / Answer Suffix;
  *  - Starting File / Instructor File / Student File via the new-file dialog
@@ -86,7 +86,7 @@ export function AddNewMenu({ vfs, instructor, onAdd }: AddNewMenuProps) {
         href="#"
         onClick={(event) => {
           event.preventDefault();
-          // Tags is click-less in legacy (dead item) — preserved.
+          // Tags is click-less in legacy (dead item) - preserved.
           if (legacyName !== null) add(legacyName);
         }}
       >

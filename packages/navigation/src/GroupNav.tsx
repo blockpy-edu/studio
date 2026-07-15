@@ -1,12 +1,12 @@
 /**
- * Assignment-group header (spec §9.1) — the React port of the
+ * Assignment-group header (spec §9.1) - the React port of the
  * `assignment_group_header` Jinja macro (blockpy-server
  * templates/helpers/assignment_groups.html:146-200). Rendered TWICE (top
  * and bottom of the page) from one GroupNavStore, matching the double
  * template include; §9.6 CSS hooks are preserved verbatim.
  *
  * Icons: legacy FontAwesome fa-step-backward/chevron-left/chevron-right/
- * fa-step-forward → Lucide SkipBack/ChevronLeft/ChevronRight/SkipForward —
+ * fa-step-forward → Lucide SkipBack/ChevronLeft/ChevronRight/SkipForward -
  * identical glyph shapes, same modernization the editor chrome applied to
  * its trace/history steppers (editor icons.tsx, A8 §3.2).
  */
@@ -41,7 +41,7 @@ export function GroupNav({ store, extras }: GroupNavProps) {
   const atFirst = currentId === store.firstId;
   const atLast = currentId === store.lastId;
   const current = entries.find((entry) => entry.id === currentId);
-  // markCorrect swaps btn-outline-secondary for btn-success (A7 §2) — the
+  // markCorrect swaps btn-outline-secondary for btn-success (A7 §2) - the
   // two are mutually exclusive, matching the legacy removeClass/addClass.
   const nextButtonClass = `btn ${nextSuccess ? 'btn-success' : 'btn-outline-secondary'} mr-2 btn-sm assignment-selector-btn assignment-selector-next`;
 
@@ -70,7 +70,7 @@ export function GroupNav({ store, extras }: GroupNavProps) {
               className="assignment-selector m-1"
               aria-label="Select assignment"
               value={currentId}
-              // Legacy: size = min(5, document-wide options / 2) — with the
+              // Legacy: size = min(5, document-wide options / 2) - with the
               // dual-rendered header that resolves to min(5, N) (:97).
               size={expanded ? Math.min(5, entries.length) : 1}
               style={{ verticalAlign: expanded ? 'top' : 'middle' }}
@@ -133,7 +133,7 @@ export function GroupNav({ store, extras }: GroupNavProps) {
             >
               {state.clockText}
             </span>
-            {/* aria-live announcement — new but non-breaking (§9.3). */}
+            {/* aria-live announcement - new but non-breaking (§9.3). */}
             <span className="sr-only" aria-live="polite">
               {current ? `Assignment: ${current.name}` : ''}
             </span>

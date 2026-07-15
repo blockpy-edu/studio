@@ -35,7 +35,7 @@ export interface PedalFeedback {
    */
   hide_correctness?: boolean;
   /**
-   * Legacy countTestCases tallies (feedback.js:341-368) — the `unitTests`
+   * Legacy countTestCases tallies (feedback.js:341-368) - the `unitTests`
    * block of the Intervention event payload (A2). Key spelling is the
    * legacy wire format (`feedbackSuccess` camelCase included).
    */
@@ -57,9 +57,9 @@ export interface PedalFeedback {
   instructions?: string | null;
   /** final.positives (on_run.js:78-88, else_message quirk applied). */
   positives?: { title: string; label: string; message: string }[];
-  /** final.systems with label log/debug — dev-console lines (on_run.js:90-95). */
+  /** final.systems with label log/debug - dev-console lines (on_run.js:90-95). */
   systems?: { label: string; title: string; message: string }[];
-  /** DATA['location'].line (feedback.js findFirstErrorLine) — error highlight. */
+  /** DATA['location'].line (feedback.js findFirstErrorLine) - error highlight. */
   line?: number | null;
 }
 
@@ -92,7 +92,7 @@ export interface PedalEvalOptions {
   onEval: string;
 }
 
-// curriculum-ctvt is NOT on PyPI (unlike curriculum-sneks) — it joins this
+// curriculum-ctvt is NOT on PyPI (unlike curriculum-sneks) - it joins this
 // list when its wheel is bundled with the deployment (spec §10.1).
 export const DEFAULT_PEDAL_PACKAGES = ['pedal', 'curriculum-sneks', 'bakery'];
 
@@ -160,7 +160,7 @@ export class PedalEnvironment {
 
   /**
    * Console-eval grading (on_eval.js): runs against the LAST grade()'s
-   * report/sandbox in this interpreter — call only after a grading pass.
+   * report/sandbox in this interpreter - call only after a grading pass.
    */
   evaluateGrade(options: PedalEvalOptions): PedalFeedback {
     const proxy = this.evaluate_(options.evaluation, options.onEval, '{}');

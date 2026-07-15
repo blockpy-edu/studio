@@ -1,6 +1,6 @@
 /**
- * Footer — Row 5 (A8 §1; legacy FOOTER_HTML, footer.js:2-41):
- * `.col-md-12.blockpy-panel.blockpy-status` with three lines —
+ * Footer - Row 5 (A8 §1; legacy FOOTER_HTML, footer.js:2-41):
+ * `.col-md-12.blockpy-panel.blockpy-status` with three lines -
  *   1. server-status badges, one per endpoint, class
  *      `server-status-<state>` (blockpy.js ui.server.status);
  *      "Load Assignment" wraps a hidden [INSTRUCTOR] force-load file input,
@@ -8,7 +8,7 @@
  *   2. the first non-empty server status message;
  *   3. the identity line (user/course/group/assignment/submission versions).
  * Legacy visibility: `display.instructor() || !ui.smallLayout()`
- * (blockpy.js:1211-1215) — the parent decides; smallLayout lands with the
+ * (blockpy.js:1211-1215) - the parent decides; smallLayout lands with the
  * settings wiring.
  */
 import type { ChangeEvent } from 'react';
@@ -44,7 +44,7 @@ export interface FooterIdentity {
 
 export interface FooterProps {
   identity?: FooterIdentity;
-  /** display.instructor — reveals the force-load-assignment file input. */
+  /** display.instructor - reveals the force-load-assignment file input. */
   instructor?: boolean;
   /** Legacy ui.server.force.loadAssignment: parsed JSON of the chosen file. */
   onForceLoadAssignment?(data: unknown): void;

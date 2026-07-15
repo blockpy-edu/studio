@@ -101,7 +101,7 @@ describe('navigation (assignment_groups.html:62-92)', () => {
 });
 
 describe('markCorrect (assignment_groups.html:124-142, A7 §2)', () => {
-  it('marks, counts, and restyles Next — idempotently', () => {
+  it('marks, counts, and restyles Next - idempotently', () => {
     const store = makeStore();
     expect(store.getSnapshot().numerator).toBe(1); // 103 seeded correct
     store.markCorrect(101);
@@ -120,7 +120,7 @@ describe('markCorrect (assignment_groups.html:124-142, A7 §2)', () => {
     expect(store.getSnapshot().nextSuccess).toBe(false);
   });
 
-  it('unknown/subordinate ids still bump the numerator — every call (legacy quirk)', () => {
+  it('unknown/subordinate ids still bump the numerator - every call (legacy quirk)', () => {
     const store = makeStore();
     store.markCorrect(102); // subordinate: no option in the header
     store.markCorrect(102); // hasClass guard never matches an empty set
@@ -135,7 +135,7 @@ describe('markCorrect (assignment_groups.html:124-142, A7 §2)', () => {
     store.markCorrect(101);
     const snap = store.getSnapshot();
     expect(snap.correct.has(101)).toBe(false);
-    expect(snap.numerator).toBe(1); // untouched — render masks it as "??"
+    expect(snap.numerator).toBe(1); // untouched - render masks it as "??"
     expect(snap.nextSuccess).toBe(false);
   });
 });
@@ -285,7 +285,7 @@ describe('countdown / time-limit checker (assignment_interface.ts:160-256)', () 
     detach();
   });
 
-  it('instructors never get the overlay — and the early return freezes the span', () => {
+  it('instructors never get the overlay - and the early return freezes the span', () => {
     const store = makeStore({}, { isInstructor: () => true });
     const detach = store.attach();
     store.setTimeLimit({
@@ -318,7 +318,7 @@ describe('countdown / time-limit checker (assignment_interface.ts:160-256)', () 
     const events: string[] = [];
     const store = makeStore({}, { logEvent: (eventType) => void events.push(eventType) });
     const detach = store.attach();
-    // A numeric time_limit crashes parseTimeLimit — legacy hits the same
+    // A numeric time_limit crashes parseTimeLimit - legacy hits the same
     // catch every 5 s (assignment_interface.ts:92-110).
     store.setTimeLimit({
       timeLimit: 45 as unknown as string,

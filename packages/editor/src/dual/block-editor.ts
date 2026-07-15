@@ -1,11 +1,11 @@
 /**
- * Block half of the dual editor — port of legacy
+ * Block half of the dual editor - port of legacy
  * `BlockMirror/src/block_editor.js` on Blockly 11 (same major version as
  * legacy).
  *
  * Ported semantics:
  *  - `setCode`: text → blocks via the shared `TextToBlocksConverter`
- *    (parse failures degrade to `ast_Raw` blocks inside the converter — the
+ *    (parse failures degrade to `ast_Raw` blocks inside the converter - the
  *    user always sees blocks, never an error lockout; B3's "no blocks from a
  *    recovered tree" is enforced in the converter itself);
  *    children get `y = line_number * 100` for vertical ordering, then
@@ -17,11 +17,11 @@
  *    text hidden; 675px responsive stacking; read-only overlay layer.
  */
 import * as Blockly from 'blockly/core';
-// @ts-expect-error TS7016 — @blockly/keyboard-navigation 0.6.x ships no
+// @ts-expect-error TS7016 - @blockly/keyboard-navigation 0.6.x ships no
 // type declarations, and an ambient shim loses to the resolved untyped JS
 // under moduleResolution "bundler" in cross-package consumers. The
 // expect-error travels with this source into every program; if the plugin
-// ever ships types it flips to an unused-directive error — the upgrade
+// ever ships types it flips to an unused-directive error - the upgrade
 // tripwire we want. The surface we use is typed just below.
 import { NavigationController } from '@blockly/keyboard-navigation';
 import {
@@ -68,7 +68,7 @@ const BLOCKLY_CHANGE_EVENTS: string[] = [
 /**
  * Dark workspace theme (M4.1, LD-23). Block colors stay Classic (they are
  * BlockMirror-normative hues, legible on dark); only the chrome components
- * restyle. win2000 is a DOM-chrome skin — the workspace keeps Classic.
+ * restyle. win2000 is a DOM-chrome skin - the workspace keeps Classic.
  */
 const DARK_WORKSPACE_THEME = Blockly.Theme.defineTheme('blockpyDark', {
   name: 'blockpyDark',
@@ -186,7 +186,7 @@ export class DualBlockEditor {
     this.workspace.setTheme(theme === 'dark' ? DARK_WORKSPACE_THEME : Blockly.Themes.Classic);
   }
 
-  /** Toolbox flyout width — used by the text editor's indent sidebar. */
+  /** Toolbox flyout width - used by the text editor's indent sidebar. */
   getToolbarWidth(): number {
     if (this.host.readOnly) return 0;
     const toolbox = this.workspace.getToolbox();
@@ -198,7 +198,7 @@ export class DualBlockEditor {
   }
 
   /**
-   * PNG snapshot of the workspace as a data URL — the legacy
+   * PNG snapshot of the workspace as a data URL - the legacy
    * `getPngFromBlocks` port (BlockMirror block_editor.js:322-384), used for
    * the `updateSubmission` image payload (§14.3). Resolves '' for an empty
    * workspace or on any failure (legacy fail-soft), and falls back to the
@@ -215,7 +215,7 @@ export class DualBlockEditor {
           resolve('');
           return;
         }
-        // Remove tags that offset (legacy comment) — the canvas transform
+        // Remove tags that offset (legacy comment) - the canvas transform
         // and up to two nested group transforms.
         blocks.removeAttribute('transform');
         (blocks.childNodes[0] as Element).removeAttribute?.('transform');

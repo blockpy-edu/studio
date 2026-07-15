@@ -1,11 +1,11 @@
-# BlockPy Studio — Platform Rewrite Specification
+# BlockPy Studio - Platform Rewrite Specification
 
 **Target:** A TypeScript + React reimplementation of the BlockPy learning environment, unifying the current BlockPy client (`blockpy-edu/blockpy`) and the assignment-orchestration frontend of the BlockPy server (`blockpy-edu/blockpy-server/frontend`) into a single application, built on modern CodeMirror (6), modern Blockly, and Pyodide.
 
 **Status:** Draft for review
 **Audience:** BlockPy maintainers and contributors implementing the rewrite
 **Contributing:** code style, lint policy, and the PR checklist live in [docs/CODE_STANDARDS.md](docs/CODE_STANDARDS.md); behavior deltas need a [ledger entry](docs/approved-differences.md) first.
-**Live demo:** the dev harness deploys to GitHub Pages on every push to main (`.github/workflows/pages.yml`) — the dropdown at the top switches between the showcase fixtures and real bakery-curriculum groups (1A, 6B); execution and grading run entirely in your browser. Regenerate the demo content with `node tools/extract-demo-groups.mjs` (needs the untracked `courses/bakery_course.json`). All harness chrome (the "Dev harness — …" header line and the group-picker bar) is gated on `display.devHarness` in the BootConfig (§5.2), which defaults to **off** — real applications mounting the app never see it; the harness page turns it on, and on the deployed demo `?devharness=false` hides it (e.g. for iframing).
+**Live demo:** the dev harness deploys to GitHub Pages on every push to main (`.github/workflows/pages.yml`) - the dropdown at the top switches between the showcase fixtures and real bakery-curriculum groups (1A, 6B); execution and grading run entirely in your browser. Regenerate the demo content with `node tools/extract-demo-groups.mjs` (needs the untracked `courses/bakery_course.json`). All harness chrome (the "Dev harness - …" header line and the group-picker bar) is gated on `display.devHarness` in the BootConfig (§5.2), which defaults to **off** - real applications mounting the app never see it; the harness page turns it on, and on the deployed demo `?devharness=false` hides it (e.g. for iframing).
 
 ---
 
@@ -13,17 +13,17 @@
 
 BlockPy is a web-based Python learning environment offering dual block/text editing, entirely client-side execution of student code, rich autograding feedback (Pedal), and LTI-based LMS integration through the BlockPy server. Today the system is split across two codebases with two UI frameworks:
 
-1. **The BlockPy client** — a Knockout.js MVVM application bundling BlockMirror (Blockly ⇄ CodeMirror round-tripping), Skulpt (in-browser Python), the virtual file system, the trace/feedback subsystems, and the server-communication layer.
-2. **The server frontend** — a TypeScript + Knockout component library (compiled to `frontend.js`) that provides the _other_ assignment types (readings, quizzes, textbooks, Kettle/TypeScript problems, "explain" tasks), the `Server` communication model, watch/grading interfaces, and — together with Jinja templates (`editor.html`, `assignment_groups.html`) — the assignment-group navigation shell that dispatches between assignment types.
+1. **The BlockPy client** - a Knockout.js MVVM application bundling BlockMirror (Blockly ⇄ CodeMirror round-tripping), Skulpt (in-browser Python), the virtual file system, the trace/feedback subsystems, and the server-communication layer.
+2. **The server frontend** - a TypeScript + Knockout component library (compiled to `frontend.js`) that provides the _other_ assignment types (readings, quizzes, textbooks, Kettle/TypeScript problems, "explain" tasks), the `Server` communication model, watch/grading interfaces, and - together with Jinja templates (`editor.html`, `assignment_groups.html`) - the assignment-group navigation shell that dispatches between assignment types.
 
 This rewrite collapses both into one React application ("**the client**") with the following goals:
 
-- **G1 — Single frontend.** One TypeScript/React codebase owns the editor, readings, quizzes, and navigation. The server's Jinja templates shrink to a thin bootstrap page that mounts the React app with a JSON configuration blob.
-- **G2 — Modern engine stack.** Skulpt → **Pyodide** (real CPython in WASM); CodeMirror 5 → **CodeMirror 6**; legacy Blockly fork → **current Blockly** (plugin-based, with a maintained Python-block set replacing BlockMirror's fork).
-- **G3 — Legacy API compatibility.** The client must speak the _existing_ blockpy-server HTTP API, event-logging vocabulary, LTI embedding protocol, and configuration surface byte-for-byte where the server observes it. Server changes are out of scope for v1 (see §14 for the compatibility contract and §17 for permitted additive changes).
-- **G4 — Legacy filesystem semantics, modern implementation.** The idiosyncratic BlockPy "filesystem" (special filename prefixes such as `!`, `^`, `?`, `&`, `*`; magic names like `answer.py`) is preserved as the _wire and authoring format_, but internally mapped onto a clean layered virtual file system (§7).
-- **G5 — Composability and nesting.** Every major surface is a React component that can be embedded inside another: full editor, minified editor inside reading code blocks, quiz rendered beneath a reading, reading rendered as a preamble to a coding problem, etc. (§12).
-- **G6 — Library integrations.** First-class support for Pedal (autograding), matplotlib (plot capture), Drafter (student web apps), CORGIS datasets, and designer/turtle-style graphics, all running against the Pyodide engine (§10).
+- **G1 - Single frontend.** One TypeScript/React codebase owns the editor, readings, quizzes, and navigation. The server's Jinja templates shrink to a thin bootstrap page that mounts the React app with a JSON configuration blob.
+- **G2 - Modern engine stack.** Skulpt → **Pyodide** (real CPython in WASM); CodeMirror 5 → **CodeMirror 6**; legacy Blockly fork → **current Blockly** (plugin-based, with a maintained Python-block set replacing BlockMirror's fork).
+- **G3 - Legacy API compatibility.** The client must speak the _existing_ blockpy-server HTTP API, event-logging vocabulary, LTI embedding protocol, and configuration surface byte-for-byte where the server observes it. Server changes are out of scope for v1 (see §14 for the compatibility contract and §17 for permitted additive changes).
+- **G4 - Legacy filesystem semantics, modern implementation.** The idiosyncratic BlockPy "filesystem" (special filename prefixes such as `!`, `^`, `?`, `&`, `*`; magic names like `answer.py`) is preserved as the _wire and authoring format_, but internally mapped onto a clean layered virtual file system (§7).
+- **G5 - Composability and nesting.** Every major surface is a React component that can be embedded inside another: full editor, minified editor inside reading code blocks, quiz rendered beneath a reading, reading rendered as a preamble to a coding problem, etc. (§12).
+- **G6 - Library integrations.** First-class support for Pedal (autograding), matplotlib (plot capture), Drafter (student web apps), CORGIS datasets, and designer/turtle-style graphics, all running against the Pyodide engine (§10).
 
 ### Non-goals (v1)
 
@@ -56,13 +56,13 @@ This rewrite collapses both into one React application ("**the client**") with t
 
 ## 3. Definitions
 
-- **Assignment** — the atomic unit students work on. `type ∈ {blockpy (python coding), reading, quiz, textbook, typescript (kettle), explain, java (dead)}`. Fundamentally, v1 treats _python coding problem_, _reading_, and _quiz_ as the three first-class types.
-- **Assignment group** — an ordered list of assignments delivered as one LTI launch; the navigation header/footer lets students move within it.
-- **Subordinate assignment** — an assignment hidden from the group selector because it renders _inside_ another assignment (e.g., a quiz rendered beneath its reading). Preserved from `assignment_groups.html` (`rejectattr('0.subordinate')`).
-- **Submission** — per-(user, assignment, course) record holding code/answers, correctness, grading status.
-- **Secretive group** — a group containing any `hidden` assignment; correctness indicators and the completion count must be masked (`??`) for the whole group.
-- **Engine** — the Pyodide-backed Python execution service.
-- **Legacy names** — the prefixed filename scheme of the current BlockPy filesystem.
+- **Assignment** - the atomic unit students work on. `type ∈ {blockpy (python coding), reading, quiz, textbook, typescript (kettle), explain, java (dead)}`. Fundamentally, v1 treats _python coding problem_, _reading_, and _quiz_ as the three first-class types.
+- **Assignment group** - an ordered list of assignments delivered as one LTI launch; the navigation header/footer lets students move within it.
+- **Subordinate assignment** - an assignment hidden from the group selector because it renders _inside_ another assignment (e.g., a quiz rendered beneath its reading). Preserved from `assignment_groups.html` (`rejectattr('0.subordinate')`).
+- **Submission** - per-(user, assignment, course) record holding code/answers, correctness, grading status.
+- **Secretive group** - a group containing any `hidden` assignment; correctness indicators and the completion count must be masked (`??`) for the whole group.
+- **Engine** - the Pyodide-backed Python execution service.
+- **Legacy names** - the prefixed filename scheme of the current BlockPy filesystem.
 
 ---
 
@@ -77,7 +77,7 @@ This rewrite collapses both into one React application ("**the client**") with t
 | Text editor   | CodeMirror 6 (`@codemirror/lang-python`, lint, autocomplete, merge for history diffs)                                                                                          |                                                                                               |
 | Blocks        | Blockly (current npm releases), custom Python block set + generators                                                                                                           | Replaces the BlockMirror Blockly fork                                                         |
 | Python engine | Pyodide (pin latest stable; loaded in a dedicated Web Worker)                                                                                                                  | `SharedArrayBuffer` interrupts where COOP/COEP available; fallback path required (§6.6)       |
-| Markdown      | unified/remark with the current instructions extensions (see §11.1). **No sanitization** — legacy parity per decision D4 (docs/DECISIONS.md); instructor HTML renders verbatim |                                                                                               |
+| Markdown      | unified/remark with the current instructions extensions (see §11.1). **No sanitization** - legacy parity per decision D4 (docs/DECISIONS.md); instructor HTML renders verbatim |                                                                                               |
 | Styling       | CSS modules + design tokens; must be themable to match host LMS neutrality; Bootstrap-compatible class hooks kept on navigation elements for legacy CSS/tests (§9.6)           |                                                                                               |
 | Testing       | Vitest + React Testing Library; Playwright for end-to-end; golden-transcript tests against a recorded legacy server (§16)                                                      |                                                                                               |
 | Packaging     | pnpm monorepo: `packages/{engine,vfs,editor,blocks,reader,quizzer,textbook,navigation,api,lti-embed,legacy-shim,app}`                                                          |                                                                                               |
@@ -123,7 +123,7 @@ The server today renders `editor.html`, which (a) injects JSON constants, (b) in
 
 ```ts
 interface BootConfig {
-  urls: LegacyUrlMap; // §14.2 — exactly the keys of window.$blockPyUrls
+  urls: LegacyUrlMap; // §14.2 - exactly the keys of window.$blockPyUrls
   user: {
     id: number | null;
     name?: string;
@@ -146,9 +146,9 @@ interface BootConfig {
       blockpy: number[];
     };
   };
-  group?: GroupBootData; // §9.2 — replaces the Jinja-rendered header
-  // devHarness (Studio-only, default false): shows the dev-shell chrome —
-  // the "Dev harness — …" header line and the demo's assignment-group
+  group?: GroupBootData; // §9.2 - replaces the Jinja-rendered header
+  // devHarness (Studio-only, default false): shows the dev-shell chrome -
+  // the "Dev harness - …" header line and the demo's assignment-group
   // picker bar. Real applications omit it; only the harness page
   // (packages/app/index.html) turns it on.
   display: { instructor: boolean; readOnly: boolean; embed: boolean; devHarness?: boolean };
@@ -159,7 +159,7 @@ interface BootConfig {
     emojiProxy: string;
     pyodideIndexURL: string;
     // assets (optional): where the deployed server hosts the build's
-    // assets/ directory — the engine's module worker lives there as a
+    // assets/ directory - the engine's module worker lives there as a
     // STABLE worker.entry.js. Unset keeps the build-time URL baked into
     // the bundle. Same-origin only (module workers can't be cross-origin).
     // Shim pages can set window.$blockPyAssetsPath instead.
@@ -177,12 +177,12 @@ interface BootConfig {
 `<AssignmentHost>` replaces `editor.html`'s `mainModel` + `loadAssignmentWrapper`. Behavior to preserve exactly:
 
 1. Given an assignment id, classify it via `assignment.typeIndex` membership (the current code checks `QUIZZES.includes(id)` etc., in the priority order quiz → reading → textbook → java → kettle → explain → blockpy).
-2. If the id is a non-blockpy type, hide the coding editor (legacy `editor.hide()`), mount the matching component, and set only that type's "current id" (all others null) — the per-type-id reset in `loadAssignmentWrapper` is observable behavior (components unmount/remount rather than reload in place) and must be kept.
+2. If the id is a non-blockpy type, hide the coding editor (legacy `editor.hide()`), mount the matching component, and set only that type's "current id" (all others null) - the per-type-id reset in `loadAssignmentWrapper` is observable behavior (components unmount/remount rather than reload in place) and must be kept.
 3. If the id is a blockpy assignment (or unknown), show the editor and delegate to its async load; on completion, mark the active type. Unknown ids fall through to the editor exactly as today (the editor is the fallback renderer and surfaces its own load errors).
 4. `java` renders the static message "Java assignments are no longer supported in BlockPy."
-5. The host exposes `loadAssignment(id: number): Promise<void>` — this is the modern `altAssignmentChangingFunction`, and the legacy global of that name must alias it (§15.3).
+5. The host exposes `loadAssignment(id: number): Promise<void>` - this is the modern `altAssignmentChangingFunction`, and the legacy global of that name must alias it (§15.3).
 
-Routing: when not embedded, the host mirrors the current URL contract — assignment switches update `assignment_id` (preserving `assignment_group_id`, `assignment_group_url`, `embed`) via `history.replaceState`, and honor deep links on load. When the SPA path is unavailable (host page without the app shell), navigation falls back to full-page loads using the server-provided per-assignment URL map (§9.2), matching today's `URL_MAP`/`document.location.href` behavior.
+Routing: when not embedded, the host mirrors the current URL contract - assignment switches update `assignment_id` (preserving `assignment_group_id`, `assignment_group_url`, `embed`) via `history.replaceState`, and honor deep links on load. When the SPA path is unavailable (host page without the app shell), navigation falls back to full-page loads using the server-provided per-assignment URL map (§9.2), matching today's `URL_MAP`/`document.location.href` behavior.
 
 ---
 
@@ -192,7 +192,7 @@ Routing: when not embedded, the host mirrors the current URL contract — assign
 
 - **E1** Run untrusted student Python entirely client-side under CPython (Pyodide) with: captured stdout/stderr, interactive `input()`, wall-clock and instruction limits, interruption ("Stop" button), and per-run isolation.
 - **E2** Provide the _instructor execution phases_ BlockPy has today: `on_run` (main grading), `on_change` (lightweight feedback as students type), `on_eval` (REPL/eval feedback), plus plain student runs and an interactive console.
-- **E3** Expose line-level tracing sufficient to rebuild the **Trace/State Explorer** (step through execution, inspect variables per step) — implemented with `sys.settrace` + frame snapshotting in the worker, streamed as compact trace events. Trace capture is opt-in per run (perf).
+- **E3** Expose line-level tracing sufficient to rebuild the **Trace/State Explorer** (step through execution, inspect variables per step) - implemented with `sys.settrace` + frame snapshotting in the worker, streamed as compact trace events. Trace capture is opt-in per run (perf).
 - **E4** Deterministic instructor-controlled environment: mocked modules, mocked `open()`/URLs (`?mock_urls.blockpy` behavior), seeded `random` when configured, event-driven re-runs.
 - **E5** Serve as a shared service: the main editor, N minified reading editors, and quiz preprocessing all submit jobs to one worker with FIFO queueing and priorities (user-initiated runs preempt `on_change` jobs; `on_change` jobs are debounced and coalesced).
 
@@ -212,7 +212,7 @@ EngineClient  ── postMessage ──►  JobRunner ─► Pyodide runtime
 - One Pyodide instance per worker; per-job isolation via a fresh `__main__` module dict, `sys.modules` snapshot/restore, and FS staging (§7.5). Full interpreter restart is available as a "nuclear" reset (exposed to users as _Restart kernel_, and triggered automatically after unrecoverable interpreter corruption).
 - **Interrupts:** where cross-origin isolation is available, use `pyodide.setInterruptBuffer` over `SharedArrayBuffer` (also enables synchronous `input()` via `Atomics.wait`). Fallback (§6.6) otherwise.
 - **stdin:** `input()` surfaces as an `input-request` event; the editor renders the existing inline console prompt. SAB path blocks synchronously; fallback path uses `pyodide.runPythonAsync` with an async input shim.
-- **Time limits:** dual guard — JS-side watchdog that fires the interrupt after the assignment's configured timeout, and a trace-based instruction counter when tracing is on. Skulpt's `execLimit` setting maps to this.
+- **Time limits:** dual guard - JS-side watchdog that fires the interrupt after the assignment's configured timeout, and a trace-based instruction counter when tracing is on. Skulpt's `execLimit` setting maps to this.
 
 ### 6.3 Job model
 
@@ -242,7 +242,7 @@ interface EngineJob {
 }
 ```
 
-Results carry: exit status, exception (type, message, formatted traceback with _student-relative_ line numbers — instructor scaffolding lines must be subtracted exactly as the current Skulpt integration does), captured streams, produced images (§10.2), Pedal final feedback (§10.1), and the trace buffer.
+Results carry: exit status, exception (type, message, formatted traceback with _student-relative_ line numbers - instructor scaffolding lines must be subtracted exactly as the current Skulpt integration does), captured streams, produced images (§10.2), Pedal final feedback (§10.1), and the trace buffer.
 
 ### 6.4 Console / REPL
 
@@ -257,7 +257,7 @@ Quizzes may declare Python **preprocessing** of student answers before submissio
 The LTI reality: BlockPy runs inside LMS iframes where COOP/COEP often cannot be guaranteed. The engine must therefore support both modes and pick at boot:
 
 - **Isolated mode** (SAB available): sync input, instant interrupt.
-- **Compat mode:** async-only execution (`runPythonAsync` with periodic `setTimeout` yields injected via Pyodide's `checkInterrupt`-style callbacks), async input shim, interrupt latency up to one yield interval, and — worst case — worker termination + engine reload as the hard-stop. Feature-detect and log the active mode via the event API (`X-Engine.Mode` event) for research telemetry.
+- **Compat mode:** async-only execution (`runPythonAsync` with periodic `setTimeout` yields injected via Pyodide's `checkInterrupt`-style callbacks), async input shim, interrupt latency up to one yield interval, and - worst case - worker termination + engine reload as the hard-stop. Feature-detect and log the active mode via the event API (`X-Engine.Mode` event) for research telemetry.
 
 ### 6.7 Skulpt-compat notes (behavioral deltas to document for instructors)
 
@@ -323,7 +323,7 @@ All server I/O and all instructor-facing UI labels use legacy names; all interna
 
 ### 7.5 Engine mounting
 
-Before each job, the engine worker materializes a snapshot of the resolved namespace into Pyodide's Emscripten FS under `/mnt/blockpy/`, applying visibility rules for the phase: student runs see student-visible files only; instructor phases additionally see `!` files; `^` starting files are never mounted (they are editor metadata). `open()` inside student code resolves against this mount. Mock URLs (§10.4) intercept network-ish access. After the job, files _created or modified by the run_ diff back into Layer 4, surface in the UI as run artifacts, and **persist to the backend as artifacts of the student's submission** (decision D3, docs/DECISIONS.md; ledger LD-3x). Verified 2026-07-10: legacy _discarded_ all program-written files (the `filewrite` hook was an unimplemented stub — appendix A1/A7), so this is an additive §17 extension shipped behind a flag, with the existing extra-files persistence path as the candidate mechanism.
+Before each job, the engine worker materializes a snapshot of the resolved namespace into Pyodide's Emscripten FS under `/mnt/blockpy/`, applying visibility rules for the phase: student runs see student-visible files only; instructor phases additionally see `!` files; `^` starting files are never mounted (they are editor metadata). `open()` inside student code resolves against this mount. Mock URLs (§10.4) intercept network-ish access. After the job, files _created or modified by the run_ diff back into Layer 4, surface in the UI as run artifacts, and **persist to the backend as artifacts of the student's submission** (decision D3, docs/DECISIONS.md; ledger LD-3x). Verified 2026-07-10: legacy _discarded_ all program-written files (the `filewrite` hook was an unimplemented stub - appendix A1/A7), so this is an additive §17 extension shipped behind a flag, with the existing extra-files persistence path as the candidate mechanism.
 
 ---
 
@@ -331,18 +331,18 @@ Before each job, the engine worker materializes a snapshot of the resolved names
 
 ### 8.1 Requirements
 
-- **B1** Three view modes: _Blocks_, _Split_, _Text_ — with the same toggle UI position and semantics as today. Split keeps both views live.
+- **B1** Three view modes: _Blocks_, _Split_, _Text_ - with the same toggle UI position and semantics as today. Split keeps both views live.
 - **B2** Text is the source of truth. Blocks are a projection: text → AST → blocks; block edits → generated Python → text. Round-trip stability: converting text→blocks→text must be idempotent for supported constructs (whitespace/comment policy documented; comments preserved at statement granularity as BlockMirror does today).
 - **B3** Unparseable text disables the Blocks/Split modes with the current "your code has an error, blocks unavailable" affordance, showing the syntax error location in the text editor.
 - **B4** The block palette ("toolbox") is instructor-configurable per assignment via the existing assignment settings (named toolbox levels and custom toolbox definitions must keep loading from their legacy settings keys).
 - **B5** Images-in-code, corgis dataset import blocks, and the block styling/l10n of the current BlockMirror set carry over incrementally; v1 must cover the full core-language block set BlockMirror supports (statements, expressions, literals, functions/defs, classes minimal, imports, comprehensions per current support level).
-- **B6 — Visual parity (added 2026-07-10).** The interface must be basically the same as the original BlockPy interface, especially in **layout** (region arrangement: instructions pane, view toggles, run controls, console, feedback pane, file tabs) and **color** (the legacy palette). Icons and fonts may change only where the replacement is relatively similar, makes sense, and improves usability/accessibility — such changes are proposed individually with rationale, not wholesale. The legacy layout/palette extraction in the A8 appendix is the conformance fixture.
+- **B6 - Visual parity (added 2026-07-10).** The interface must be basically the same as the original BlockPy interface, especially in **layout** (region arrangement: instructions pane, view toggles, run controls, console, feedback pane, file tabs) and **color** (the legacy palette). Icons and fonts may change only where the replacement is relatively similar, makes sense, and improves usability/accessibility - such changes are proposed individually with rationale, not wholesale. The legacy layout/palette extraction in the A8 appendix is the conformance fixture.
 
 ### 8.2 Parsing strategy
 
 BlockMirror currently uses Skulpt's parser to build the AST that drives block generation. The rewrite must not depend on Skulpt.
 
-**Decision (2026-07-10):** block generation is driven by the **CodeMirror CST** — the Lezer Python parse tree already powering CM6 highlighting (`@codemirror/lang-python` / `@lezer/python`). One parser serves highlighting, diagnostics, and the text→blocks direction; conversion is synchronous, works before/without Pyodide loading, and never queues behind student runs.
+**Decision (2026-07-10):** block generation is driven by the **CodeMirror CST** - the Lezer Python parse tree already powering CM6 highlighting (`@codemirror/lang-python` / `@lezer/python`). One parser serves highlighting, diagnostics, and the text→blocks direction; conversion is synchronous, works before/without Pyodide loading, and never queues behind student runs.
 
 - The CST→workspace builder in `@blockpy/blocks` consumes Lezer trees directly (concrete tree: comments and token positions are preserved, aiding B2's comment policy).
 - Lezer's error tolerance is used for B3: any error node in the tree marks the source unparseable for block purposes (blocks/split disabled with the legacy affordance), rather than generating blocks from a recovered tree.
@@ -369,11 +369,11 @@ Replaces the `assignment_group_header` Jinja macro and its jQuery. Rendered **tw
 
 Left to right, matching the legacy header:
 
-1. **First** button (step-backward icon) — disabled when current == first.
-2. **Back** button (chevron-left) — disabled when current == first.
+1. **First** button (step-backward icon) - disabled when current == first.
+2. **Back** button (chevron-left) - disabled when current == first.
 3. **Assignment `<select>`** listing non-subordinate assignments in group order; option label = `✔ ` prefix + name when correct (suppressed in secretive groups); option classes `correct-submission` / `incorrect-submission` / `secret-submission` preserved as CSS hooks.
-4. **Completion box** — `(<n>/<total> completed)`, `??` numerator when secretive. Clicking it toggles the selector between dropdown and expanded list-box (legacy: `size = min(5, options/2)` vs `size=1`), persisted under the exact localStorage key `blockpy_assignmentSelectorExpanded` (string `"true"`/`"false"`), guarded for storage-denied contexts.
-5. **Next** button (chevron-right), **Last** button (step-forward) — disabled at end. Next gains success styling (legacy `btn-success`) after the current assignment is marked correct.
+4. **Completion box** - `(<n>/<total> completed)`, `??` numerator when secretive. Clicking it toggles the selector between dropdown and expanded list-box (legacy: `size = min(5, options/2)` vs `size=1`), persisted under the exact localStorage key `blockpy_assignmentSelectorExpanded` (string `"true"`/`"false"`), guarded for storage-denied contexts.
+5. **Next** button (chevron-right), **Last** button (step-forward) - disabled at end. Next gains success styling (legacy `btn-success`) after the current assignment is marked correct.
 6. Right-aligned: **countdown** span (time remaining when a time limit is set) and **clock** span (§9.4).
 
 ### 9.2 Boot data
@@ -388,7 +388,7 @@ interface GroupBootData {
     hidden: boolean;
     correct: boolean; // from the paired submission
   }>;
-  anySecretive: boolean; // OR of hidden — masks all statuses
+  anySecretive: boolean; // OR of hidden - masks all statuses
   currentAssignmentId: number;
 }
 ```
@@ -396,7 +396,7 @@ interface GroupBootData {
 ### 9.3 Behavior
 
 - Selecting/Next/Back/First/Last resolve the target id using the _non-subordinate ordered list_ (INDICES semantics: next of last = last, back of first = first) and call `AssignmentHost.loadAssignment(id)`. If no SPA host is present (`altAssignmentChangingFunction` undefined in legacy terms), do a full navigation to `assignments[i].url` and show the legacy "~~~ The next problem is loading! Please wait" notice.
-- `markCorrect(assignmentId)` — invoked by any assignment component on success (this is the `callback.success` config the editor receives): idempotently set correct, add ✔, restyle Next, increment the completion numerator. In secretive groups: perform none of the visible updates and set the numerator to `??` (legacy behavior). The store also re-broadcasts so both header instances update.
+- `markCorrect(assignmentId)` - invoked by any assignment component on success (this is the `callback.success` config the editor receives): idempotently set correct, add ✔, restyle Next, increment the completion numerator. In secretive groups: perform none of the visible updates and set the numerator to `??` (legacy behavior). The store also re-broadcasts so both header instances update.
 - Keyboard: buttons focusable; select operable; add `aria-live="polite"` announcements for assignment changes (new, but non-breaking).
 
 ### 9.4 Time-spent clock and countdown
@@ -406,11 +406,11 @@ Preserve the `editor.html` clock exactly:
 - Starts from `sessionStartTime` (server-provided) or `Date.now()`; ticks every 10 s.
 - Display tiers: `(Just started)` under 1 min; `~N minute(s) spent` under 1 h; `~H:MM hours spent`; cap `99+ hours spent`.
 - Click toggles modes: `session` → `loading` (`(Getting Total)`) → `activity`, fetching total via the legacy `estimate_group_duration` endpoint (`window.ACTIVITY_GET_DURATION` equivalent; the global must still be exported for legacy pages, §15.3); errors fall back to session mode. Clicking again returns to session mode.
-- Countdown span: renders remaining time when the assignment/group carries a time limit; hook point for the exam/passcode subsystem. (Legacy leaves population of `.assignment-selector-countdown` to other scripts — the rewrite owns it via the same store.)
+- Countdown span: renders remaining time when the assignment/group carries a time limit; hook point for the exam/passcode subsystem. (Legacy leaves population of `.assignment-selector-countdown` to other scripts - the rewrite owns it via the same store.)
 
 ### 9.5 Completion-of-group
 
-When the last incomplete assignment flips correct in a non-secretive group, show the legacy end-of-group affordance (verify exact current behavior — at minimum, Next/Last disabled at end plus fully green state; if the legacy `frontend` shows a congratulations message, replicate).
+When the last incomplete assignment flips correct in a non-secretive group, show the legacy end-of-group affordance (verify exact current behavior - at minimum, Next/Last disabled at end plus fully green state; if the legacy `frontend` shows a congratulations message, replicate).
 
 ### 9.6 CSS compatibility
 
@@ -430,7 +430,7 @@ Keep the class names `assignment-selector-div`, `assignment-selector`, `assignme
 ### 10.2 matplotlib
 
 - Use the Agg backend in-worker; hook `plt.show()`/figure finalization to serialize PNGs, emit them as `image` events rendered in the console output area (current behavior), and offer the legacy "save image" flow via the `saveImage` endpoint (used for submission snapshots/grading views).
-- Multiple figures per run render in order; figures count toward Pedal's plot-inspection APIs (Pedal's matplotlib mock is replaced by inspecting real figure objects — provide the shim so existing `!on_run.py` scripts using Pedal's plotting assertions keep working).
+- Multiple figures per run render in order; figures count toward Pedal's plot-inspection APIs (Pedal's matplotlib mock is replaced by inspecting real figure objects - provide the shim so existing `!on_run.py` scripts using Pedal's plotting assertions keep working).
 
 ### 10.3 Drafter (student web apps)
 
@@ -450,27 +450,27 @@ The editor's AI-help affordances continue to call the server's `openaiProxy` end
 
 ## 11. Assignment Types
 
-### 11.1 Python coding problems (`blockpy` type) — `@blockpy/editor`
+### 11.1 Python coding problems (`blockpy` type) - `@blockpy/editor`
 
 Feature-parity checklist against the current client (each item is a conformance test target):
 
-- Instructions pane rendering `!instructions.md` (markdown + HTML, LaTeX, dynamic content placeholders — verify legacy extensions list from the client's instructions renderer and freeze it in an appendix).
+- Instructions pane rendering `!instructions.md` (markdown + HTML, LaTeX, dynamic content placeholders - verify legacy extensions list from the client's instructions renderer and freeze it in an appendix).
 - View toggles (Blocks/Split/Text), Run, Stop, Evaluate/console, Trace (state explorer with step slider, variable table, active-line highlight in both views), History (diff timeline), Reset-to-starting-code (from `^` files), file tabs per role, upload/download of data files, "quick task" compact mode if enabled in settings.
 - Feedback pane with Pedal categories, "full guidance vs. gentle hints" modes as configured, and instructor-only internals (raw feedback object, grading controls: force-mark-correct, regrade) behind `display.instructor`.
 - Settings surface: everything read from `!assignment_settings.blockpy` today keeps its key names and effects (toolbox level, `disable_timeout`/exec limits, hide files, start view, etc.). Unknown keys pass through untouched so old assignments never break.
-- Submission lifecycle: run → autograde → `update_submission` (score/correct) → `update_submission_status` transitions → `markCorrect` — identical calls and ordering (§14.3).
-- Passcode lock: when `passcodeProtected`, block the UI with the passcode prompt before any assignment content loads (legacy `editor.requestPasscode()`), validating however the legacy client does (verify: local hash vs server check) — same UX.
+- Submission lifecycle: run → autograde → `update_submission` (score/correct) → `update_submission_status` transitions → `markCorrect` - identical calls and ordering (§14.3).
+- Passcode lock: when `passcodeProtected`, block the UI with the passcode prompt before any assignment content loads (legacy `editor.requestPasscode()`), validating however the legacy client does (verify: local hash vs server check) - same UX.
 
-### 11.2 Readings — `@blockpy/reader`
+### 11.2 Readings - `@blockpy/reader`
 
 Port of the server-frontend `<reader>` component:
 
-- Content: instructor-authored markdown/HTML (assignment `instructions`/content field), rendered with the same pipeline as instructions; supports embedded YouTube videos (log play/pause/seek events as the current reader does — verify exact event names in the frontend source and freeze them) and images.
+- Content: instructor-authored markdown/HTML (assignment `instructions`/content field), rendered with the same pipeline as instructions; supports embedded YouTube videos (log play/pause/seek events as the current reader does - verify exact event names in the frontend source and freeze them) and images.
 - **Executable code blocks:** fenced code blocks marked runnable ("blockpy" blocks in the source) hydrate into the minified editor (§8.4) in place: editable, runnable, resettable, sharing the page engine. Non-runnable blocks render read-only with CM6 highlighting.
 - **Reading-completion tracking:** the reader reports engagement (scroll-to-bottom / dwell time / video watched, per the legacy component's rules) and marks the reading correct via the same submission calls; navigation reflects it. Verify the exact completion rule in `frontend/components/reader.ts` and preserve it.
 - **Subordinate quiz:** if the reading has an attached subordinate quiz assignment, render the full quizzer directly beneath the reading content (the legacy composition), with its own submission lifecycle; the reading and quiz report correctness independently. `asPreamble` mode (a reading rendered above another assignment, per the `<reader params="asPreamble: ...">` usage) is retained as a prop.
 
-### 11.3 Quizzes — `@blockpy/quizzer`
+### 11.3 Quizzes - `@blockpy/quizzer`
 
 Port of `<quizzer>`. The concrete question schema, attempt rules, and grading flags live in the server frontend source and server models; the rewrite freezes them as TypeScript types generated from real payload samples (conformance fixtures), rather than inventing a new schema.
 
@@ -478,13 +478,13 @@ Port of `<quizzer>`. The concrete question schema, attempt rules, and grading fl
 2. **Pooling/randomization:** honor the legacy per-attempt question pools, shuffled choices, and seeds so attempts reproduce identically after reload.
 3. **Attempt lifecycle:** states as in the legacy component (e.g., not-started → attempting → submitted/feedback-available, with attempt counts, attempt limits, and "practice" vs "graded" modes). Timer/countdown integrates with the navigation countdown span for timed quizzes.
 4. **Feedback:** per-question correctness/partial credit and overall score display rules follow the legacy flags (immediate vs on-close feedback, hidden answers in secretive contexts).
-5. **Persistence:** answers autosave through the same submission endpoints/payload structure the legacy quizzer uses (`save_assignment`/`update_submission` family with quiz JSON bodies — capture exact usage from the frontend `Server` model as fixtures).
+5. **Persistence:** answers autosave through the same submission endpoints/payload structure the legacy quizzer uses (`save_assignment`/`update_submission` family with quiz JSON bodies - capture exact usage from the frontend `Server` model as fixtures).
 6. **Pyodide preprocessing (§6.5):** questions may attach a preprocessing script; the quizzer runs it against the student's answer before submission and sends the processed payload; instructor grading scripts server-side thus receive normalized data. This formalizes and generalizes the existing "quizzes can use the execution engine" pathway.
-7. **Instructor mode:** inline preview of correct answers and (out of v1 UI scope but schema-compatible) the separate quiz editor remains usable — the quizzer must not alter stored quiz JSON it doesn't understand.
+7. **Instructor mode:** inline preview of correct answers and (out of v1 UI scope but schema-compatible) the separate quiz editor remains usable - the quizzer must not alter stored quiz JSON it doesn't understand.
 
-### 11.4 Textbooks — `@blockpy/textbook`
+### 11.4 Textbooks - `@blockpy/textbook`
 
-Legacy `<textbook>` composes multiple readings/assignments into a chaptered page. v1 ports it as a thin composition over `reader` + `AssignmentHost` per the legacy component's layout (chapter nav sidebar). If timeline pressure hits, textbook may ship as a legacy-shim type like Kettle/Explain (§17) — decide at implementation kickoff; the type registry supports either.
+Legacy `<textbook>` composes multiple readings/assignments into a chaptered page. v1 ports it as a thin composition over `reader` + `AssignmentHost` per the legacy component's layout (chapter nav sidebar). If timeline pressure hits, textbook may ship as a legacy-shim type like Kettle/Explain (§17) - decide at implementation kickoff; the type registry supports either.
 
 ---
 
@@ -495,7 +495,7 @@ A single mechanism underlies all the nesting cases:
 - `AssignmentSurface` = React context providing `{assignmentId, submissionApi, engine, logger, depth, variant}`.
 - Any assignment component can host another with `variant: 'full' | 'embedded' | 'minified'`.
 - Concrete required compositions (all exist today and must work): reading → minified editors (many); reading → quiz (subordinate, full-width); assignment → preamble reading (`asPreamble`); group page → any assignment type; standalone embed (LTI `embed=true`) → single assignment without navigation.
-- Event logging and submission calls always attach to the _owning_ assignment id of the surface (nested editors in a reading log against the reading; the subordinate quiz logs against the quiz's own id) — matching current behavior.
+- Event logging and submission calls always attach to the _owning_ assignment id of the surface (nested editors in a reading log against the reading; the subordinate quiz logs against the quiz's own id) - matching current behavior.
 - Depth guard: refuse nesting beyond depth 3 with a console warning (protects against authored content cycles).
 
 ---
@@ -505,9 +505,9 @@ A single mechanism underlies all the nesting cases:
 Preserve every observable behavior of the `editor.html` glue:
 
 - **Frame resize:** when `display.embed`, post `{subject:"lti.frameResize", height: bodyHeight + 50}` (JSON-stringified) to `window.parent` with origin `*` (as today; tightening origin is a §17 opt-in), on load and via a `ResizeObserver` on `document.body` debounced 500 ms.
-- **Cookie-blocked fallback:** on boot, detect cookie availability (legacy `frontend.checkCookies()`), set `window.ltiLoadedCorrectly`, log the console error verbatim in spirit, and perform the LTI platform-storage handshake (`lti.put_data` postMessages for state and nonce with generated UUIDs, listening for `lti.put_data.response` with message-id/origin validation) as currently written — including the current `'*'` platform-origin caveat, kept behind a constant so it can be corrected when platforms comply.
+- **Cookie-blocked fallback:** on boot, detect cookie availability (legacy `frontend.checkCookies()`), set `window.ltiLoadedCorrectly`, log the console error verbatim in spirit, and perform the LTI platform-storage handshake (`lti.put_data` postMessages for state and nonce with generated UUIDs, listening for `lti.put_data.response` with message-id/origin validation) as currently written - including the current `'*'` platform-origin caveat, kept behind a constant so it can be corrected when platforms comply.
 - **Loading screen:** show the loading notice (including the Safari warning and a retry link to the legacy `load_assignment` URL) until the app mounts; remove `.delete-on-load` content.
-- **Emoji proxy:** configure the engine so emoji rendering resolves through `paths.emojiProxy` (legacy `Sk.emojiProxy` — reimplemented as an engine-level hook for output rendering).
+- **Emoji proxy:** configure the engine so emoji rendering resolves through `paths.emojiProxy` (legacy `Sk.emojiProxy` - reimplemented as an engine-level hook for output rendering).
 - No use of cookies/localStorage beyond the legacy keys already documented; all auth rides on `access_token` and server session as today.
 
 ---
@@ -516,7 +516,7 @@ Preserve every observable behavior of the `editor.html` glue:
 
 ### 14.1 Contract
 
-The client MUST interoperate with an **unmodified** blockpy-server. All endpoints, verbs, parameter names, payload shapes, and response handling are defined by current server routes and current client usage — the rewrite treats recorded request/response transcripts from the live legacy client as the normative fixtures ("golden transcripts", §16.2). `@blockpy/api` is a typed wrapper generated over those fixtures.
+The client MUST interoperate with an **unmodified** blockpy-server. All endpoints, verbs, parameter names, payload shapes, and response handling are defined by current server routes and current client usage - the rewrite treats recorded request/response transcripts from the live legacy client as the normative fixtures ("golden transcripts", §16.2). `@blockpy/api` is a typed wrapper generated over those fixtures.
 
 ### 14.2 Endpoint inventory (from `window.$blockPyUrls` + `editor.html`)
 
@@ -539,7 +539,7 @@ The client MUST interoperate with an **unmodified** blockpy-server. All endpoint
 | `estimate_group_duration` (from editor.html, not the url map)      | Total-time clock (§9.4)                                                      |
 | `load_assignment` page route                                       | Full-page navigation fallback and retry links                                |
 
-Auth: every request carries the session cookie when available and the `access_token` field exactly where the legacy client puts it (form field / header — per transcript). Group context (`assignment_group_id`, `course_id`) accompanies calls as today.
+Auth: every request carries the session cookie when available and the `access_token` field exactly where the legacy client puts it (form field / header - per transcript). Group context (`assignment_group_id`, `course_id`) accompanies calls as today.
 
 ### 14.3 Submission lifecycle calls
 
@@ -555,7 +555,7 @@ The legacy client logs a ProgSnap2-inspired event stream through `logEvent` (eve
 
 ### 14.5 Payload compatibility for assignments
 
-`loadAssignment` responses (and the inline `assignment_data` boot path via legacy `editor.loadAssignmentData_`) parse into the internal model through a versioned decoder. The decoder must accept every payload the current server emits for every assignment type — including fields the rewrite doesn't use — and must round-trip unknown fields on save (no data loss for forward compatibility with the legacy editor operating on the same records).
+`loadAssignment` responses (and the inline `assignment_data` boot path via legacy `editor.loadAssignmentData_`) parse into the internal model through a versioned decoder. The decoder must accept every payload the current server emits for every assignment type - including fields the rewrite doesn't use - and must round-trip unknown fields on save (no data loss for forward compatibility with the legacy editor operating on the same records).
 
 ---
 
@@ -565,7 +565,7 @@ Pages, course content, and research tooling touch BlockPy through globals. The s
 
 ### 15.1 `window.blockpy.BlockPy` constructor
 
-A facade class accepting the current option bag — at minimum every key `editor.html` passes: `'blockly.path'`, `'attachment.point'`, `'urls'`, `'user.id'`, `'user.name'`, `'user.role'`, `'user.course_id'`, `'user.group_id'`, `'access_token'`, `'display.instructor'`, `'display.read_only'`, `'callback.success'`, plus arbitrary `settings-*`-derived keys — and mounting the React app accordingly. Public methods used in the wild and required: `loadAssignment(id)` (returns a thenable with `.done()` support — jQuery-Deferred-compatible wrapper), `loadAssignmentData_(payload)`, `hide()`, `show()`, `requestPasscode()`. `$MAIN_BLOCKPY_EDITOR` continues to point at the facade instance.
+A facade class accepting the current option bag - at minimum every key `editor.html` passes: `'blockly.path'`, `'attachment.point'`, `'urls'`, `'user.id'`, `'user.name'`, `'user.role'`, `'user.course_id'`, `'user.group_id'`, `'access_token'`, `'display.instructor'`, `'display.read_only'`, `'callback.success'`, plus arbitrary `settings-*`-derived keys - and mounting the React app accordingly. Public methods used in the wild and required: `loadAssignment(id)` (returns a thenable with `.done()` support - jQuery-Deferred-compatible wrapper), `loadAssignmentData_(payload)`, `hide()`, `show()`, `requestPasscode()`. `$MAIN_BLOCKPY_EDITOR` continues to point at the facade instance.
 
 ### 15.2 `settings-*` query parameters
 
@@ -573,11 +573,11 @@ Any query param `settings-<key>=<json>` overrides the corresponding config key, 
 
 ### 15.3 Other globals
 
-- `altAssignmentChangingFunction` — set by the app to `AssignmentHost.loadAssignment`; if a _page_ defines it first, navigation defers to it (legacy contract).
-- `markCorrect(id)` — global alias to the navigation store action (older content calls it directly).
-- `window.ACTIVITY_GET_DURATION` — promise-returning total-duration fetcher (clock, §9.4).
-- `window.frontend` minimal surface: `checkCookies()`, `generateUUID()`, `Server` (constructor-compatible stub delegating to `@blockpy/api`) — enough that unmodified server templates keep working during migration.
-- `URL_MAP`, `INDICES`, `FIRST_ID`, `LAST_ID`, `FULL_SELECTOR_DIV`, `loadNavigation()` — emitted by the shim when running against unmodified templates so any course-level scripts that poke them don't crash; documented as deprecated.
+- `altAssignmentChangingFunction` - set by the app to `AssignmentHost.loadAssignment`; if a _page_ defines it first, navigation defers to it (legacy contract).
+- `markCorrect(id)` - global alias to the navigation store action (older content calls it directly).
+- `window.ACTIVITY_GET_DURATION` - promise-returning total-duration fetcher (clock, §9.4).
+- `window.frontend` minimal surface: `checkCookies()`, `generateUUID()`, `Server` (constructor-compatible stub delegating to `@blockpy/api`) - enough that unmodified server templates keep working during migration.
+- `URL_MAP`, `INDICES`, `FIRST_ID`, `LAST_ID`, `FULL_SELECTOR_DIV`, `loadNavigation()` - emitted by the shim when running against unmodified templates so any course-level scripts that poke them don't crash; documented as deprecated.
 
 ---
 
@@ -585,11 +585,11 @@ Any query param `settings-<key>=<json>` overrides the corresponding config key, 
 
 ### 16.1 Conformance suites
 
-1. **VFS/legacy-name suite** — fixture table from §7.1 verification; parse/format round-trips; visibility matrices per role.
-2. **Round-trip editing suite** — corpus of real student programs (existing BlockMirror test corpus) asserting text→blocks→text idempotence and error-mode handling.
-3. **Engine suite** — curriculum regression corpus: representative `!on_run.py` graders from curriculum-ctvt/sneks executed against known student submissions must produce the same correctness verdicts as production (allowing documented message-text deltas).
-4. **Navigation suite** — Playwright: button enable/disable at boundaries, subordinate filtering, secretive masking, expansion persistence, dual header sync, markCorrect visuals, clock tiers and mode toggling.
-5. **Quiz suite** — fixture quizzes covering every question type, pooling reproducibility, attempt limits, preprocessing success/failure paths.
+1. **VFS/legacy-name suite** - fixture table from §7.1 verification; parse/format round-trips; visibility matrices per role.
+2. **Round-trip editing suite** - corpus of real student programs (existing BlockMirror test corpus) asserting text→blocks→text idempotence and error-mode handling.
+3. **Engine suite** - curriculum regression corpus: representative `!on_run.py` graders from curriculum-ctvt/sneks executed against known student submissions must produce the same correctness verdicts as production (allowing documented message-text deltas).
+4. **Navigation suite** - Playwright: button enable/disable at boundaries, subordinate filtering, secretive masking, expansion persistence, dual header sync, markCorrect visuals, clock tiers and mode toggling.
+5. **Quiz suite** - fixture quizzes covering every question type, pooling reproducibility, attempt limits, preprocessing success/failure paths.
 
 ### 16.2 Golden transcripts
 
@@ -607,15 +607,15 @@ Record full HTTP traffic of the legacy client performing a scripted session (loa
 
 ## 17. Migration Plan and Permitted Extensions
 
-1. **Phase 0** — Freeze appendices: verified prefix table, event vocabulary, quiz schema fixtures, settings-key inventory, golden transcripts.
-2. **Phase 1** — Ship `engine`, `vfs`, `editor` behind a per-course feature flag; server templates unchanged (`mountLegacy` path). Skulpt client remains default.
-3. **Phase 2** — Ship `navigation` + `AssignmentHost` + `reader` + `quizzer`; the React app owns the whole `editor.html` body for flagged courses.
-4. **Phase 3** — Default-on; legacy client kept installable for one semester; remove Jinja inline scripts in favor of the BootConfig JSON block.
+1. **Phase 0** - Freeze appendices: verified prefix table, event vocabulary, quiz schema fixtures, settings-key inventory, golden transcripts.
+2. **Phase 1** - Ship `engine`, `vfs`, `editor` behind a per-course feature flag; server templates unchanged (`mountLegacy` path). Skulpt client remains default.
+3. **Phase 2** - Ship `navigation` + `AssignmentHost` + `reader` + `quizzer`; the React app owns the whole `editor.html` body for flagged courses.
+4. **Phase 3** - Default-on; legacy client kept installable for one semester; remove Jinja inline scripts in favor of the BootConfig JSON block.
 5. **Permitted additive changes** (each behind a flag, never breaking G3): tightened postMessage origins; batched event logging; new `X-` events; new engine endpoints (e.g., wheel hosting) added to the server as pure additions.
 
 ---
 
-## Appendix A — Traceability to source artifacts
+## Appendix A - Traceability to source artifacts
 
 - `editor.html` → §5.2 (boot), §5.3 (dispatch, per-type observables, `loadAssignmentWrapper` order), §9.4 (clock code), §13 (resize/cookie/LTI handshake, Safari notice, emoji proxy), §14.2 (URL map), §15 (globals, `settings-*` loop, passcode).
 - `assignment_groups.html` → §9 in full (buttons, select classes, ✔ prefix, completion box expansion + localStorage key, secretive `??`, subordinate filtering, `URL_MAP` fallback navigation and loading message, `markCorrect` visuals).

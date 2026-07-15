@@ -1,5 +1,5 @@
 /**
- * Bytes literal block (M3.6) — Studio addition, no BlockMirror ancestor.
+ * Bytes literal block (M3.6) - Studio addition, no BlockMirror ancestor.
  * Carries the ORIGINAL literal text (prefix + quotes) in an editable field,
  * so `b'\x00'` round-trips byte-exactly like Num keeps `0x10`.
  */

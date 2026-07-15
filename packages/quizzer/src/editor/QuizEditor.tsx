@@ -1,13 +1,13 @@
 /**
  * Visual quiz editor (new requirement, 2026-07-11): the instructor-facing
- * authoring surface for a whole quiz — question editing per type, quiz
+ * authoring surface for a whole quiz - question editing per type, quiz
  * settings, pools, live validation (the bakery quiz_check port), and a
  * "Try It" mode that runs the REAL student Quizzer against the unsaved
  * draft, grading either locally (the process_quiz port) or remotely
  * (through the real save/submit endpoints).
  *
- * Fallback modes: Raw (the two document strings verbatim — the legacy RAW
- * editor) and JSON (pretty-printed with live parse errors — the legacy
+ * Fallback modes: Raw (the two document strings verbatim - the legacy RAW
+ * editor) and JSON (pretty-printed with live parse errors - the legacy
  * FORM/jsoneditor analog). All three editors share ONE canonical state:
  * the raw instruction/check strings; unknown fields survive every mode.
  */
@@ -214,7 +214,7 @@ export function QuizEditor(props: QuizEditorProps) {
           {saveState === 'saving' ? 'Saving…' : 'Save Quiz'}
         </button>
         {saveState === 'saved' && <small className="text-muted">Saved.</small>}
-        {saveState === 'failed' && <small className="text-danger">Save failed — try again.</small>}
+        {saveState === 'failed' && <small className="text-danger">Save failed - try again.</small>}
         <span className="float-right quizzer-editor-issue-count">
           {issues.length === 0
             ? 'No issues found'
@@ -498,7 +498,7 @@ function TryItPanel(props: {
             checked={gradeMode === 'local'}
             onChange={() => setGradeMode('local')}
           />{' '}
-          Grade locally (instant, uses the DRAFT — even unsaved changes)
+          Grade locally (instant, uses the DRAFT - even unsaved changes)
         </label>
         <label>
           <input
@@ -509,7 +509,7 @@ function TryItPanel(props: {
             disabled={!props.remoteTryOut}
           />{' '}
           Grade remotely (the real server grader; uses the last SAVED quiz
-          {props.dirty ? ' — you have unsaved changes!' : ''})
+          {props.dirty ? ' - you have unsaved changes!' : ''})
         </label>
       </div>
       {summary && <div className="alert alert-info p-1 quizzer-tryit-summary">{summary}</div>}

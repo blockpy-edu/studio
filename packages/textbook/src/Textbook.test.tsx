@@ -108,7 +108,7 @@ describe('Textbook (§11.4)', () => {
       />,
     );
     const header = await screen.findByText('Chapter 1) Introduction');
-    // Default expanded — children visible, aria-expanded reports it.
+    // Default expanded - children visible, aria-expanded reports it.
     expect(header.getAttribute('aria-expanded')).toBe('true');
     expect(screen.queryByText('Primer')).not.toBeNull();
     // Clicking the header (legacy-inert) now collapses the subtree.
@@ -154,7 +154,7 @@ describe('Textbook (§11.4)', () => {
     const missing = await screen.findByText('Missing Reading');
     expect(missing.className).toContain('disabled');
     fireEvent.click(missing);
-    // Not clickable — the open page stays the primer.
+    // Not clickable - the open page stays the primer.
     expect(screen.getByText('READER 201')).toBeTruthy();
   });
 

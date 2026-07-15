@@ -1,5 +1,5 @@
 /**
- * Python editor toolbar — Row 4 top (A8 §1 button groups, in legacy order).
+ * Python editor toolbar - Row 4 top (A8 §1 button groups, in legacy order).
  * Class names and FA icon classes are legacy hooks (§9.6, A8 §3.2); the
  * groups not yet backed by functionality (datasets) render disabled so the
  * layout is conformant while their wiring lands incrementally.
@@ -13,7 +13,7 @@ export interface PythonToolbarProps {
   onRun(): void;
   onStop(): void;
   onReset(): void;
-  /** Legacy `assignment.settings.enableBlocks` — hides the view toggle. */
+  /** Legacy `assignment.settings.enableBlocks` - hides the view toggle. */
   enableBlocks?: boolean;
   /**
    * Toggles history mode. Button enabled only when provided (legacy
@@ -37,7 +37,7 @@ export interface PythonToolbarProps {
   focusedMode?: boolean;
   /**
    * Docs panel toggle (M4.3; STUDIO EXTENSION). Renders only with a
-   * handler — the CodingEditor supplies one when `docs_url` is set.
+   * handler - the CodingEditor supplies one when `docs_url` is set.
    */
   onToggleDocs?(): void;
   docsOpen?: boolean;
@@ -179,9 +179,9 @@ export function PythonToolbar({
           <Icon name="download" />
         </button>
       </div>
-      {/* NB: the M3.3 per-user Autocomplete toggle is gone — autocomplete
+      {/* NB: the M3.3 per-user Autocomplete toggle is gone - autocomplete
           became the enable_autocomplete ASSIGNMENT setting (M7.2). */}
-      {/* Blockly keyboard navigation (M6.2, LD-30; §16.3 best-effort —
+      {/* Blockly keyboard navigation (M6.2, LD-30; §16.3 best-effort -
           default off, persisted). Only meaningful with a block workspace. */}
       {enableBlocks && (
         <div className="btn-group mr-2" role="group">
@@ -199,7 +199,7 @@ export function PythonToolbar({
           </button>
         </div>
       )}
-      {/* Docs panel toggle (M4.3; Studio extension — docs_url set). */}
+      {/* Docs panel toggle (M4.3; Studio extension - docs_url set). */}
       {onToggleDocs && (
         <div className="btn-group mr-2" role="group">
           <button
@@ -215,7 +215,7 @@ export function PythonToolbar({
           </button>
         </div>
       )}
-      {/* Focused mode toggle (M4.2; Studio extension — exam display). */}
+      {/* Focused mode toggle (M4.2; Studio extension - exam display). */}
       {onToggleFocus && (
         <div className="btn-group mr-2" role="group">
           <button

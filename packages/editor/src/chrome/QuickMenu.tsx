@@ -1,16 +1,16 @@
 /**
- * Quick Menu — Row 1 right column (A8 §1: `.col-md-3.blockpy-panel
+ * Quick Menu - Row 1 right column (A8 §1: `.col-md-3.blockpy-panel
  * .blockpy-quick-menu`, role=menubar, warm border-left). Legacy markup
  * interface.js:117-193; behaviors blockpy.js `ui.menu.*` (567-660).
  *
  * Ported here: mark-submitted button (full legacy text/click ladder),
  * "View as instructor" checkbox (graders), fullscreen toggle, Edit Queued
- * Inputs dialog (dialog.js EDIT_INPUTS — feeds compat-mode `inputsPrefill`),
+ * Inputs dialog (dialog.js EDIT_INPUTS - feeds compat-mode `inputsPrefill`),
  * Toggle Images, Get Shareable Link (hidden without a share URL, like
- * legacy `canShare`), the pink bug icon (dead in legacy — only ever
- * `.hide()`, feedback.js:269 — made REAL as LD-36: appears on internal
+ * legacy `canShare`), the pink bug icon (dead in legacy - only ever
+ * `.hide()`, feedback.js:269 - made REAL as LD-36: appears on internal
  * grading errors and opens the traceback dialog), and the wall clock
- * (`has_clock`; A4 §6 documents the inverted `showClock` naming — behavior
+ * (`has_clock`; A4 §6 documents the inverted `showClock` naming - behavior
  * ported, names not).
  *
  * Deferred: owner/readonly spying controls, instructor-stdout dialog, and
@@ -35,7 +35,7 @@ const THEME_LABELS: Record<ThemeName, string> = {
 };
 
 /**
- * Legacy `getCurrentTime` (utilities.js:336-348) — including the quirk that
+ * Legacy `getCurrentTime` (utilities.js:336-348) - including the quirk that
  * noon/midnight render as "0:05pm"/"0:05am" (`hours % 12`, never 12).
  */
 export function formatClockTime(now: Date): string {
@@ -58,7 +58,7 @@ export interface SubmissionControls {
   hidden?: boolean;
   /** submission.correct */
   correct?: boolean;
-  /** user.groupId — only affects the "closed" caption. */
+  /** user.groupId - only affects the "closed" caption. */
   grouped?: boolean;
   onUpdateStatus(status: 'inProgress' | 'Submitted'): void;
 }
@@ -88,7 +88,7 @@ export function isSubmitted(controls: SubmissionControls): boolean {
 }
 
 export interface QuickMenuProps {
-  /** ui.role.isGrader — shows the "View as instructor" checkbox. */
+  /** ui.role.isGrader - shows the "View as instructor" checkbox. */
   grader?: boolean;
   /** display.instructor (drives the checkbox state). */
   instructor?: boolean;
@@ -102,7 +102,7 @@ export interface QuickMenuProps {
    * only when provided; clicking builds the link and opens START_SHARE.
    */
   shareUrl?(): string;
-  /** Mark-submitted button — renders only when reviewed/canClose allow. */
+  /** Mark-submitted button - renders only when reviewed/canClose allow. */
   submission?: SubmissionControls;
   /** Legacy engine.delayedRun for the "Run" branch of mark-submitted. */
   onRun?(): void;
@@ -158,7 +158,7 @@ export function QuickMenu(props: QuickMenuProps) {
     const target = content?.parentElement ?? content;
     // Ledger LD-17: two-arm handling. Legacy chained .catch().then()
     // (interface.js:55-63), so Success ALSO logged after the Error path
-    // swallowed a rejection — failures now log ONLY the Error event.
+    // swallowed a rejection - failures now log ONLY the Error event.
     void target?.requestFullscreen().then(
       () => {
         props.onLogEvent?.('X-Display.Fullscreen.Success', '');
@@ -186,7 +186,7 @@ export function QuickMenu(props: QuickMenuProps) {
     void navigator.clipboard.writeText(shareLink).then(() => setCopied(true));
   };
   // A feedback rating requested the prompted variant (legacy rate →
-  // startShare(true), blockpy.js:808-812) — the Feedback pane raises the
+  // startShare(true), blockpy.js:808-812) - the Feedback pane raises the
   // store flag; this menu owns the dialog.
   const promptedShareRequested = useEditorChromeStore((state) => state.promptedShare);
   const shareUrlRef = useRef(props.shareUrl);
@@ -235,7 +235,7 @@ export function QuickMenu(props: QuickMenuProps) {
       ref={rootRef}
       className="col-md-3 blockpy-panel blockpy-quick-menu"
       // Legacy said role=menubar (interface.js:117), but the children are
-      // plain buttons, not menuitems — menubar's required-children ARIA
+      // plain buttons, not menuitems - menubar's required-children ARIA
       // contract fails (WCAG audit M6.1). toolbar matches the actual
       // widgetry; non-visual delta.
       role="toolbar"
@@ -315,7 +315,7 @@ export function QuickMenu(props: QuickMenuProps) {
         </button>
       )}
       {/* LD-36: the legacy-dead bug icon (interface.js:181, only ever
-          .hide()) made real — appears (faint pink) while an internal grading
+          .hide()) made real - appears (faint pink) while an internal grading
           error is recorded; clicking opens the traceback dialog. Visible to
           ALL roles: a student can pull the traceback when reporting a broken
           grader (the generic "Internal Grading Error" badge already shows). */}
@@ -340,7 +340,7 @@ export function QuickMenu(props: QuickMenuProps) {
         okayLabel="Close"
       >
         <p>
-          Something went wrong inside this assignment&apos;s grading script — this is a problem with
+          Something went wrong inside this assignment&apos;s grading script - this is a problem with
           the assignment, not with your code. Consider reporting it to your instructor along with
           the details below.
         </p>

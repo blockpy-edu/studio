@@ -1,12 +1,12 @@
 /**
- * LTI frame resize (spec §13) — port of the editor.html:350-380 "intelligent
+ * LTI frame resize (spec §13) - port of the editor.html:350-380 "intelligent
  * resizing" snippet: post `{subject: "lti.frameResize", height: bodyHeight
  * + 50}` (JSON-STRINGIFIED, matching the legacy postMessage) to
  * `window.parent` with origin `'*'` (tightening the origin is a §17 opt-in),
  * once at install and again via a ResizeObserver on `document.body`
  * debounced 500 ms.
  *
- * Legacy gates this on `{% if embed %}` in editor.html — but note
+ * Legacy gates this on `{% if embed %}` in editor.html - but note
  * textbook.html:213 gates it on `{% if not embed %}` (inverted; harmless
  * unframed since parent === self). The caller owns the gating.
  */
@@ -18,7 +18,7 @@ export interface FrameResizeMessage {
   height: number;
 }
 
-/** jQuery `$("body").height()` — the computed content-box height. */
+/** jQuery `$("body").height()` - the computed content-box height. */
 const bodyHeight = (win: Window): number => {
   const body = win.document.body;
   const computed = Number.parseFloat(win.getComputedStyle(body).height);

@@ -1,5 +1,5 @@
 /**
- * Local upload/download helpers (M7.4, LD-39) — conformance against the
+ * Local upload/download helpers (M7.4, LD-39) - conformance against the
  * legacy sources: convertIpynbToPython (python.js:161-181), sluggify
  * (abstract_editor.js:14-16), download naming (abstract_editor.js:18-22 +
  * python.js:466-471).

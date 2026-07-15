@@ -65,7 +65,7 @@ describe('link/image rewriting (plugins.ts:188-190, 244-260)', () => {
     expect(html).toContain('href="httpfoo/bar"');
   });
 
-  it('raw HTML passes through untouched — including its links (html:true, D4-A)', () => {
+  it('raw HTML passes through untouched - including its links (html:true, D4-A)', () => {
     const html = renderReadingMarkdown('<a href="raw.csv">raw</a> <script>x()</script>', ENV);
     expect(html).toContain('<a href="raw.csv">raw</a>');
     expect(html).toContain('<script>x()</script>');

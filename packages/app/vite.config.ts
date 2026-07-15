@@ -12,7 +12,7 @@ function devApi(): Plugin {
   return {
     name: 'blockpy-dev-api',
     configureServer(server) {
-      // The quiz grader imports quizzer TS — node can't execute that from
+      // The quiz grader imports quizzer TS - node can't execute that from
       // the config bundle, so vite's own transform pipeline loads it.
       let graderPromise: Promise<DemoQuizGrader> | null = null;
       const loadGrader = () =>
@@ -21,7 +21,7 @@ function devApi(): Plugin {
           .then((mod) => (mod as { gradeQuizWire: DemoQuizGrader }).gradeQuizWire));
       server.middlewares.use((req, res, next) => {
         const [path = '', query = ''] = (req.url ?? '').split('?');
-        // Prefix-gate BEFORE consuming the body — a drained stream would
+        // Prefix-gate BEFORE consuming the body - a drained stream would
         // starve any later middleware that wanted the request.
         if (!path.startsWith('/api/')) return next();
         // Most routes are legacy form-encoded POSTs; /api/assignments/by_url

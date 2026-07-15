@@ -64,7 +64,7 @@ describe('student.run', () => {
     const evalError = await runner.execute(job({ phase: 'student.eval', code: '1 / 0' }));
     expect(evalError.error?.traceback).not.toContain('<exec>');
     // The tracer raises TraceLimitError from a harness frame at the TAIL of
-    // the chain — the formatted-parts filter must catch it too.
+    // the chain - the formatted-parts filter must catch it too.
     const traced = await runner.execute(
       job({
         code: 'for i in range(100000):\n    x = i\n',
@@ -164,7 +164,7 @@ describe('student.run', () => {
   });
 });
 
-describe('student.eval — persistent REPL (§6.4)', () => {
+describe('student.eval - persistent REPL (§6.4)', () => {
   it('evaluates against the last run namespace', async () => {
     await runner.execute(job({ code: 'total = 6 * 7' }));
     const result = await runner.execute(job({ phase: 'student.eval', code: 'total + 1' }));

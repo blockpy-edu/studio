@@ -6,7 +6,7 @@ import { defineBlock, registerConverter } from '../registry';
 import { createBlock } from '../xml';
 import type { TextToBlocksConverter } from '../text-to-blocks';
 import type * as ir from '../ir/types';
-// Shared operator tables — legacy hung these on `BlockMirrorTextToBlocks` /
+// Shared operator tables - legacy hung these on `BlockMirrorTextToBlocks` /
 // script-level globals in `ast_BinOp.js` for this file to consume.
 import {
   BINOPS_AUGASSIGN_DISPLAY,

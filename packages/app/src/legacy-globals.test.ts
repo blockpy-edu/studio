@@ -59,7 +59,7 @@ describe('bootConfigFromLegacyGlobals (§5.2 compatibility rule)', () => {
     expect(config.assignment.assignmentGroupId).toBe(11);
     expect(config.assignment.typeIndex.quiz).toEqual([102]);
     expect(config.assignment.typeIndex.blockpy).toEqual([101]);
-    // editor.html:277 — instructor display derives from the role.
+    // editor.html:277 - instructor display derives from the role.
     expect(config.display.instructor).toBe(true);
     // Jinja url_for booleans serialize as True/False.
     expect(config.display.embed).toBe(true);

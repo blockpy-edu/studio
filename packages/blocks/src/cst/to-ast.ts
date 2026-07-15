@@ -7,7 +7,7 @@
  * semantics because that is what Skulpt's `astFromParse` gave BlockMirror:
  *  - chained comparisons collapse into one `Compare`,
  *  - same-operator `and`/`or` chains collapse into one `BoolOp`
- *    (parenthesized sub-chains do NOT collapse — checked on the CST, where
+ *    (parenthesized sub-chains do NOT collapse - checked on the CST, where
  *    the parens still exist),
  *  - subscripts use `Index`/`Slice`/`ExtSlice`, and `a[1, 2]` is
  *    `Index(Tuple)` while `a[1:2, 3]` is `ExtSlice([Slice, Index])`,
@@ -258,7 +258,7 @@ class CstConverter {
       case 'ContinueStatement':
         return [{ _astname: 'Continue', ...loc }];
       case 'StatementGroup': {
-        // Semicolon-joined simple statements (`a = 1; b = 2`) — the grammar
+        // Semicolon-joined simple statements (`a = 1; b = 2`) - the grammar
         // wraps them in one StatementGroup node (M7.5). Flatten into
         // separate statements sharing the line, exactly the shape Skulpt
         // gave BlockMirror (two same-lineno statements → stacked blocks);
@@ -432,8 +432,8 @@ class CstConverter {
   /**
    * match/case (M3.6). CST: `match` expr MatchBody{ ':' MatchClause+ };
    * MatchClause: `case` pattern+ Guard? Body. v1 keeps each case pattern
-   * TEXTUAL — the raw source between the `case` keyword and the clause
-   * body, guards included — patterns are not expressions and BlockMirror
+   * TEXTUAL - the raw source between the `case` keyword and the clause
+   * body, guards included - patterns are not expressions and BlockMirror
    * has no precedent (plan M3.6 design decision).
    */
   private matchStatement(node: SyntaxNode, loc: { lineno: number; col_offset: number }): ir.Match {
@@ -807,7 +807,7 @@ class CstConverter {
   }
 
   /**
-   * Convert a run of sibling nodes that forms one expression — or, when it
+   * Convert a run of sibling nodes that forms one expression - or, when it
    * contains top-level commas, an unparenthesized tuple. `*expr` becomes
    * `Starred` (assignment targets, bare tuples).
    */
@@ -1176,7 +1176,7 @@ class CstConverter {
     // Multi-dim subscripts are always ExtSlice, even all-index ones
     // (`a[1, 2]` → ExtSlice([Index, Index])). CPython ≤3.8 and Skulpt made
     // that Index(Tuple), which the legacy tuple generator re-rendered as
-    // `a[(1, 2)]` — the corpus (§16.1.2 #42) asserts the text-preserving
+    // `a[(1, 2)]` - the corpus (§16.1.2 #42) asserts the text-preserving
     // ExtSlice rendering, so the corpus wins over AST-shape fidelity here.
     return { _astname: 'ExtSlice', dims: segments.map(toDim) };
   }

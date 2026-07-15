@@ -1,6 +1,6 @@
 /**
- * @blockpy/engine — Pyodide-backed Python execution service (spec §6).
- * Compat mode (no SharedArrayBuffer) is the primary mode — SAB is
+ * @blockpy/engine - Pyodide-backed Python execution service (spec §6).
+ * Compat mode (no SharedArrayBuffer) is the primary mode - SAB is
  * unavailable in Canvas LMS iframes (maintainer testing, 2026-07-10).
  */
 export { PHASE_PRIORITY, detectEngineMode } from './protocol';

@@ -5,7 +5,7 @@ Target: `packages/blocks/src/ast/ast<Name>.ts` (one module per legacy file).
 
 **Fidelity is the requirement.** Message strings, field names, colors, mutation
 attribute names, ordering, and generator output must match the legacy code
-exactly — the §16.1.2 round-trip suite asserts `text → blocks → text` is an
+exactly - the §16.1.2 round-trip suite asserts `text → blocks → text` is an
 exact-text fixed point over the BlockMirror corpus. Port comments too. Do NOT
 "improve" behavior; quirks are load-bearing.
 
@@ -19,13 +19,13 @@ exact-text fixed point over the BlockMirror corpus. Port comments too. Do NOT
    - Inside imperative definitions, type the block instance loosely:
      `const block = this as AnyDuringMigration` or define a local
      `type XBlock = Blockly.Block & { targetCount_: number; ... }` and use
-     `function (this: XBlock) {...}` on each method. `any` is acceptable —
+     `function (this: XBlock) {...}` on each method. `any` is acceptable -
      runtime fidelity beats type elegance.
 2. **Generator**: `python.pythonGenerator.forBlock['ast_X'] = function (block, generator) {...}` →
    `generator.forBlock['ast_X'] = function (block) {...}` with
    `import { generator } from '../generator'`.
    - `python.pythonGenerator.ORDER_FOO` → `generator.ORDER_FOO` (they exist
-     at runtime; cast `(generator as any).ORDER_FOO` if TS complains — or use
+     at runtime; cast `(generator as any).ORDER_FOO` if TS complains - or use
      `Order.FOO` from `../generator` ONLY if the numeric value is identical).
    - `python.pythonGenerator.blank` → `generator.blank`.
    - `python.pythonGenerator.valueToCode/statementToCode/quote_/getVariableName`
@@ -40,7 +40,7 @@ exact-text fixed point over the BlockMirror corpus. Port comments too. Do NOT
 
    NOTE the key: the registry dispatches on `node._astname` WITHOUT the
    `ast_` prefix (`'Assign'`, not `'ast_Assign'`). The Blockly block TYPE
-   string keeps the `ast_` prefix. Use a plain `function`, never an arrow —
+   string keeps the `ast_` prefix. Use a plain `function`, never an arrow -
    `this` is the converter instance.
 
 ## Imports available
@@ -57,23 +57,23 @@ import type * as ir from '../ir/types';
 
 ## Mechanical translations
 
-| Legacy | Port |
-| --- | --- |
-| `Sk.ffi.remapToJs(x)` | `x` (IR values are plain JS) |
-| `value === Sk.builtin.none.none$` | `value === null` |
-| `value === Sk.builtin.bool.true$` / `false$` | `value === true` / `value === false` |
-| `BlockMirrorTextToBlocks.create_block(...)` | `createBlock(...)` (same arg order) |
-| `BlockMirrorTextToBlocks.raw_block(...)` | `rawBlock(...)` |
-| `BlockMirrorTextToBlocks.COLOR.X` | `COLOR.X` |
-| `BlockMirrorTextToBlocks.xmlToString` | `xmlToString` |
-| `this.ast_Comment(txt, lineno)` | `this.astComment(txt, lineno)` |
-| `this.convert / convertElements / convertBody / isTopLevel / getSourceCode / LOCKED_BLOCK / FUNCTION_SIGNATURES / METHOD_SIGNATURES / MODULE_FUNCTION_SIGNATURES / MODULE_FUNCTION_IMPORTS / hiddenImports / strictAnnotations / COLOR` | same members on `this` |
-| `document.createElement(...)` (in mutationToDom etc.) | `Blockly.utils.xml.createElement(...)` |
-| `document.createTextNode(...)` | `Blockly.utils.xml.createTextNode(...)` |
-| `Blockly.inputs.Align.RIGHT` | unchanged (exists in Blockly 11) |
-| `new Blockly.FieldVariable/FieldDropdown/FieldTextInput/FieldNumber/...` | unchanged |
-| `Blockly.Extensions.apply(...)` | unchanged |
-| `Blockly.Variables.NAME_TYPE` | `Blockly.Names.NameType.VARIABLE` |
+| Legacy                                                                                                                                                                                                                                  | Port                                    |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `Sk.ffi.remapToJs(x)`                                                                                                                                                                                                                   | `x` (IR values are plain JS)            |
+| `value === Sk.builtin.none.none$`                                                                                                                                                                                                       | `value === null`                        |
+| `value === Sk.builtin.bool.true$` / `false$`                                                                                                                                                                                            | `value === true` / `value === false`    |
+| `BlockMirrorTextToBlocks.create_block(...)`                                                                                                                                                                                             | `createBlock(...)` (same arg order)     |
+| `BlockMirrorTextToBlocks.raw_block(...)`                                                                                                                                                                                                | `rawBlock(...)`                         |
+| `BlockMirrorTextToBlocks.COLOR.X`                                                                                                                                                                                                       | `COLOR.X`                               |
+| `BlockMirrorTextToBlocks.xmlToString`                                                                                                                                                                                                   | `xmlToString`                           |
+| `this.ast_Comment(txt, lineno)`                                                                                                                                                                                                         | `this.astComment(txt, lineno)`          |
+| `this.convert / convertElements / convertBody / isTopLevel / getSourceCode / LOCKED_BLOCK / FUNCTION_SIGNATURES / METHOD_SIGNATURES / MODULE_FUNCTION_SIGNATURES / MODULE_FUNCTION_IMPORTS / hiddenImports / strictAnnotations / COLOR` | same members on `this`                  |
+| `document.createElement(...)` (in mutationToDom etc.)                                                                                                                                                                                   | `Blockly.utils.xml.createElement(...)`  |
+| `document.createTextNode(...)`                                                                                                                                                                                                          | `Blockly.utils.xml.createTextNode(...)` |
+| `Blockly.inputs.Align.RIGHT`                                                                                                                                                                                                            | unchanged (exists in Blockly 11)        |
+| `new Blockly.FieldVariable/FieldDropdown/FieldTextInput/FieldNumber/...`                                                                                                                                                                | unchanged                               |
+| `Blockly.Extensions.apply(...)`                                                                                                                                                                                                         | unchanged                               |
+| `Blockly.Variables.NAME_TYPE`                                                                                                                                                                                                           | `Blockly.Names.NameType.VARIABLE`       |
 
 ## IR node shapes (what converters receive)
 
@@ -87,17 +87,17 @@ Identifiers are plain strings (`node.id`, `node.attr`, `alias.name`,
 
 ## Gotchas
 
-- Field values in `createBlock` are stringified; legacy passed raw JS values —
+- Field values in `createBlock` are stringified; legacy passed raw JS values -
   behavior matches.
 - Mutation keys: `'@name'` → attribute, array value → repeated child elements,
   other keys → `<arg name=...>` children (see `../xml.ts`).
-- `updateShape_`/`mutationToDom`/`domToMutation` must be ported exactly —
+- `updateShape_`/`mutationToDom`/`domToMutation` must be ported exactly -
   workspace deserialization calls them.
 - If the legacy file references helpers from other legacy files (e.g.
   `ast_Call` uses `this.FUNCTION_SIGNATURES`), those tables live in
   `./signatures.ts`.
 - Do NOT edit `src/ast/index.ts` (the barrel is assembled separately) and do
   NOT edit shared files (`registry.ts`, `xml.ts`, `generator.ts`,
-  `text-to-blocks.ts`) — report a blocker instead of changing them.
+  `text-to-blocks.ts`) - report a blocker instead of changing them.
 - Verify with `pnpm --filter @blockpy/blocks typecheck` before finishing.
   `pnpm vitest run` from the repo root must not regress `src/cst` tests.

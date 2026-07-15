@@ -17,7 +17,7 @@ let client: EngineClient;
 beforeAll(async () => {
   const require = createRequire(import.meta.url);
   const indexURL = dirname(require.resolve('pyodide'));
-  // One Pyodide instance shared across (re)loads — recreating the runner
+  // One Pyodide instance shared across (re)loads - recreating the runner
   // reinstalls the runtime module, which is exactly what restart needs here.
   const pyodide = await loadPyodide({ indexURL });
   client = new EngineClient({
@@ -61,7 +61,7 @@ describe('end-to-end through the worker protocol', () => {
     expect(afterX?.locals?.['x']).toBe('1');
     // student-relative lines subtract the one-line prefix
     expect(lines.at(-1)!.studentLine).toBe(lines.at(-1)!.line - 1);
-    // The final (module return) step snapshots the END state — the trace
+    // The final (module return) step snapshots the END state - the trace
     // explorer's last page shows all final variables.
     const last = result.trace!.at(-1)!;
     expect(last.event).toBe('return');
@@ -70,7 +70,7 @@ describe('end-to-end through the worker protocol', () => {
     expect(last.locals?.['scaffold']).toBe('0');
   });
 
-  // Downloads matplotlib+numpy from the Pyodide CDN — opt in with MPL_IT=1.
+  // Downloads matplotlib+numpy from the Pyodide CDN - opt in with MPL_IT=1.
   it.skipIf(!process.env.MPL_IT)(
     'captures matplotlib figures as base64 PNGs (§10.2)',
     async () => {
@@ -91,7 +91,7 @@ describe('end-to-end through the worker protocol', () => {
       expect(result.images).toHaveLength(1);
       // PNG magic bytes in base64.
       expect(result.images![0]!.startsWith('iVBOR')).toBe(true);
-      // Figures were closed — a following run starts clean.
+      // Figures were closed - a following run starts clean.
       const clean = await client.run(job({ code: 'print("next")' }));
       expect(clean.images).toBeUndefined();
     },

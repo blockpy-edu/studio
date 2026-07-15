@@ -1,5 +1,5 @@
 /**
- * @blockpy/lti-embed — LTI embedding glue (spec §13): frame resize,
+ * @blockpy/lti-embed - LTI embedding glue (spec §13): frame resize,
  * cookie-blocked fallback + platform-storage handshake, loading screen,
  * emoji proxy hook. Ports of the editor.html/textbook.html inline scripts
  * and frontend/site/core.ts.

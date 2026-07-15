@@ -1,5 +1,5 @@
 /**
- * A5 — Golden-transcript recorder (DEVELOPMENT_PLAN.md §0.2, spec §16.2).
+ * A5 - Golden-transcript recorder (DEVELOPMENT_PLAN.md §0.2, spec §16.2).
  *
  * Drives the LEGACY client through a scripted session against a local dev
  * blockpy-server while recording all HTTP traffic to a HAR, then scrubs
@@ -76,7 +76,7 @@ await step('quiz 1022: answer first question', async () => {
 });
 
 await step('quiz 1022: submit attempt', async () => {
-  // "Submit answer" is disabled while isDirty (answers not yet autosaved) —
+  // "Submit answer" is disabled while isDirty (answers not yet autosaved) -
   // the click auto-waits for it to enable
   await page
     .getByRole('button', { name: /submit answer/i })

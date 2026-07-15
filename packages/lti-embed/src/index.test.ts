@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 /**
  * §13 conformance: frame resize message shape + debounce, cookie fallback
- * handshake (validation ladder, generated UUIDs — LD-14), loading screen,
+ * handshake (validation ladder, generated UUIDs - LD-14), loading screen,
  * emoji proxy mapping.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -173,7 +173,7 @@ describe('installCookieFallback (§13, editor.html:27-99)', () => {
       expect(errorSpy).toHaveBeenCalledWith(COOKIE_ERROR_MESSAGE);
       expect(posted).toHaveLength(2);
       // message_id shared; key/value carry the GENERATED ids (legacy posted
-      // literal "<state_id>" placeholders — fixed per §13, ledger LD-14).
+      // literal "<state_id>" placeholders - fixed per §13, ledger LD-14).
       expect(posted[0]!.message).toEqual({
         subject: 'lti.put_data',
         message_id: 'uuid-1',

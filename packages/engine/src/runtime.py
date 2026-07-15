@@ -1,9 +1,9 @@
 # The in-worker Python runtime, installed into Pyodide once at boot
-# (bundled as a string via a Vite `?raw` import — see raw.d.ts). Implements
+# (bundled as a string via a Vite `?raw` import - see raw.d.ts). Implements
 # per-job isolation (spec 6.2): fresh __main__ module dict per job,
 # sys.modules snapshot/restore, FS staging under /mnt/blockpy with artifact
 # diff-back (spec 7.5, LD-3x), scripted stdin, student-relative traceback
-# line mapping (spec 6.3 — instructor answer_prefix lines are subtracted, as
+# line mapping (spec 6.3 - instructor answer_prefix lines are subtracted, as
 # legacy Skulpt did), live stdout/stderr tee streaming, and opt-in
 # sys.settrace tracing whose step counter doubles as the instruction limit
 # (E3, spec 6.2).
@@ -23,7 +23,7 @@ TRACE_STORAGE_CAP = 10000
 # so the health canary scales to platforms with shallow stacks (§6.6).
 BOOT_RECURSION_LIMIT = sys.getrecursionlimit()
 
-# Plot capture (spec 10.2): headless Agg backend — figures are snapshotted
+# Plot capture (spec 10.2): headless Agg backend - figures are snapshotted
 # into PNGs after each run instead of "shown". Set before matplotlib can be
 # imported; silence Agg's "cannot be shown" warning from plt.show().
 os.environ.setdefault('MPLBACKEND', 'Agg')
@@ -42,7 +42,7 @@ class _Tee(io.StringIO):
         self.callback = callback
 
     def write(self, text):
-        # JS null arrives as JsNull (not None) — guard on callability.
+        # JS null arrives as JsNull (not None) - guard on callability.
         if text and callable(self.callback):
             self.callback(text)
         return super().write(text)
@@ -99,7 +99,7 @@ class StudioRuntime:
             if '/site-packages/' in file:
                 # Installed packages (loadPackage/micropip) are expensive to
                 # re-initialize (matplotlib takes seconds) and stateless per
-                # job in practice — adopt into the baseline. Per-job figure
+                # job in practice - adopt into the baseline. Per-job figure
                 # state is reset by capture_figures (plt.close('all')).
                 self.baseline_modules.add(name)
                 continue
@@ -112,7 +112,7 @@ class StudioRuntime:
     def install_requests_mock(self):
         """Install a per-job `requests` shim resolving `?mock_urls.blockpy`.
 
-        Legacy parity: ALL url access goes through the mock table — the map
+        Legacy parity: ALL url access goes through the mock table - the map
         is JSON `{filename: [url, ...]}`; a hit returns the staged file's
         contents, no map or an unknown url raises the legacy IOError texts
         (configurations.js:135-155). The module is dynamic (no __file__), so
@@ -247,7 +247,7 @@ class StudioRuntime:
             allow_real_requests=False, on_input=None):
         full = (prefix or '') + code + (suffix or '')
         prefix_lines = (prefix or '').count('\n')
-        # JS null arrives as JsNull (not None) — normalize scalar options.
+        # JS null arrives as JsNull (not None) - normalize scalar options.
         if not isinstance(trace_limit, int):
             trace_limit = None
 
@@ -270,7 +270,7 @@ class StudioRuntime:
             if interactive:
                 # Interactive input (spec §6.5): JSPI suspends this
                 # synchronous call while the console shows a textbox. The
-                # prompt is NOT echoed to stdout — the console's input line
+                # prompt is NOT echoed to stdout - the console's input line
                 # displays (and then freezes with) it, legacy-style.
                 from pyodide.ffi import run_sync
                 return str(run_sync(on_input(str(prompt))))
@@ -284,7 +284,7 @@ class StudioRuntime:
         builtins.input = scripted_input
         sys.modules['__main__'] = module
         # Legacy parity (spec 10.4): requests resolves through the mock-urls
-        # table, never the network — unless the allow_real_requests setting
+        # table, never the network - unless the allow_real_requests setting
         # is on (M3.5), in which case the REAL requests package (installed
         # host-side with pyodide-http patching) stays importable.
         if not allow_real_requests:
@@ -310,7 +310,7 @@ class StudioRuntime:
         except BaseException as exc:  # noqa: BLE001 - full error report needed
             error = self.format_error(exc, filename, prefix_lines)
         finally:
-            # Snapshot plots BEFORE the module restore unloads matplotlib —
+            # Snapshot plots BEFORE the module restore unloads matplotlib -
             # figures drawn before an error still surface (spec 10.2).
             images = self.capture_figures()
             builtins.input = old_input
@@ -359,12 +359,12 @@ class StudioRuntime:
         """Probe wasm stack headroom after a job (§6.6 crash recovery).
 
         A stack-overflow fatal (unbounded recursion through C layers, e.g. a
-        recursive __getattr__ — pyodide#5959/#5987) can leave the interpreter
+        recursive __getattr__ - pyodide#5959/#5987) can leave the interpreter
         dead or with a corrupted stack pointer WITHOUT failing the job that
         caused it (grading fail-softs around it). On a healthy interpreter
         this probe returns instantly; on a poisoned one it triggers the
         fatal NOW, JS-side, where the worker host answers by reloading the
-        runner — instead of the fatal landing on the student's next Run.
+        runner - instead of the fatal landing on the student's next Run.
         """
         prev = sys.getrecursionlimit()
         depth = min(500, BOOT_RECURSION_LIMIT // 2)
@@ -390,7 +390,7 @@ class StudioRuntime:
                     line = lineno
         # Students must never see the runtime harness frames. This module is
         # loaded via runPython (co_filename "<exec>"), so the caught exception
-        # opens with our own run/evaluate frame — drop every leading harness
+        # opens with our own run/evaluate frame - drop every leading harness
         # frame before formatting (the student's <module> frame comes right
         # after; a SyntaxError from compile() has ONLY harness frames and
         # formats fine with tb=None from its own attributes).
@@ -399,7 +399,7 @@ class StudioRuntime:
             tb = tb.tb_next
         parts = traceback.format_exception(type(exc), exc, tb)
         # Non-leading harness frames (e.g. the trace-limit tracer at the tail)
-        # can't be dropped by the walk above — filter their formatted entries.
+        # can't be dropped by the walk above - filter their formatted entries.
         formatted = ''.join(
             part for part in parts if not part.startswith('  File "<exec>"')
         )

@@ -1,5 +1,5 @@
 /**
- * @blockpy/quizzer — quiz assignments: the A3 frozen schema, seeded pools,
+ * @blockpy/quizzer - quiz assignments: the A3 frozen schema, seeded pools,
  * attempt lifecycle, and server-graded submission flow (spec §11.3).
  */
 export {

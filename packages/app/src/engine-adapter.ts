@@ -40,7 +40,7 @@ export interface EngineAdapterOptions {
    * BootConfig.paths.assets: where the deployed server hosts the build's
    * `assets/` directory. The bundler bakes a base-absolute worker URL into
    * the main chunk at build time; integrating servers that mount the
-   * bundle under their own path override it here. Same-origin only —
+   * bundle under their own path override it here. Same-origin only -
    * module workers cannot be instantiated cross-origin.
    */
   assetsBase?: string;
@@ -55,7 +55,7 @@ export interface EngineAdapterOptions {
   /**
    * FALLBACK instructor grading script (`!on_run.py`) for callers without a
    * VFS. When the chrome passes a per-run `RunOptions.onRun` (the live VFS
-   * contents), that always wins — including an empty string meaning "no
+   * contents), that always wins - including an empty string meaning "no
    * grader". A clean student run is followed by a Pedal `instructor.on_run`
    * job whose resolved feedback drives the pane (§10.1, §14.3). Wheels
    * install lazily on the first grading job, so that job gets a generous
@@ -96,7 +96,7 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
           ),
         indexURL: options.indexURL,
         // Crash recovery (§6.6): a reloaded/respawned interpreter has no
-        // Pedal wheels — the next grading job must get the install-length
+        // Pedal wheels - the next grading job must get the install-length
         // wall clock and the LD-37 one-time-setup indicator again.
         onRunnerReload: () => {
           pedalReady = false;
@@ -113,7 +113,7 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
       if (isBootRun) {
         options.onBootStateChange?.(
           true,
-          'Starting Python — one-time setup, may take a little while…',
+          'Starting Python - one-time setup, may take a little while…',
         );
         // System message: footer status + dev console, not the student
         // console.
@@ -122,7 +122,7 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
       const jobId = `harness-run-${++jobCounter}`;
       activeJobId = jobId;
       // Interactive input() (spec §6.5): values the user types during the
-      // run — collected so the grading pass replays the SAME stdin the
+      // run - collected so the grading pass replays the SAME stdin the
       // student run consumed (legacy execution.input()).
       const typedInputs: string[] = [];
       try {
@@ -165,7 +165,7 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
         const trace = result.trace ?? [];
         const images = result.images;
         // The student's raw traceback always reaches the student console
-        // (M3.2) — grading never swallows it.
+        // (M3.2) - grading never swallows it.
         const studentError = result.success
           ? null
           : result.error?.traceback || result.error?.message || 'Execution failed.';
@@ -173,7 +173,7 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
         // static fallback; empty/whitespace means "no grader".
         const onRun = runOptions?.onRun !== undefined ? runOptions.onRun : options.onRunScript;
         // Legacy parity (engine.js:109-124): the grading pass chains after
-        // EVERY run — `failure()` resolves, so student syntax/runtime errors
+        // EVERY run - `failure()` resolves, so student syntax/runtime errors
         // reach Pedal, whose own set_source → run captures them as feedback.
         // Only the disable_feedback setting skips grading.
         if (onRun && onRun.trim() !== '' && !runOptions?.disableFeedback) {
@@ -183,13 +183,13 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
           const gradeOptions: RunOptions | undefined = typedInputs.length
             ? { ...runOptions, inputs: [...(runOptions?.inputs ?? []), ...typedInputs] }
             : runOptions;
-          // The first grading job downloads the Pedal wheels — the second
+          // The first grading job downloads the Pedal wheels - the second
           // one-time wait the indicator must cover (LD-37).
           const firstGrade = !pedalReady;
           if (firstGrade) {
             options.onBootStateChange?.(
               true,
-              'Loading the feedback engine — one-time setup, may take a little while…',
+              'Loading the feedback engine - one-time setup, may take a little while…',
             );
           }
           let graded: RunOutcome;
@@ -239,7 +239,7 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
       } finally {
         activeJobId = null;
         // A fatal boot failure (worker death) throws before the success
-        // path flips `booted` — never leave the indicator stuck (LD-37).
+        // path flips `booted` - never leave the indicator stuck (LD-37).
         if (isBootRun && !booted) options.onBootStateChange?.(false);
       }
     },
@@ -342,7 +342,7 @@ function shapePedalFeedback(
   let category = feedback.category;
   let label = feedback.title || feedback.label;
   // Remap to expected BlockPy labels (feedback.js:202-210). Pedal 3 emits
-  // lowercase categories and "No Errors" (Pedal 2 said "No errors") —
+  // lowercase categories and "No Errors" (Pedal 2 said "No errors") -
   // compare case-insensitively so both eras remap.
   if (category.toLowerCase() === 'instructor' && label.toLowerCase() === 'explain') {
     label = 'Instructor Feedback';
@@ -360,7 +360,7 @@ function shapePedalFeedback(
       message: feedback.message,
       positives: feedback.positives ?? [],
     },
-    // The SUCCESS/SCORE/HIDE triple for the §14.3 submission lifecycle —
+    // The SUCCESS/SCORE/HIDE triple for the §14.3 submission lifecycle -
     // only a real resolver pass produces one (fail-softs return none).
     grade: {
       success: feedback.success,
@@ -415,7 +415,7 @@ async function gradeWithPedal(
   );
   if (!result.success || !result.feedback) {
     // Second internal-error source (PedalEnvironmentError: wheel install,
-    // environment setup) — the traceback feeds the bug-icon dialog too.
+    // environment setup) - the traceback feeds the bug-icon dialog too.
     const detail = result.error?.traceback || result.error?.message;
     if (detail) handlers.systemError?.(detail);
     return {

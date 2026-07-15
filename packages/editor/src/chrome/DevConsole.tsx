@@ -1,5 +1,5 @@
 /**
- * Dev console — STUDIO EXTENSION (no legacy analog; requirement added
+ * Dev console - STUDIO EXTENSION (no legacy analog; requirement added
  * 2026-07-10). A secondary console visible only in instructor view, so the
  * student console stays clean:
  *   - system messages (engine boot, grader lifecycle, respawns), which
@@ -57,7 +57,7 @@ export function DevConsole({ size = 'col-md-6', onShowStudent }: DevConsoleProps
         {entries.map((entry, i) => (
           <div key={i} className={`blockpy-printer-output blockpy-printer-${entry.kind}`}>
             {entry.kind === 'stderr' ? (
-              // Grader tracebacks land here — same <pre> treatment as the
+              // Grader tracebacks land here - same <pre> treatment as the
               // student console (M3.2).
               <pre className="blockpy-printer-traceback">{entry.text}</pre>
             ) : (

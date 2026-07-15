@@ -1,5 +1,5 @@
 /**
- * Console panel — Row 2 left (A8 §1: `.blockpy-panel.blockpy-console`,
+ * Console panel - Row 2 left (A8 §1: `.blockpy-panel.blockpy-console`,
  * printer area 200px/resize-vertical with per-line dashed separators).
  *
  * The Evaluate affordance follows legacy console.js exactly: after a
@@ -57,7 +57,7 @@ function FrozenEvalLine({ expression }: { expression: string }) {
   );
 }
 
-/** A frozen (already-answered) input() line — legacy ConsoleLineInput after
+/** A frozen (already-answered) input() line - legacy ConsoleLineInput after
  *  submit: prompt text, then the disabled textbox + Enter button. */
 function FrozenInputLine({ prompt, value }: { prompt: string; value: string }) {
   return (

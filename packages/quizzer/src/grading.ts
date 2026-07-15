@@ -1,5 +1,5 @@
 /**
- * Local quiz grading engine — a TypeScript port of the SERVER grader
+ * Local quiz grading engine - a TypeScript port of the SERVER grader
  * (blockpy-server models/data_formats/quizzes.py `process_quiz` /
  * `check_quiz_question`, read 2026-07-11), so the instructor's "Try It"
  * panel can grade drafts instantly without a round trip. The remote path
@@ -9,26 +9,26 @@
  *   - true/false compares `str(check.correct).lower()` against the answer;
  *   - matching zips statement-ordered lists; a list `correct` entry accepts
  *     any member; feedback entries are strings or {answer: message} maps
- *     (the bakery format also authors {statement: message} maps — treated
+ *     (the bakery format also authors {statement: message} maps - treated
  *     per-statement here, which is what the zip degenerates to);
  *   - multiple answers score = matching-checkbox-count / options, correct =
  *     set equality restricted to known options, index-aligned `wrong`
  *     feedback for mismatched options, `wrong_any` fallback;
  *   - short answer/numerical: `correct`/`correct_exact` trimmed-submission
  *     exact match (string or list, quizzes.py→common/text.py:6-14), or
- *     `correct_regex` any-match — INCLUDING the server's feedback quirk of
+ *     `correct_regex` any-match - INCLUDING the server's feedback quirk of
  *     looking regex feedback up by the matched `correct_regex` entry;
  *   - fill-in-blanks: per-blank exact/regex; the server's rich `feedback`
- *     iteration is broken in python (dict unpacking, quizzes.py:202) — the
+ *     iteration is broken in python (dict unpacking, quizzes.py:202) - the
  *     port implements the DOCUMENTED intent (string | {regex: msg} |
  *     [{regex: msg}] per blank) and the validator flags the server gap;
  *   - `correct_any` (a newer authoring field, bakery FEEDBACK_FIELDS) is
- *     preserved by the editor but NOT graded — the server ignores it too;
+ *     preserved by the editor but NOT graded - the server ignores it too;
  *   - essay/text-only always score 1; unknown types produce the
  *     "Unknown Type: …" error feedback; empty quiz → correct=false.
  *
  * DELIBERATE DELTA (LD-35): the server skips questions with ABSENT answers
- * entirely (quizzes.py:72-76, its own "Hack" comment) — which let a blank
+ * entirely (quizzes.py:72-76, its own "Hack" comment) - which let a blank
  * question ride an otherwise-correct submission to correct=true. This port
  * grades absent answers for questions that were actually PRESENTED (their
  * type's empty answer → incorrect, points counted); questions pooled OUT of
@@ -57,7 +57,7 @@ export interface LocalQuizResult {
   feedbacks: Record<QuestionId, QuizQuestionFeedback>;
 }
 
-/** common/text.py:6-14 — trims the SUBMISSION only; list = membership. */
+/** common/text.py:6-14 - trims the SUBMISSION only; list = membership. */
 export function compareStringEquality(submitted: string, expected: unknown): boolean {
   if (!submitted && Boolean(expected)) return false;
   const trimmed = String(submitted).trim();
@@ -96,7 +96,7 @@ export function checkQuizQuestion(
   check: Record<string, unknown>,
   student: StudentAnswer | null | undefined,
 ): QuestionResult | null {
-  // Null/absent answers grade as the type's EMPTY answer (LD-35) — never let
+  // Null/absent answers grade as the type's EMPTY answer (LD-35) - never let
   // String(undefined) coercion alias against an unauthored check value (the
   // server would crash on None.lower(); coercion must not turn that into a
   // silent pass).
@@ -140,7 +140,7 @@ export function checkQuizQuestion(
         );
       }
     } else if (feedbackSource && typeof feedbackSource === 'object') {
-      // Bakery shape: {statement: message} — applied per statement.
+      // Bakery shape: {statement: message} - applied per statement.
       const statements = question.statements ?? [];
       statements.forEach((statement, index) => {
         if (index < answers.length) {
@@ -149,7 +149,7 @@ export function checkQuizQuestion(
       });
     }
     const anyFeedback = feedbacks.some((entry) => Boolean(entry));
-    // Python all([]) is True — an empty zip grades correct with score 0
+    // Python all([]) is True - an empty zip grades correct with score 0
     // (quizzes.py:118-119); JS [].every matches.
     const allCorrect = corrects.every(Boolean);
     const message = anyFeedback
@@ -330,17 +330,17 @@ export interface ProcessQuizOptions {
    *  answers for presented questions grade as incorrect (LD-35) and absent
    *  answers for the rest stay excluded (pooled out of the attempt). */
   visible?: Set<QuestionId>;
-  /** Pool seed (submission id / id+attempt per poolRandomness) — used to
+  /** Pool seed (submission id / id+attempt per poolRandomness) - used to
    *  recompute `visible` when the caller doesn't pass it directly. */
   seed?: number;
 }
 
 /** process_quiz (quizzes.py:58-99) with the LD-35 delta: every PRESENTED
- *  question grades — absent answers grade as the type's empty answer instead
+ *  question grades - absent answers grade as the type's empty answer instead
  *  of being skipped (the server's "Hack" excluded them from the total, so a
  *  blank question could ride an otherwise-correct submission to correct).
- *  Questions pooled OUT of the attempt (per `visible`/`seed`, or — when
- *  neither is known — pool membership / a `hiddenAnswers` stash) stay
+ *  Questions pooled OUT of the attempt (per `visible`/`seed`, or - when
+ *  neither is known - pool membership / a `hiddenAnswers` stash) stay
  *  excluded. Nothing checked ⇒ false. */
 export function processQuiz(
   instructions: QuizInstructions,

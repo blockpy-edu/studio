@@ -1,5 +1,5 @@
 /**
- * Loading screen (spec §13) — the editor.html:20-23 notice shown until the
+ * Loading screen (spec §13) - the editor.html:20-23 notice shown until the
  * app mounts, removed by `$('.delete-on-load').remove()` (editor.html:383).
  * Host pages (unmodified templates) ship their own span; app-owned pages
  * can render `loadingNoticeHtml` into the shell before mounting.
@@ -18,7 +18,7 @@ export function loadingNoticeHtml(retryUrl?: string): string {
   return `<span class='delete-on-load'>${LOADING_NOTICE_TEXT}${link}</span>`;
 }
 
-/** `$('.delete-on-load').remove()` — fired when the app mounts. */
+/** `$('.delete-on-load').remove()` - fired when the app mounts. */
 export function removeLoadingScreen(doc: Document = document): void {
   doc.querySelectorAll('.delete-on-load').forEach((element) => element.remove());
 }

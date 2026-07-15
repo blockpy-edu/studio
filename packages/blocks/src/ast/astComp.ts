@@ -1,5 +1,5 @@
 /**
- * Port of legacy `ast/ast_Comp.js` — the four comprehension kinds
+ * Port of legacy `ast/ast_Comp.js` - the four comprehension kinds
  * (ListComp, SetComp, GeneratorExp, DictComp) plus their shared
  * `ast_comprehensionFor` / `ast_comprehensionIf` clause blocks and the
  * mutator dialog blocks.

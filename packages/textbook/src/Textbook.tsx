@@ -1,18 +1,18 @@
 /**
- * Textbook assignment component (spec §11.4) — a thin composition over
+ * Textbook assignment component (spec §11.4) - a thin composition over
  * `reader` per the M2.5 decision: the parity reference is the WORKING
  * standalone textbook page (templates/blockpy/textbook.html), not the
  * `<textbook>` knockout component, which shipped unfinished (its content
- * renderer is commented out and editor.html never passes it a textbook —
+ * renderer is commented out and editor.html never passes it a textbook -
  * ledger LD-15).
  *
  * Ported observables (textbook.html):
- *   - Sidebar: the recursive `textbook_item` macro (:60-81) — list-group
+ *   - Sidebar: the recursive `textbook_item` macro (:60-81) - list-group
  *     items indented `5 + indent*8` px; readings clickable
  *     (`list-group-item-info` at the top level only); header-only items
  *     `disabled list-group-item-secondary`; active tracks the open page.
  *   - Open page: `<reader asPreamble: true>` with a NO-OP markCorrect
- *     (:109) — the textbook itself never marks correct (the component's
+ *     (:109) - the textbook itself never marks correct (the component's
  *     own markRead is commented out, textbook.ts:121-156); the READING's
  *     completion still posts through the reader's own markRead.
  *   - URL contract: `openReading` pushes `?page=<url>` history state
@@ -59,7 +59,7 @@ export interface TextbookLoadResult {
 export interface TextbookProps {
   assignmentId: number;
   loadAssignment: (assignmentId: number) => Promise<TextbookLoadResult | null>;
-  /** The open page — the app injects a full `Reader` (asPreamble, no-op
+  /** The open page - the app injects a full `Reader` (asPreamble, no-op
    *  markCorrect), keyed by reading id. */
   renderReading: (readingId: number) => ReactNode;
   /** Client-side rehydration (LD-16): url slug → assignment. Absent or
@@ -215,7 +215,7 @@ export function Textbook(props: TextbookProps) {
           pageUrl,
         );
       } catch {
-        // Sandboxed/about: pages — navigation state just stays local.
+        // Sandboxed/about: pages - navigation state just stays local.
       }
     },
     [updateTitle],
@@ -240,7 +240,7 @@ export function Textbook(props: TextbookProps) {
   // -- sidebar (the textbook_item macro, textbook.html:60-81) -----------------
   // LD-41 (M7.8): chapter rows with children expand/collapse. Legacy header
   // rows were inert by design (click bound only `if item.reading`,
-  // textbook.html:63-66) — clicking a chapter title now toggles its subtree
+  // textbook.html:63-66) - clicking a chapter title now toggles its subtree
   // instead of doing nothing. Default expanded (the legacy flat look);
   // per-session state. Header+reading rows keep opening their reading
   // (legacy semantics) and get a separate chevron for collapsing.
@@ -260,11 +260,11 @@ export function Textbook(props: TextbookProps) {
     // A row is interactive when it opens a reading OR toggles a subtree.
     const togglesOnly = !clickable && hasChildren && label !== null;
     // Instructor diagnosability (M7.8): a missing reading says WHY instead
-    // of sitting silently disabled (LD-16 — url refs need the by_url
+    // of sitting silently disabled (LD-16 - url refs need the by_url
     // endpoint published, or the ref itself is bad).
     const missingHint =
       instructorRef.current && reading?.missing
-        ? `Could not resolve "${reading.url}" — is the assignments/by_url endpoint published (LD-16), and does the URL match an assignment?`
+        ? `Could not resolve "${reading.url}" - is the assignments/by_url endpoint published (LD-16), and does the URL match an assignment?`
         : undefined;
     return (
       <div key={key}>
@@ -306,7 +306,7 @@ export function Textbook(props: TextbookProps) {
             )}{' '}
             {label}
             {missingHint && (
-              <small className="book-item-missing-hint"> (unresolved — LD-16?)</small>
+              <small className="book-item-missing-hint"> (unresolved - LD-16?)</small>
             )}
           </div>
         )}

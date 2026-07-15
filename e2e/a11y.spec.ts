@@ -1,17 +1,17 @@
 /**
- * WCAG 2.1 A/AA automated audit (Phase 6, §16.3) — axe-core over the four
+ * WCAG 2.1 A/AA automated audit (Phase 6, §16.3) - axe-core over the four
  * student-facing surfaces the acceptance criteria name: navigation + coding
  * editor, quiz, reading, textbook.
  *
  * Scope notes:
- *  - Tags limit to wcag2a/wcag2aa/wcag21a/wcag21aa — axe's automatable
+ *  - Tags limit to wcag2a/wcag2aa/wcag21a/wcag21aa - axe's automatable
  *    subset; the manual checklist (focus order, screen-reader passes) stays
  *    in the Phase 6 audit doc.
  *  - The Blockly workspace SVG is excluded: block a11y is the keyboard-nav
  *    plugin's territory (its own §16.3 line) and axe has no meaningful
  *    rules for the canvas-like SVG surface.
  *  - color-contrast on the LEGACY-normative chrome colors is asserted, not
- *    waived — B6 visual parity covers layout/metrics/hues, and the B6
+ *    waived - B6 visual parity covers layout/metrics/hues, and the B6
  *    mandate never required shipping inaccessible contrast; failures here
  *    get ledger-reviewed fixes instead of exclusions.
  */

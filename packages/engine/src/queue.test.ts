@@ -57,7 +57,7 @@ describe('JobQueue (E5)', () => {
     expect(s.executed).toEqual(['a', 'b']);
   });
 
-  it('coalesces on_change jobs — only the newest survives', async () => {
+  it('coalesces on_change jobs - only the newest survives', async () => {
     const s = setup();
     s.queue.enqueue(job('c1', 'instructor.on_change'));
     s.queue.enqueue(job('c2', 'instructor.on_change'));

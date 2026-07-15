@@ -1,5 +1,5 @@
 /**
- * Interactive input() protocol plumbing (spec §6.5) with a fake runner —
+ * Interactive input() protocol plumbing (spec §6.5) with a fake runner -
  * the JSPI suspension itself is browser-only (worker-host.test.ts covers
  * the no-JSPI EOFError fallback against real Pyodide).
  */
@@ -133,7 +133,7 @@ describe('WorkerHost interactive input round trip', () => {
 
   it('crash and restart-kernel reloads remember the init indexURL (§6.6)', async () => {
     // Reloading without the indexURL resolves pyodide-lock.json against the
-    // wrong base — the "<!doctype is not valid JSON" dead-engine failure.
+    // wrong base - the "<!doctype is not valid JSON" dead-engine failure.
     const urls: Array<string | undefined> = [];
     let crash = true;
     const host = new WorkerHost({
@@ -235,7 +235,7 @@ describe('WorkerHost interactive input round trip', () => {
       mode: 'compat',
     });
     await host.handle({ kind: 'init' });
-    // Fire both without awaiting — the second arrives mid-crash-recovery.
+    // Fire both without awaiting - the second arrives mid-crash-recovery.
     const first = host.handle({ kind: 'run', job: job({ id: 'boom', interactiveInput: false }) });
     const second = host.handle({ kind: 'run', job: job({ id: 'after', interactiveInput: false }) });
     await Promise.all([first, second]);

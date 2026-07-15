@@ -27,7 +27,7 @@ export interface EngineJob {
   /**
    * Resolved files to stage into the worker FS, keyed by the name student
    * code opens (visibility filtering + search-order resolution happen in
-   * the VFS before the job is built — spec §7.5; `^` files never appear).
+   * the VFS before the job is built - spec §7.5; `^` files never appear).
    */
   files: Record<string, string>;
   /** Code to execute (for eval phases: the expression). */
@@ -43,7 +43,7 @@ export interface EngineJob {
    * Interactive input() (spec §6.5): when scripted inputs run dry, the
    * worker suspends the run via JSPI and posts 'input-request'; the client
    * answers with 'input-response' once the console collects a line. Set
-   * only when the client actually has an input UI wired — otherwise the
+   * only when the client actually has an input UI wired - otherwise the
    * legacy EOFError fallback applies (and always applies without JSPI).
    */
   interactiveInput?: boolean;
@@ -53,17 +53,17 @@ export interface EngineJob {
    * (legacy `execLimit` maps here, §6.2).
    */
   limits?: { wallMs?: number; traceSteps?: number };
-  /** Opt-in per run (perf) — E3. */
+  /** Opt-in per run (perf) - E3. */
   trace?: boolean;
   /**
    * `allow_real_requests` setting (M3.5): skip the ?mock_urls.blockpy
    * `requests` shim and let the real requests package (pyodide-http
-   * patched, installed lazily by the runner) hit the network — best-effort,
+   * patched, installed lazily by the runner) hit the network - best-effort,
    * browser CORS still applies. Default false = legacy mock behavior.
    */
   allowRealRequests?: boolean;
   /**
-   * Pedal grading request (spec §10.1) — set on `instructor.on_run` /
+   * Pedal grading request (spec §10.1) - set on `instructor.on_run` /
    * `instructor.on_eval` jobs. The job's `code` is the student submission;
    * the S3 pipeline (set_source → queue_input → start_trace → run → tifa →
    * exec(on_run) → resolve) runs inside the worker and the resolved final
@@ -107,7 +107,7 @@ export interface TraceStep {
   line: number;
   /** Line with instructor `answer_prefix` lines subtracted. */
   studentLine: number;
-  /** Variable snapshot (repr, truncated) — present on 'line' events. */
+  /** Variable snapshot (repr, truncated) - present on 'line' events. */
   locals?: Record<string, string>;
 }
 
@@ -138,7 +138,7 @@ export interface EngineResult {
   images?: string[];
   /** Files created or modified by the run (LD-3x run artifacts). */
   artifacts: Record<string, string>;
-  /** Resolved Pedal feedback — present when the job carried `pedal`. */
+  /** Resolved Pedal feedback - present when the job carried `pedal`. */
   feedback?: PedalFeedback;
   durationMs: number;
 }
@@ -161,7 +161,7 @@ export type WorkerToClient =
   | { kind: 'result'; result: EngineResult }
   /**
    * Crash recovery (§6.6): the worker replaced a dead/poisoned interpreter
-   * with a fresh one. All interpreter state is gone — installed wheels
+   * with a fresh one. All interpreter state is gone - installed wheels
    * (Pedal!), the REPL namespace, staged files. Clients re-arm anything
    * keyed on "already installed" (the engine adapter resets pedalReady).
    */

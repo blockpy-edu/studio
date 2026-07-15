@@ -9,7 +9,7 @@
  * The real `Server` (frontend/services/server.ts) is a knockout store hub;
  * the only behavior template code drives directly is the constructor shape
  * and `makeBlockPyRequest`'s timestamp/timezone stamping (server.ts:65-70)
- * — everything else delegates to `@blockpy/api` inside the mounted app.
+ * - everything else delegates to `@blockpy/api` inside the mounted app.
  */
 import { checkCookies, generateUUID } from '@blockpy/lti-embed';
 

@@ -1,16 +1,16 @@
 /**
- * §16.3 non-functional canaries (M6.2). Not benchmarks — regression
+ * §16.3 non-functional canaries (M6.2). Not benchmarks - regression
  * tripwires with generous budgets, run on the same Chromium the suite
  * already uses.
  *
  * The §16.3 memory line has three legs:
- *  1. one ENGINE per page — by construction (the App's single
+ *  1. one ENGINE per page - by construction (the App's single
  *     RunController is handed to every editor; the PYODIDE_E2E smoke test
  *     exercises the shared engine for the minified swap);
- *  2. editors release resources on unmount — MinifiedEditor unit test
+ *  2. editors release resources on unmount - MinifiedEditor unit test
  *     (Blockly workspace registry returns to baseline; incl. the upstream
  *     trashcan-flyout leak we dispose manually);
- *  3. absolute heap stays sane pre-engine — this canary.
+ *  3. absolute heap stays sane pre-engine - this canary.
  */
 import { expect, test, type Page } from '@playwright/test';
 
@@ -40,11 +40,11 @@ test('editor page + hydrated reading stay under the pre-engine heap budget', asy
     .locator('select.assignment-selector')
     .selectOption('103');
   await page.locator('.blockpy-host-reading').waitFor();
-  // Hydrate every runnable block; re-query per click — each hydration
+  // Hydrate every runnable block; re-query per click - each hydration
   // removes its launch button, so a snapshotted list goes stale under
   // parallel-suite timing.
   const launchButtons = page.locator('.blockpy-host-reading .reader-run-button');
-  // count() below doesn't wait — under parallel-suite load the buttons
+  // count() below doesn't wait - under parallel-suite load the buttons
   // hydrate after the host div, so anchor on the first one appearing.
   await launchButtons.first().waitFor();
   let hydrated = 0;

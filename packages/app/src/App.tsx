@@ -74,7 +74,7 @@ const settingBool = (value: unknown): boolean =>
 /**
  * The files legacy autosaves individually through saveFile
  * (createSubscriptions, server.js:123-134). Other files persist through
- * the `#extra_*_files.blockpy` bundles — pending with the uploads work.
+ * the `#extra_*_files.blockpy` bundles - pending with the uploads work.
  */
 const AUTOSAVE_FILES = new Set([
   'answer.py',
@@ -97,7 +97,7 @@ export interface AppProps {
  * BootConfig carries endpoints (M1.6) and falls back to a canned dev
  * harness otherwise, so the editor pipeline stays exercisable offline.
  * AssignmentHost (spec §5.3, type dispatch) replaces the body in
- * Milestone 2.1 — until then the coding editor is the only renderer, which
+ * Milestone 2.1 - until then the coding editor is the only renderer, which
  * matches its legacy role as the fallback for unknown types.
  */
 export function App({ config, extras, registerActions }: AppProps) {
@@ -108,7 +108,7 @@ export function App({ config, extras, registerActions }: AppProps) {
   // .isGrader) arrives with AssignmentHost (M2.1).
   const [instructorView, setInstructorView] = useState(display.instructor);
   // Live handle for the reading/quiz surfaces: seeds from the real role and
-  // only graders ever see the toggle, so production behavior is unchanged —
+  // only graders ever see the toggle, so production behavior is unchanged -
   // but the dev harness's "as instructor" checkbox reaches the quiz editor.
   const instructorViewRef = useRef(display.instructor);
   instructorViewRef.current = instructorView;
@@ -150,11 +150,11 @@ export function App({ config, extras, registerActions }: AppProps) {
   const [score, setScore] = useState(0);
   // §7.4 out-of-date banner: saveFile responded version_change (LD-11).
   const [versionOutdated, setVersionOutdated] = useState(false);
-  // Live dual editor — the updateSubmission block-PNG source (§14.3).
+  // Live dual editor - the updateSubmission block-PNG source (§14.3).
   const dualEditorRef = useRef<DualEditor | null>(null);
   const store = useEditorChromeStore;
   // Focused editor mode (M4.2) hides the group-nav headers around the
-  // editor — the flag lives in the editor chrome store.
+  // editor - the flag lives in the editor chrome store.
   const focusedMode = useEditorChromeStore((state) => state.focusedMode);
   // Group organizer dialog (M4.6 slice 1, LD-28).
   const [organizerOpen, setOrganizerOpen] = useState(false);
@@ -296,7 +296,7 @@ export function App({ config, extras, registerActions }: AppProps) {
     [api, adoptAssignmentData, store, withLoadingOverlay, assignmentLabel],
   );
 
-  // AssignmentHost dispatch (spec §5.3) — the modern loadAssignmentWrapper.
+  // AssignmentHost dispatch (spec §5.3) - the modern loadAssignmentWrapper.
   const dispatchRef = useRef<((assignmentId: number) => Promise<void>) | null>(null);
 
   // Boot-time load: inline assignment_data beats the id fetch, exactly the
@@ -317,7 +317,7 @@ export function App({ config, extras, registerActions }: AppProps) {
     } else if (assignment.textbookPath && api) {
       // Standalone textbook route (M4.7; the load_textbook contract,
       // assignments.py:95-130): resolve the path BY URL FIRST, THEN as a
-      // numeric id — the flagged server template passes the raw <path>
+      // numeric id - the flagged server template passes the raw <path>
       // instead of resolving it. The initial ?page= is honored by the
       // Textbook component itself (url-then-id, Textbook.tsx pageParam).
       const path = assignment.textbookPath;
@@ -341,7 +341,7 @@ export function App({ config, extras, registerActions }: AppProps) {
 
   // LTI page environment (§13): cookie fallback + loading-screen removal
   // once at mount; frame resize while embedded. Shim pages (unmodified
-  // templates) run the cookie script inline themselves — the
+  // templates) run the cookie script inline themselves - the
   // ltiLoadedCorrectly guard keeps the handshake from double-running.
   useEffect(() => {
     const globals = window as unknown as Record<string, unknown>;
@@ -373,7 +373,7 @@ export function App({ config, extras, registerActions }: AppProps) {
           .logEvent(eventType, category, label, message, filePath, extended)
           .catch(() => undefined);
       } catch {
-        // clientMayEmit refused the type — a chrome bug; never break the UI.
+        // clientMayEmit refused the type - a chrome bug; never break the UI.
       }
     },
     [api],
@@ -431,7 +431,7 @@ export function App({ config, extras, registerActions }: AppProps) {
   ]);
   navStoreRef.current = navStore;
 
-  // §15.3 globals. `markCorrect` is the alias older content calls directly —
+  // §15.3 globals. `markCorrect` is the alias older content calls directly -
   // a no-op on group-less pages (editor.html:109-114). Never clobber a
   // legacy-template-owned global when we don't own the navigation (shim
   // mode against unmodified pages defines both itself).
@@ -498,7 +498,7 @@ export function App({ config, extras, registerActions }: AppProps) {
               directory: params.get('directory') ?? '',
             });
           } catch {
-            // Unparseable URL — listed but not fetchable.
+            // Unparseable URL - listed but not fetchable.
           }
         }
       }
@@ -583,7 +583,7 @@ export function App({ config, extras, registerActions }: AppProps) {
     : (harnessVfs.read('!instructions.md') ?? '');
 
   // A4 settings: the assignment blob under the `settings-*` overrides
-  // (§15.2 — query params are the debugging escape hatch, applied last).
+  // (§15.2 - query params are the debugging escape hatch, applied last).
   const settings = useMemo(
     () => ({
       ...(active ? parseAssignmentSettings(active.assignment.settings) : {}),
@@ -595,7 +595,7 @@ export function App({ config, extras, registerActions }: AppProps) {
   activeAssignmentUrlRef.current = active?.assignment.url ?? '';
 
   // Exam countdown feed (spec §9.4): the checker reads settings.time_limit
-  // plus the per-student override and start from the submission — legacy
+  // plus the per-student override and start from the submission - legacy
   // reads the same live pair (assignment_interface.ts:186-193). The raw
   // setting passes through unconverted: a numeric time_limit crashes
   // parseTimeLimit into the timer_error path in legacy too.
@@ -634,12 +634,12 @@ export function App({ config, extras, registerActions }: AppProps) {
     () =>
       createEngineRunController({
         indexURL: paths.pyodideIndexURL,
-        // paths.assets: deployed location of the build's assets/ dir —
+        // paths.assets: deployed location of the build's assets/ dir -
         // overrides the build-time worker URL (engine-adapter).
         ...(paths.assets ? { assetsBase: paths.assets } : {}),
         // LD-37: one-time setup waits (Pyodide boot, Pedal wheels) drive
         // the Run-button spinner + console banner instead of reading as a
-        // hang. Chrome UI, not a routed system message — the dev-console
+        // hang. Chrome UI, not a routed system message - the dev-console
         // rule (system output never in the student console) is untouched.
         onBootStateChange: (booting, label) =>
           useEditorChromeStore.getState().setEngineBooting(booting ? (label ?? 'Loading…') : null),
@@ -649,7 +649,7 @@ export function App({ config, extras, registerActions }: AppProps) {
 
   // -- reading + quiz slots (spec §11.2/§11.3, M2.3/M2.4) -----------------------
   // Each component keeps its OWN loaded pair (legacy posts loadAssignment
-  // without adopting into the editor model) — the editor's `active`
+  // without adopting into the editor model) - the editor's `active`
   // assignment is untouched while a reading/quiz is displayed. Their events
   // and persistence carry their OWN ids over the base payload (§12; the
   // legacy AssignmentInterface builds payloads from its own pair).
@@ -657,7 +657,7 @@ export function App({ config, extras, registerActions }: AppProps) {
     if (!api) return undefined;
     // Per-surface owning-id slots (§12): a quiz and its preamble reading
     // mount TOGETHER, so one shared slot pair would cross-attribute their
-    // events — each requested id keeps its own loaded pair instead.
+    // events - each requested id keeps its own loaded pair instead.
     const surfaceIds = new Map<
       number,
       { assignmentId: number | null; submissionId: number | null }
@@ -683,7 +683,7 @@ export function App({ config, extras, registerActions }: AppProps) {
             })
             .catch(() => undefined);
         } catch {
-          // clientMayEmit refused the type — never break the surface.
+          // clientMayEmit refused the type - never break the surface.
         }
       };
     const downloadUrl = (assignmentId: number, filename: string) =>
@@ -737,7 +737,7 @@ export function App({ config, extras, registerActions }: AppProps) {
             : (id) => withLoadingOverlay(assignmentLabel(id, 'reading'), () => loadReading(id))
         }
         markRead={async (assignmentId, submissionId) => {
-          // reader.ts:384-398 — updateSubmission {status: 1, correct: true}
+          // reader.ts:384-398 - updateSubmission {status: 1, correct: true}
           // with the READING's ids overriding the base payload.
           const response = await api.updateSubmission({
             assignment_id: assignmentId,
@@ -752,7 +752,7 @@ export function App({ config, extras, registerActions }: AppProps) {
             message: extractMessage(response['message']),
           };
         }}
-        // A preamble reading never touches navigation — the legacy quizzer
+        // A preamble reading never touches navigation - the legacy quizzer
         // passes markCorrect: ()=>{} to it (quiz_ui.ts:201).
         markCorrect={preamble ? () => undefined : markCorrectEverywhere}
         logEvent={makeSurfaceLogEvent(readingId)}
@@ -792,7 +792,7 @@ export function App({ config, extras, registerActions }: AppProps) {
                 url: response.assignment!.url,
                 instructions: response.assignment!.instructions,
                 settings: response.assignment!.settings,
-                // The checks document — the server blanks it for students
+                // The checks document - the server blanks it for students
                 // (encode_quiz_json); instructors get it for the editor.
                 onRun: response.assignment!.onRun,
               },
@@ -809,7 +809,7 @@ export function App({ config, extras, registerActions }: AppProps) {
           })
         }
         saveAnswer={async (assignmentId, submissionId, code) => {
-          // quizzer.ts:143-153 — the whole submission JSON as answer.py,
+          // quizzer.ts:143-153 - the whole submission JSON as answer.py,
           // with the QUIZ's ids riding over the base payload.
           const response = await api.saveFile('answer.py', code, {
             assignment_id: assignmentId,
@@ -818,7 +818,7 @@ export function App({ config, extras, registerActions }: AppProps) {
           return { success: response.success === true };
         }}
         submitQuiz={async (assignmentId, submissionId) => {
-          // quizzer.ts:207-244 — status: 0, correct: false; the server
+          // quizzer.ts:207-244 - status: 0, correct: false; the server
           // grades (regrade_if_quiz) and returns the feedbacks map.
           const response = await api.updateSubmission({
             assignment_id: assignmentId,
@@ -854,7 +854,7 @@ export function App({ config, extras, registerActions }: AppProps) {
         // Subordinate-reading preamble beneath no one: the quiz renders the
         // reading ABOVE itself (quiz_ui.ts:194-208).
         renderReading={(readingId) => reading(readingId, true)}
-        // quizzer.ts:108-110 — url-slug readingIds resolve through the
+        // quizzer.ts:108-110 - url-slug readingIds resolve through the
         // assignment store's by_url fallback; unresolved slugs fail soft
         // inside the Quizzer (readingId stays null, console.error).
         lookupReadingId={async (url) => {
@@ -877,7 +877,7 @@ export function App({ config, extras, registerActions }: AppProps) {
 
     // Textbook (spec §11.4): a thin reader composition; each opened page is
     // a full Reader rendered as an embedded surface with a NO-OP markCorrect
-    // (textbook.html:109) — the reading still posts its own markRead.
+    // (textbook.html:109) - the reading still posts its own markRead.
     const textbook = (textbookId: number) => (
       <Textbook
         assignmentId={textbookId}
@@ -970,7 +970,7 @@ export function App({ config, extras, registerActions }: AppProps) {
 
   // Instructor tools (LD-34): icon-only buttons living at the far right of
   // the TOP group-nav bar (right of the clock). Never rendered for
-  // students — gated on the page's instructor flag (with the dev shell's
+  // students - gated on the page's instructor flag (with the dev shell's
   // devHarness flag standing in until real role gating lands, the M2.1
   // TODO). The persistent toggle survives assignment-type switches so the
   // quiz editor and instructor views are reachable from ANY surface.
@@ -1000,8 +1000,8 @@ export function App({ config, extras, registerActions }: AppProps) {
         aria-label="Instructor mode"
         title={
           instructorView
-            ? 'Instructor mode is ON — click to view as a student'
-            : 'Instructor mode is OFF — click to enable'
+            ? 'Instructor mode is ON - click to view as a student'
+            : 'Instructor mode is OFF - click to enable'
         }
         onClick={() => setInstructorView(!instructorView)}
       >
@@ -1020,7 +1020,7 @@ export function App({ config, extras, registerActions }: AppProps) {
     <main>
       {(display.devHarness ?? false) && (
         <p style={{ fontSize: 'smaller' }}>
-          Dev harness — {user.name ?? 'anonymous'} ({user.role});{' '}
+          Dev harness - {user.name ?? 'anonymous'} ({user.role});{' '}
           {active?.assignment.name ?? assignment.currentAssignmentId ?? 'no assignment'};{' '}
           {display.instructor ? 'instructor' : 'student'} view. AssignmentHost replaces this shell
           in Milestone 2.1.{' '}
@@ -1080,13 +1080,13 @@ export function App({ config, extras, registerActions }: AppProps) {
               </button>
             ) : (
               <span>
-                (Forking is not configured on this page — ask your server administrator to publish
+                (Forking is not configured on this page - ask your server administrator to publish
                 the forkAssignment endpoint.)
               </span>
             )}
           </div>
         )}
-      {/* OFFER_FORK (M7.9, LD-42) — the legacy dialog with WORKING buttons.
+      {/* OFFER_FORK (M7.9, LD-42) - the legacy dialog with WORKING buttons.
           Single-assignment fork via /assignments/fork (forks into the
           CALLER's course); "fork entire group" needs a server route a
           non-owner may call (server-team flag). */}
@@ -1148,7 +1148,7 @@ export function App({ config, extras, registerActions }: AppProps) {
       {versionOutdated && (
         <div className="alert alert-warning blockpy-version-outdated">
           The assignment has been updated since you started working on it. Reload the page to get
-          the latest version — your code is saved.{' '}
+          the latest version - your code is saved.{' '}
           <button
             type="button"
             className="btn btn-sm btn-outline-secondary"
@@ -1166,7 +1166,7 @@ export function App({ config, extras, registerActions }: AppProps) {
       {topNavVisible && navStore && (
         <GroupNav store={navStore} {...(instructorTools ? { extras: instructorTools } : {})} />
       )}
-      {/* Group-less pages have no nav bar to host the tools — a plain
+      {/* Group-less pages have no nav bar to host the tools - a plain
           (non-sticky) right-aligned strip keeps instructor mode reachable. */}
       {!topNavVisible && instructorTools && (
         <div className="blockpy-instructor-bar" style={{ textAlign: 'right', padding: '2px 8px' }}>
@@ -1252,7 +1252,7 @@ export function App({ config, extras, registerActions }: AppProps) {
             disableTifa={settingBool(settings['disable_tifa'] ?? false)}
             disableInstructorRun={settingBool(settings['disable_instructor_run'] ?? false)}
             // Pool-question seed (on_run.js:43-45; LD-22): legacy currentSeed
-            // = poolSeed || submission.id — no poolSeed UI yet (M2 deferral).
+            // = poolSeed || submission.id - no poolSeed UI yet (M2 deferral).
             seed={active?.submission?.id != null ? String(active.submission.id) : undefined}
             // Settings form (M3.5): assignment columns prefill from the
             // decoded assignment; Save persists blob + columns through
@@ -1302,7 +1302,7 @@ export function App({ config, extras, registerActions }: AppProps) {
                   })
                   .then((response) => {
                     // Non-owner instructor save: the server rejects with
-                    // forkable=true (helpers.py:55-60) — offer the fork
+                    // forkable=true (helpers.py:55-60) - offer the fork
                     // (M7.9, LD-42; legacy startPossibleFork, server.js:657).
                     if (response.success === false && response['forkable'] === true) {
                       setForkError('');
@@ -1319,7 +1319,7 @@ export function App({ config, extras, registerActions }: AppProps) {
               }
             }}
             onRunStart={(studentCode) => {
-              // run.js:13 — answer.py saves immediately when a run starts.
+              // run.js:13 - answer.py saves immediately when a run starts.
               void sync?.saveFileNow('answer.py', studentCode);
             }}
             onGraded={(grade) => {
@@ -1348,7 +1348,7 @@ export function App({ config, extras, registerActions }: AppProps) {
               instructor: instructorView,
               onInstructorChange: setInstructorView,
               // has_clock ASSIGNMENT setting (A4 §6: default false; QuickMenu
-              // resolved the legacy showClock inversion internally — pass the
+              // resolved the legacy showClock inversion internally - pass the
               // positive value). Hardcoding `true` here was the M7.2 bug.
               hasClock: settingBool(settings['has_clock'] ?? false),
               // hide_queued_inputs (blockpy.js:627): hides Edit Inputs.
@@ -1374,7 +1374,7 @@ export function App({ config, extras, registerActions }: AppProps) {
                     },
                   }
                 : {}),
-              // Mark-submitted ladder (blockpy.js:590-625) — the button shows
+              // Mark-submitted ladder (blockpy.js:590-625) - the button shows
               // only for reviewed/can_close assignments (QuickMenu gates it).
               ...(active && api
                 ? {

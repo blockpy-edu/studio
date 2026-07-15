@@ -1,16 +1,16 @@
 /**
- * Assignment Settings form — the legacy ASSIGNMENT_SETTINGS_EDITOR_HTML port
+ * Assignment Settings form - the legacy ASSIGNMENT_SETTINGS_EDITOR_HTML port
  * (blockpy/src/editor/assignment_settings.js:4-300), M3.5. Previously the
  * `!assignment_settings.blockpy` tab fell through to a blank text editor.
  *
  * Canonical state is the raw settings blob: the form initializes from the
  * parsed JSON, and Save merges ONLY the edited keys back over the original
- * object — unknown keys round-trip untouched (D5-B / LD-5). A key is written
+ * object - unknown keys round-trip untouched (D5-B / LD-5). A key is written
  * when it was already present or its value differs from the legacy default;
  * a raw-JSON escape hatch stays available for hand edits.
  *
  * Assignment-level columns (Name/URL/Points/IP Ranges + Public/Hidden/
- * Reviewed) are NOT settings-blob keys — they render only when the host
+ * Reviewed) are NOT settings-blob keys - they render only when the host
  * passes them and travel back through `onSave`'s second argument (the
  * legacy `save_assignment` wire fields).
  */
@@ -245,7 +245,7 @@ export function SettingsEditor({ blob, assignment, onSave }: SettingsEditorProps
     for (const [key, value] of Object.entries(edits)) {
       merged[key] = value;
     }
-    // Drop keys explicitly reset to '' that the original never had — keeps
+    // Drop keys explicitly reset to '' that the original never had - keeps
     // blobs minimal (a blank passcode should not persist as "").
     for (const [key, value] of Object.entries(merged)) {
       if (value === '' && !(key in original)) delete merged[key];
@@ -486,7 +486,7 @@ export function SettingsEditor({ blob, assignment, onSave }: SettingsEditorProps
                 />
                 {rawError && <small className="text-danger">{rawError}</small>}
                 <small className="form-text text-muted">
-                  Raw contents of !assignment_settings.blockpy — overrides the form on Save. Unknown
+                  Raw contents of !assignment_settings.blockpy - overrides the form on Save. Unknown
                   keys always round-trip (LD-5).
                 </small>
               </>

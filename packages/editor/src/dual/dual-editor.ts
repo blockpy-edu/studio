@@ -1,11 +1,11 @@
 /**
- * The dual (blocks ↔ text) editor controller — port of legacy
+ * The dual (blocks ↔ text) editor controller - port of legacy
  * `BlockMirror/src/block_mirror.js` (the real `BlockMirror` class; legacy
  * `main.js` is a dead file).
  *
  * Ported semantics:
  *  - configuration validation and defaults (legacy names kept);
- *  - `setCode(code, quietly)` — a non-quiet set pushes into both editors
+ *  - `setCode(code, quietly)` - a non-quiet set pushes into both editors
  *    quietly; listeners ALWAYS fire `{name: 'changed', value: code}`;
  *  - sync loop: each cross-editor push is quiet, so no cycles; text→blocks
  *    honors `blockDelay` (false = immediate);
@@ -16,7 +16,7 @@
  *  - highlight APIs delegate to the text editor only (legacy parity).
  *
  * Deviations (deliberate, minor): Ctrl-Enter actually invokes `run` (legacy
- * bound an undefined property — the binding never worked); Skulpt options
+ * bound an undefined property - the binding never worked); Skulpt options
  * (`skipSkulpt`) are gone (no Skulpt in Studio).
  */
 import { DualBlockEditor } from './block-editor';
@@ -47,7 +47,7 @@ export interface DualEditorConfiguration {
    * Legacy text-mode indent sidebar (text_editor.js `updateGutter`): pads
    * the text editor's left so code aligns under the block toolbox when
    * toggling text↔split. Default true (legacy). The minified variant (§8.4)
-   * turns it off — it has no block toolbox to align with.
+   * turns it off - it has no block toolbox to align with.
    */
   indentSidebar?: boolean;
 }
@@ -110,7 +110,7 @@ export class DualEditor {
       readOnly: configuration.readOnly ?? false,
       height: configuration.height ?? 500,
       viewMode: configuration.viewMode ?? 'split',
-      // M3.3: default 300 ms — synchronous whole-workspace regeneration on
+      // M3.3: default 300 ms - synchronous whole-workspace regeneration on
       // every split/block-mode keystroke was the perceived "slow
       // highlighting". Pass `false` for the legacy immediate behavior.
       blockDelay: configuration.blockDelay ?? 300,
@@ -197,7 +197,7 @@ export class DualEditor {
   // -- sync loop --------------------------------------------------------------
 
   private handleTextChanged(newCode: string): void {
-    // The code mirror + change listener fire IMMEDIATELY — Run/autosave must
+    // The code mirror + change listener fire IMMEDIATELY - Run/autosave must
     // never observe stale text (M3.3). Only the expensive text→blocks
     // regeneration debounces; in text mode the hidden block editor already
     // defers via its own outOfDate_ stash, so typing there costs nothing.
@@ -261,7 +261,7 @@ export class DualEditor {
 
   /**
    * Live-swap the color theme on both halves (M4.1, LD-23). No-op when
-   * unchanged — Blockly's setTheme forces a full workspace refresh, which
+   * unchanged - Blockly's setTheme forces a full workspace refresh, which
    * must not run on every mount (every editor starts light).
    */
   setTheme(theme: EditorTheme): void {

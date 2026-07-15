@@ -50,17 +50,17 @@ await step('reading 1021', async () => {
   await shot('legacy-reading.png');
 });
 
-// NOTE: no quiz capture — group 189's quiz is an EXAM and its questions are
+// NOTE: no quiz capture - group 189's quiz is an EXAM and its questions are
 // sensitive (removed 2026-07-10). Capture the quiz UI from a non-exam
 // practice quiz instead when one is available.
 
-await step('blockpy editor 1024 — default view', async () => {
+await step('blockpy editor 1024 - default view', async () => {
   await navigateTo(1024);
   await page.waitForSelector('button.blockpy-run');
   await shot('legacy-editor-default.png');
 });
 
-await step('blockpy editor 1024 — after a run (console + feedback)', async () => {
+await step('blockpy editor 1024 - after a run (console + feedback)', async () => {
   await page.evaluate(() => {
     const cm = document.querySelector('.blockpy-python-blockmirror .CodeMirror')?.CodeMirror;
     cm?.setValue('print("Visual parity reference")\n');
@@ -70,7 +70,7 @@ await step('blockpy editor 1024 — after a run (console + feedback)', async () 
   await shot('legacy-editor-after-run.png');
 });
 
-await step('blockpy editor 1024 — blocks view', async () => {
+await step('blockpy editor 1024 - blocks view', async () => {
   // BlockMirror view toggle buttons carry mode classes; try common hooks
   const toggle = page
     .locator(

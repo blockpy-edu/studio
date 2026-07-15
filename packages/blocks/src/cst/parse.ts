@@ -1,8 +1,8 @@
 /**
- * Lezer parse + diagnostics — the B1–B3 "blockable" gate (spec §8).
+ * Lezer parse + diagnostics - the B1–B3 "blockable" gate (spec §8).
  *
  * Per spike S2: Lezer error-recovers, so "has any error node" is the correct
- * unparseable test — blocks must never be generated from a recovered tree.
+ * unparseable test - blocks must never be generated from a recovered tree.
  * The one deliberate tolerance closes the S2 known-gap: `@lezer/python`
  * rejects valueless `yield` (which BlockMirror and CPython support) by
  * emitting a ZERO-WIDTH error node right after the `yield` keyword inside a

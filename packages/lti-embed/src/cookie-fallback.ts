@@ -1,11 +1,11 @@
 /**
- * Cookie-blocked boot fallback (spec §13) — port of the editor.html:27-99
+ * Cookie-blocked boot fallback (spec §13) - port of the editor.html:27-99
  * inline script plus `frontend.checkCookies()` (frontend/site/core.ts:20-27)
  * and `frontend.generateUUID()` (frontend/utilities/random.ts:31-45).
  *
  * On boot: detect cookie availability, publish `window.ltiLoadedCorrectly`,
  * log the console error verbatim, and perform the LTI platform-storage
- * handshake — `lti.put_data` postMessages for the state and nonce,
+ * handshake - `lti.put_data` postMessages for the state and nonce,
  * listening for `lti.put_data.response` with the legacy validation ladder
  * (object → subject → message-id → origin → error → success log).
  *
@@ -14,10 +14,10 @@
  *    expecting '*' to be the origin", editor.html:33) behind a constant so
  *    it can be corrected when platforms comply. Because `event.origin` is
  *    never literally `'*'`, the response listener can never accept a
- *    message — faithfully matching legacy, where the handshake fires and
+ *    message - faithfully matching legacy, where the handshake fires and
  *    the confirmation is unreachable.
  *  - Legacy posts the LITERAL placeholder strings `"blockpy_<state_id>"` /
- *    `"<state_id>"` / `"nonce_<nonce_value>"` — the generated `stateId`
+ *    `"<state_id>"` / `"nonce_<nonce_value>"` - the generated `stateId`
  *    was never interpolated (half-finished code). Studio substitutes the
  *    generated UUIDs per the spec's "with generated UUIDs" (ledger LD-14).
  */
@@ -97,7 +97,7 @@ export function installCookieFallback(
       return;
     }
     // Validate that the event's origin is the same as the derived platform
-    // origin (never true while PLATFORM_ORIGIN is '*' — legacy-exact).
+    // origin (never true while PLATFORM_ORIGIN is '*' - legacy-exact).
     if (event.origin !== platformOrigin) {
       return;
     }
@@ -108,7 +108,7 @@ export function installCookieFallback(
       console.log(error['message']);
       return;
     }
-    // It's the response we expected — state and nonce values were stored.
+    // It's the response we expected - state and nonce values were stored.
     console.log('Success! State and nonce values were stored.');
   };
   win.addEventListener('message', listener);

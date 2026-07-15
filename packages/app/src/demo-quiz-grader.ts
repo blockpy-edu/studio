@@ -1,10 +1,10 @@
 /**
- * Wire-shaped quiz grading for the dev/demo stub — the quizzer's own
+ * Wire-shaped quiz grading for the dev/demo stub - the quizzer's own
  * processQuiz (the engine the real server runs) over the last-saved
  * submission document. Kept in its own module because the two stub hosts
  * load it differently: the browser fetch stub imports it statically, and
  * the vite middleware loads it through `server.ssrLoadModule` (the config
- * bundle itself must not pull TS workspace imports — esbuild leaves bare
+ * bundle itself must not pull TS workspace imports - esbuild leaves bare
  * specifiers external and node can't execute .ts).
  */
 import { processQuiz, type QuizChecksDocument } from '@blockpy/quizzer/grading';

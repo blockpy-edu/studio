@@ -2,14 +2,14 @@
  * Imperative bridge between the host page and the mounted React app.
  * Legacy pages drive the editor synchronously right after construction
  * (`new blockpy.BlockPy(...)` then `editor.loadAssignmentData_(...)` in the
- * same tick — editor.html:263-348), but React commits asynchronously, so
+ * same tick - editor.html:263-348), but React commits asynchronously, so
  * the handle queues calls until the App registers its actions and replays
  * them in order.
  */
 import type { LegacyAssignmentPayload } from './boot-config';
 
 /**
- * Non-JSON wiring a host (the legacy shim, tests) can hand the app —
+ * Non-JSON wiring a host (the legacy shim, tests) can hand the app -
  * callbacks and injectables that have no place in the BootConfig block.
  */
 export interface MountExtras {

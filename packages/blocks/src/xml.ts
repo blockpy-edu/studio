@@ -1,12 +1,12 @@
 /**
- * Blockly XML construction helpers — port of the `create_block` /
+ * Blockly XML construction helpers - port of the `create_block` /
  * `raw_block` / `xmlToString` statics from legacy `text_to_blocks.js`.
  *
  * Deliberately uses the global HTML `document` (like legacy), NOT Blockly's
  * XML document: HTML `setAttribute`/`createElement` lowercase attribute and
  * tag names, and the ported mutation contracts depend on that (converters
  * emit `@ORELSE`-style keys while `domToMutation` reads `orelse`). Requires
- * a DOM (browser or jsdom) — same constraint legacy had.
+ * a DOM (browser or jsdom) - same constraint legacy had.
  */
 export type MutationValue = string | number | boolean | null | Element | (string | number)[];
 

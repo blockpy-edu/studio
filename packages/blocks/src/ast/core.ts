@@ -1,5 +1,5 @@
 /**
- * Top-level node converters — the handful defined inline in legacy
+ * Top-level node converters - the handful defined inline in legacy
  * `text_to_blocks.js` rather than in their own `ast_*.js` files.
  */
 import { registerConverter } from '../registry';

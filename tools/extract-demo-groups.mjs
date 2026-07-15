@@ -6,12 +6,12 @@
  *   node tools/extract-demo-groups.mjs
  *
  * Reads courses/bakery_course.json (a blockpy-server course export; not in
- * git — ask a maintainer) and writes
+ * git - ask a maintainer) and writes
  * packages/app/src/demo/bakery-groups.json.
  *
  * Ordering note: the export's membership `position` columns are all 0 and
  * the legacy server never ordered by them (course.py:204-244, see plan
- * M4.6) — course pages showed insertion order. For a DEMO that arbitrary
+ * M4.6) - course pages showed insertion order. For a DEMO that arbitrary
  * order reads as broken, so assignments sort by their "1A3.1)" name prefix
  * (natural sort); subordinate readings ride along wherever the nav hides
  * them anyway.

@@ -1,13 +1,13 @@
 /**
- * Submission lifecycle sync (spec §14.3 + §7.4 autosave) — the Studio port
+ * Submission lifecycle sync (spec §14.3 + §7.4 autosave) - the Studio port
  * of legacy server.js saveFile/_postLatestRetry/updateSubmission and the
  * on_run.js:162-175 grading sequence. The contract is pinned in
  * docs/appendices/skulpt-compat.md ("score semantics"):
  *
  * - feedback presents FIRST (the editor calls onGraded after setFeedback)
- * - score = clamp(SCORE, 0, 1) then max(previousScore) — monotonic
+ * - score = clamp(SCORE, 0, 1) then max(previousScore) - monotonic
  * - the POSTed `correct` is the RAW success of THIS run
- * - markCorrect fires in the response handler when !hide && correct —
+ * - markCorrect fires in the response handler when !hide && correct -
  *   legacy quirk: EVEN when the server responded success: false
  * - saveFile: per-filename trailing debounce (TIMER_DELAY 1000 ms),
  *   latest-wins; run start saves answer.py immediately (run.js:13)
@@ -21,18 +21,18 @@ export interface SubmissionSyncOptions {
   api: ApiClient;
   /** Footer badge hook (legacy setStatus). */
   setStatus: (endpoint: ServerEndpoint, status: ServerStatusState, message?: string) => void;
-  /** display.read_only gate — legacy checks it per call, so a getter. */
+  /** display.read_only gate - legacy checks it per call, so a getter. */
   readOnly: () => boolean;
-  /** Legacy `callback.success` — the navigation markCorrect (§15.3). */
+  /** Legacy `callback.success` - the navigation markCorrect (§15.3). */
   markCorrect?: (assignmentId: number) => void;
   /**
-   * saveFile responded `version_change: true` — the assignment changed
+   * saveFile responded `version_change: true` - the assignment changed
    * under this submission. Studio surfaces the §7.4 out-of-date banner
-   * (legacy IGNORED the flag — ledger LD-11).
+   * (legacy IGNORED the flag - ledger LD-11).
    */
   onVersionChange?: () => void;
   /**
-   * Block-workspace PNG data URL for the updateSubmission payload —
+   * Block-workspace PNG data URL for the updateSubmission payload -
    * legacy getPngFromBlocks (server.js:675-680); resolves '' when there
    * are no blocks or capture fails.
    */
@@ -81,7 +81,7 @@ export class SubmissionSync {
 
   /**
    * Debounced autosave (legacy saveFile default TIMER_DELAY): trailing,
-   * latest-wins per filename — a newer edit cancels the pending POST.
+   * latest-wins per filename - a newer edit cancels the pending POST.
    */
   saveFileDebounced(filename: string, contents: string): void {
     const pending = this.timers.get(filename);
@@ -95,11 +95,11 @@ export class SubmissionSync {
     );
   }
 
-  /** Immediate save (legacy `saveFile(..., null)` — run start, run.js:13). */
+  /** Immediate save (legacy `saveFile(..., null)` - run start, run.js:13). */
   async saveFileNow(filename: string, contents: string): Promise<void> {
     const pending = this.timers.get(filename);
     if (pending !== undefined) {
-      // The immediate save IS the latest — drop the queued older one.
+      // The immediate save IS the latest - drop the queued older one.
       this.cancel(pending);
       this.timers.delete(filename);
     }
@@ -214,7 +214,7 @@ export class SubmissionSync {
         correct: grade.success, // RAW success of THIS run, not the OR
         hidden_override: grade.hideCorrectness,
         force_update: false,
-        // Legacy awaits getPngFromBlocks before POSTing (server.js:675) —
+        // Legacy awaits getPngFromBlocks before POSTing (server.js:675) -
         // the image field is always present, '' when capture yields none.
         image: await this.captureImage(),
       });
@@ -232,7 +232,7 @@ export class SubmissionSync {
       );
     }
     // Legacy quirk (server.js:687-689): markCorrect fires on the response
-    // REGARDLESS of response.success — only hide/correct gate it.
+    // REGARDLESS of response.success - only hide/correct gate it.
     if (!grade.hideCorrectness && grade.success && this.options.markCorrect) {
       const assignmentId = this.options.api.context.assignmentId;
       if (assignmentId !== null) this.options.markCorrect(assignmentId);

@@ -19,7 +19,7 @@ export interface FeedbackState {
   /** Pedal category (lowercased legacy vocabulary; null = no feedback). */
   category: string | null;
   label: string;
-  /** HTML body — rendered unsanitized, D4-A legacy parity. */
+  /** HTML body - rendered unsanitized, D4-A legacy parity. */
   message: string;
   /**
    * Pedal final.positives (on_run.js:78-88): green-star compliments shown
@@ -41,7 +41,7 @@ export type EvalState = 'hidden' | 'button' | 'input';
 /**
  * Color themes (M4.1; STUDIO EXTENSION, no legacy analog). `light` is the
  * B6 visual-parity default; `dark` and `win2000` are explicit user opt-ins.
- * `prefers-color-scheme` is deliberately ignored — the parity default wins
+ * `prefers-color-scheme` is deliberately ignored - the parity default wins
  * until the user chooses (plan M4.1 / ledger LD-23).
  */
 export type ThemeName = 'light' | 'dark' | 'win2000';
@@ -78,7 +78,7 @@ export interface EditorChromeState {
   feedback: FeedbackState;
   traceSteps: TraceStepView[];
   traceStep: number;
-  /** Legacy `ui.secondRow.isTraceVisible` — trace replaces feedback. */
+  /** Legacy `ui.secondRow.isTraceVisible` - trace replaces feedback. */
   traceVisible: boolean;
   /** Per-endpoint server state driving the footer badges (`model.status`). */
   serverStatus: Record<ServerEndpoint, ServerStatusState>;
@@ -88,7 +88,7 @@ export interface EditorChromeState {
   queuedInputs: string[];
   /**
    * Interactive input() request (spec §6.5): the prompt whose console
-   * input line is currently live, or null. One at a time — the engine is
+   * input line is currently live, or null. One at a time - the engine is
    * single-job and Python is suspended while this is set.
    */
   pendingInput: string | null;
@@ -105,7 +105,7 @@ export interface EditorChromeState {
   /** Active color theme (M4.1); persisted, applied via `[data-theme]`. */
   theme: ThemeName;
   /**
-   * Focused editor mode (M4.2; STUDIO EXTENSION — exam-friendly). Hides
+   * Focused editor mode (M4.2; STUDIO EXTENSION - exam-friendly). Hides
    * instructions/quick-menu/file-strip/group-nav and moves console +
    * feedback into a collapsible bottom drawer. Deliberately NOT persisted:
    * every page load starts in the normal chrome.
@@ -136,7 +136,7 @@ export interface EditorChromeState {
    * Dev console (STUDIO EXTENSION, no legacy analog): a secondary,
    * instructor-only console for system messages (engine boot, grader
    * lifecycle) and instructor-code output, keeping the student console
-   * clean. It shares the console slot — a toggle swaps between the two.
+   * clean. It shares the console slot - a toggle swaps between the two.
    */
   devConsole: ConsoleEntry[];
   /** Which console occupies the console slot. */
@@ -167,7 +167,7 @@ export interface EditorChromeState {
   graderError: string | null;
   /**
    * Engine one-time-setup label (LD-37): non-null while Pyodide (first Run)
-   * or the Pedal wheels (first grading) download — drives the Run button
+   * or the Pedal wheels (first grading) download - drives the Run button
    * spinner and the console status banner so the wait doesn't read as a
    * hang. The value is the user-facing message.
    */
@@ -234,7 +234,7 @@ const INITIAL_SERVER_STATUS = Object.fromEntries(
   SERVER_ENDPOINTS.map((endpoint) => [endpoint, 'offline']),
 ) as Record<ServerEndpoint, ServerStatusState>;
 
-// NB: the M3.3 'BLOCKPY_display.autocomplete' key is retired (M7.2 —
+// NB: the M3.3 'BLOCKPY_display.autocomplete' key is retired (M7.2 -
 // autocomplete became the enable_autocomplete ASSIGNMENT setting); stale
 // keys in existing browsers are simply never read again.
 /** localStorage key for the file-tree rail (M3.7). */
@@ -258,7 +258,7 @@ function writeStoredFlag(key: string, value: boolean): void {
   try {
     localStorage.setItem(key, String(value));
   } catch {
-    // Storage unavailable (sandboxed iframe) — the toggle still works.
+    // Storage unavailable (sandboxed iframe) - the toggle still works.
   }
 }
 
@@ -274,7 +274,7 @@ function readStoredTheme(): ThemeName {
 }
 
 /**
- * Themes apply as a `data-theme` attribute on the root element — the
+ * Themes apply as a `data-theme` attribute on the root element - the
  * `[data-theme=…]` scopes in styles/themes.css override the tokens.css
  * values. Light removes the attribute so the unthemed (parity) values bind.
  */
@@ -286,7 +286,7 @@ function applyThemeAttribute(theme: ThemeName): void {
       document.documentElement.dataset.theme = theme;
     }
   } catch {
-    // No DOM (SSR/tests without jsdom) — CSS theming simply doesn't bind.
+    // No DOM (SSR/tests without jsdom) - CSS theming simply doesn't bind.
   }
 }
 
@@ -295,7 +295,7 @@ applyThemeAttribute(INITIAL_THEME);
 
 /**
  * Resolver for the live console input line (spec §6.5). Held outside the
- * state (not serializable); one at a time — the engine is single-job.
+ * state (not serializable); one at a time - the engine is single-job.
  */
 let consoleInputResolver: ((value: string) => void) | null = null;
 
@@ -341,7 +341,7 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
       // Notify the badge when the other console is in the slot.
       consoleUnseen: state.activeConsole === 'dev' ? state.consoleUnseen + 1 : state.consoleUnseen,
     })),
-  // Legacy clears the whole printer on each run — the beginEval button line
+  // Legacy clears the whole printer on each run - the beginEval button line
   // lives inside it, so it goes too (and there is nothing left unseen).
   clearConsole: () => set({ console: [], evalState: 'hidden', consoleUnseen: 0 }),
   setFeedback: (feedback) => set({ feedback }),
@@ -352,7 +352,7 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
       traceStep: Math.max(0, Math.min(index, state.traceSteps.length - 1)),
     })),
   setTraceVisible: (visible) => set({ traceVisible: visible }),
-  // Legacy setStatus(endpoint, state, message) — the messages line shows the
+  // Legacy setStatus(endpoint, state, message) - the messages line shows the
   // first non-empty message, capitalized (ui.server.messages, blockpy.js).
   setServerStatus: (endpoint, status, message) =>
     set((state) => ({
@@ -402,7 +402,7 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
     try {
       localStorage.setItem(THEME_KEY, theme);
     } catch {
-      // Storage unavailable — the theme still applies for this session.
+      // Storage unavailable - the theme still applies for this session.
     }
     applyThemeAttribute(theme);
     set({ theme });

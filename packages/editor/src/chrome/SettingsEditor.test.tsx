@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * M3.5: the Assignment Settings form — legacy ASSIGNMENT_SETTINGS_EDITOR
+ * M3.5: the Assignment Settings form - legacy ASSIGNMENT_SETTINGS_EDITOR
  * port. Canonical contract: Save merges ONLY edited keys over the original
  * blob (unknown keys round-trip, D5-B/LD-5); defaults don't pollute the
  * blob; assignment columns travel separately.
@@ -14,7 +14,7 @@ afterEach(cleanup);
 const BLOB = JSON.stringify({
   toolbox: 'ct',
   hide_files: false,
-  // A key Studio has never heard of — must survive (LD-5).
+  // A key Studio has never heard of - must survive (LD-5).
   time_limit: '50min',
 });
 

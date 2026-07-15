@@ -30,7 +30,7 @@ function textToBlocksToText(source: string): string {
  * and `break`, so these were masked). Where corpus and legacy conflict we
  * choose per-case and pin the chosen output here:
  *
- * - #73 `import matplotlib.pyplot as plt`: `plt` is in `hiddenImports` — the
+ * - #73 `import matplotlib.pyplot as plt`: `plt` is in `hiddenImports` - the
  *   converter deliberately suppresses the block (legacy UX: plotting
  *   boilerplate is hidden; the generator re-emits the import whenever a
  *   plt.* call block is present). Legacy parity wins: a bare, unused plt
@@ -39,7 +39,7 @@ function textToBlocksToText(source: string): string {
  * (#42 `df[1, 2, 3, 4]` is the opposite call: legacy rendered Index(Tuple)
  * as `df[(1, 2, 3, 4)]`; the corpus asserts the text-preserving form, so
  * to-ast emits ExtSlice for all multi-dim subscripts and the corpus
- * expectation stands — no entry needed here.)
+ * expectation stands - no entry needed here.)
  */
 const KNOWN_LEGACY_DELTAS: Record<number, string> = {
   73: '',

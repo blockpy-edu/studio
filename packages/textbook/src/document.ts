@@ -1,5 +1,5 @@
 /**
- * Textbook document format (spec §11.4) — port of blockpy-server
+ * Textbook document format (spec §11.4) - port of blockpy-server
  * models/data_formats/textbook.py (v1 schema):
  *
  *   { version: 1, settings: {}, content: [Item] }
@@ -10,7 +10,7 @@
  * `{name, url, id, missing}` (rehydrate_textbook_v1) before rendering.
  * `load_assignment` performs NO rehydration, so a client-side textbook
  * must resolve urls itself (the Textbook component takes a resolver;
- * unresolvable entries render as the legacy MISSING_READING_V1 —
+ * unresolvable entries render as the legacy MISSING_READING_V1 -
  * ledger LD-16).
  */
 
@@ -108,7 +108,7 @@ export function* walkItems(items: TextbookItem[]): Generator<TextbookItem> {
   }
 }
 
-/** The default first page — the first reading in document order (the
+/** The default first page - the first reading in document order (the
  *  server's default_first_page). */
 export function firstReading(doc: TextbookDocument): TextbookAssignmentRef | null {
   for (const item of walkItems(doc.content)) {

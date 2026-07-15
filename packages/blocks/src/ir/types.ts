@@ -1,5 +1,5 @@
 /**
- * AST intermediate representation — the contract between the Lezer CST
+ * AST intermediate representation - the contract between the Lezer CST
  * converter (`cst/to-ast.ts`) and the ported BlockMirror block converters.
  *
  * The shape deliberately mirrors the AST BlockMirror consumed from Skulpt's
@@ -18,7 +18,7 @@
  */
 
 /**
- * Traversal backlink — `TextToBlocksConverter.convert` stamps the enclosing
+ * Traversal backlink - `TextToBlocksConverter.convert` stamps the enclosing
  * node on every node it visits (legacy `node._parent = parent`); `astStr`'s
  * `isDocString` reads it.
  */
@@ -26,7 +26,7 @@ export interface Parented {
   _parent?: AnyNode;
 }
 
-/** Operator / context marker nodes — no position, just an `_astname` tag. */
+/** Operator / context marker nodes - no position, just an `_astname` tag. */
 export interface OpNode<Name extends string = string> extends Parented {
   _astname: Name;
 }
@@ -79,7 +79,7 @@ export interface FunctionDef extends Located {
   body: Stmt[];
   decorator_list: Expr[];
   returns: Expr | null;
-  /** `async def` (M3.6) — converters raw-fallback when set (no block v1). */
+  /** `async def` (M3.6) - converters raw-fallback when set (no block v1). */
   is_async?: boolean;
 }
 
@@ -130,7 +130,7 @@ export interface For extends Located {
   iter: Expr;
   body: Stmt[];
   orelse: Stmt[];
-  /** `async for` (M3.6) — converters raw-fallback when set (no block v1). */
+  /** `async for` (M3.6) - converters raw-fallback when set (no block v1). */
   is_async?: boolean;
 }
 
@@ -155,7 +155,7 @@ export interface Match extends Located {
 }
 
 /**
- * M3.6 design decision: case patterns are TEXTUAL in v1 — the raw source
+ * M3.6 design decision: case patterns are TEXTUAL in v1 - the raw source
  * between `case` and the clause colon, guards included. Patterns are not
  * expressions and BlockMirror has no precedent; revisit only if course
  * content demands a pattern-block algebra.
@@ -170,7 +170,7 @@ export interface With extends Located {
   _astname: 'With';
   items: WithItem[];
   body: Stmt[];
-  /** `async with` (M3.6) — converters raw-fallback when set (no block v1). */
+  /** `async with` (M3.6) - converters raw-fallback when set (no block v1). */
   is_async?: boolean;
 }
 

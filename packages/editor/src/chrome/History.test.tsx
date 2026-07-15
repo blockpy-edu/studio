@@ -95,7 +95,7 @@ describe('HistoryToolbar', () => {
     expect(container.querySelector('.blockpy-history-toolbar')).not.toBeNull();
     const options = container.querySelectorAll('option');
     expect(options).toHaveLength(5);
-    // Only File.Edit options are enabled (File.Create is disabled — legacy
+    // Only File.Edit options are enabled (File.Create is disabled - legacy
     // quirk: it is navigable via the buttons but not the dropdown).
     expect(Array.from(options).map((option) => option.disabled)).toEqual([
       true,

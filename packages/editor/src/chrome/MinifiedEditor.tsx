@@ -1,19 +1,19 @@
 /**
- * Minified editor variant (§8.4) — the compact configuration hydrated into
+ * Minified editor variant (§8.4) - the compact configuration hydrated into
  * reading code blocks (§11.2, M2.3): text-only by default (blocks optional),
  * short height, no file tabs, no instructions pane. Save/submit endpoints
  * are stripped (A7 §"runnable code blocks").
  *
- * Layout (maintainer, 2026-07-11): two columns — LEFT: output console above
+ * Layout (maintainer, 2026-07-11): two columns - LEFT: output console above
  * the feedback area; RIGHT: the Run/Reset toolbar above the code editor.
  *
- * Unlike `CodingEditor`, ALL state is per-instance React state — a reading
+ * Unlike `CodingEditor`, ALL state is per-instance React state - a reading
  * page hydrates many of these at once (§16.3 budgets ten), so they must not
  * share the singleton chrome store. They DO share the page's engine through
  * a common `RunController`; each run executes in a detached namespace (the
  * engine gives every `student.run` job a fresh `__main__`, §6.4/M1.3.3).
  *
- * Event logging attaches to the READING assignment id — wired with the M2.3
+ * Event logging attaches to the READING assignment id - wired with the M2.3
  * reader (the logger does not exist in the chrome yet). The ephemeral-VFS
  * file staging for readings that reference data files also lands there.
  */
@@ -33,7 +33,7 @@ export interface MinifiedEditorProps {
   runController?: RunController;
   /** Blocks are optional in readings (§8.4); default text-only. */
   mode?: DualEditorMode;
-  /** Editor height — short by default. */
+  /** Editor height - short by default. */
   height?: number;
   readOnly?: boolean;
   blocklyMediaPath?: string;
@@ -184,7 +184,7 @@ export function MinifiedEditor(props: MinifiedEditorProps) {
         <DualEditorView
           mode={props.mode ?? 'text'}
           toolbox="normal"
-          // No block toolbox to align with in the compact variant — drop the
+          // No block toolbox to align with in the compact variant - drop the
           // legacy text-mode indent sidebar.
           indentSidebar={false}
           code={code}

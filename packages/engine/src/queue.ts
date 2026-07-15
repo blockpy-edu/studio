@@ -1,7 +1,7 @@
 /**
  * Job queue (E5, spec §6.1): one engine worker serves the whole page.
  * User-initiated jobs (runs, evals, grading) are FIFO and preempt
- * `on_change` background jobs, which are debounced and coalesced — only the
+ * `on_change` background jobs, which are debounced and coalesced - only the
  * newest pending on_change survives, and it only runs when nothing
  * user-initiated is waiting.
  */

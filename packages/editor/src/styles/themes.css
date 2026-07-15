@@ -1,14 +1,14 @@
 /**
- * Color themes (M4.1; STUDIO EXTENSION — ledger LD-23). Light is the B6
+ * Color themes (M4.1; STUDIO EXTENSION - ledger LD-23). Light is the B6
  * visual-parity default and lives entirely in tokens.css; the scopes below
  * bind only when the user opts in (`data-theme` on the root element, set by
- * the chrome store). `prefers-color-scheme` is deliberately ignored — the
+ * the chrome store). `prefers-color-scheme` is deliberately ignored - the
  * parity default wins until the user chooses.
  *
  * Load order: after tokens.css AND blockpy.css (the non-token rules below
  * must win by source order).
  *
- * Dark values are NOT normative-legacy — they are chosen for WCAG AA
+ * Dark values are NOT normative-legacy - they are chosen for WCAG AA
  * contrast against the #1e1e1e/#26221a surfaces (§16.3). The neutral ramp
  * inverts (neutral-900 was "ink on paper"; in dark it is "ink on slate").
  */
@@ -30,7 +30,7 @@
   --blockpy-status-internal: #6c6c6c; /* black badge would merge with bg */
   --blockpy-status-offline: #999;
 
-  /* Feedback accents (used as TEXT on dark surfaces — brightened) */
+  /* Feedback accents (used as TEXT on dark surfaces - brightened) */
   --blockpy-positive-green: #4cbb4c;
   --blockpy-alert-red: #ff6b6b;
 
@@ -49,7 +49,7 @@
   --blockpy-gutter-border: #555;
   --blockpy-line-rule: rgba(255, 255, 255, 0.12);
 
-  /* Neutral ramp — inverted (900 stays "strongest contrast vs surface") */
+  /* Neutral ramp - inverted (900 stays "strongest contrast vs surface") */
   --blockpy-neutral-900: #f2f2f2;
   --blockpy-neutral-800: #dddddd;
   --blockpy-neutral-700: #cccccc;
@@ -146,7 +146,7 @@
 }
 
 /* ==========================================================================
-   Windows 2000 — cosmetic skin ONLY (identical layout/metrics). Bevels use
+   Windows 2000 - cosmetic skin ONLY (identical layout/metrics). Bevels use
    inset box-shadows, never border-width changes; radii flatten; the font
    stack goes system-gray-era. Everything else inherits the light tokens.
    ========================================================================== */
@@ -197,7 +197,7 @@
   border-color: #c0c0c0;
 }
 
-/* Sunken text wells (fields stay white — authentic). */
+/* Sunken text wells (fields stay white - authentic). */
 :root[data-theme='win2000'] .blockpy-content .form-control,
 :root[data-theme='win2000'] .modal-content .form-control,
 :root[data-theme='win2000'] .blockpy-content select,

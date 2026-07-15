@@ -1,12 +1,12 @@
 /**
- * The legacy filename adapter (spec §7.3) — the ONE place the prefix
+ * The legacy filename adapter (spec §7.3) - the ONE place the prefix
  * oddities live. Verified against the legacy client in appendix A1
  * (docs/appendices/A1-filename-prefixes.md); citations there.
  *
  * Legacy recognizes eight namespaces ("spaces") signaled by a filename
  * prefix (files.js:178-188). Note the deliberate harmonization: legacy
  * `editors.js` recognized only a subset of the prefixes (`!^?$`) while
- * `files.js` recognized all of `!^?&$*#` — we use the full set everywhere
+ * `files.js` recognized all of `!^?&$*#` - we use the full set everywhere
  * (A1 §7.8).
  */
 
@@ -17,7 +17,7 @@ export const SPACES = [
   'hidden', // '?' hidden from student UI, readable by student code
   'readonly', // '&' instructor-authored, student-visible, uneditable
   'secret', // '$' never menu-visible, never persisted
-  'generated', // '*' run artifacts (vestigial in legacy — A1 §4e)
+  'generated', // '*' run artifacts (vestigial in legacy - A1 §4e)
   'bundle', // '#' wire-format concatenation bundles (actively persisted)
 ] as const;
 export type Space = (typeof SPACES)[number];
@@ -45,7 +45,7 @@ const PREFIX_SPACE: Record<string, Space> = {
 
 /**
  * Storage layer (spec §7.2, corrected per A1 §6.5): which record owns the
- * bytes. `wire` is not a real layer — `#` bundles are a persistence encoding
+ * bytes. `wire` is not a real layer - `#` bundles are a persistence encoding
  * over other layers. `transient` is the Studio run-artifact layer (LD-3x).
  */
 export type Layer =
@@ -88,7 +88,7 @@ export function format(space: Space, basename: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Magic names (A1 §3) — exact filenames the client special-cases.
+// Magic names (A1 §3) - exact filenames the client special-cases.
 // ---------------------------------------------------------------------------
 
 export type PersistenceKind =
@@ -126,7 +126,7 @@ export const SPACE_BUNDLE: Partial<Record<Space, BundleName>> = {
 
 /**
  * The verified magic-name registry (A1 §3, fixture seed §8). Legacy protected
- * the wrong name (`!assignment_settings.py`) in its guard lists — we protect
+ * the wrong name (`!assignment_settings.py`) in its guard lists - we protect
  * the real `.blockpy` name per A1 §7.4.
  */
 export const MAGIC_NAMES: readonly MagicName[] = [

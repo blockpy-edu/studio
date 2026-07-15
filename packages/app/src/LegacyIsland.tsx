@@ -1,5 +1,5 @@
 /**
- * Kettle/Explain legacy islands (spec §17, M2.5) — these assignment types
+ * Kettle/Explain legacy islands (spec §17, M2.5) - these assignment types
  * stay on the OLD frontend bundle: a sandboxed Knockout island renders the
  * legacy custom element (`<kettle params=…>` / `<explain params=…>`,
  * editor.html:168-185) when the page provides `window.ko` with the
@@ -9,7 +9,7 @@
  *
  * The legacy components reach into `$MAIN_BLOCKPY_EDITOR.components.server`
  * (createServerData/_postBlocking/_postRetry/altLogEntry, kettle.ts:1003,
- * explain.ts:274) and `$MAIN_BLOCKPY_EDITOR.model.display.passcode()` — on
+ * explain.ts:274) and `$MAIN_BLOCKPY_EDITOR.model.display.passcode()` - on
  * pages where Studio owns that global (the shim facade) those paths don't
  * exist, so the island grafts a compatibility bridge delegating to
  * `@blockpy/api` before binding.
@@ -38,7 +38,7 @@ export interface LegacyServerBridge {
 }
 
 export interface LegacyServerBridgeOptions {
-  /** ApiClient.buildPayload — the eleven-field base context (§14.1). */
+  /** ApiClient.buildPayload - the eleven-field base context (§14.1). */
   buildPayload: () => WirePayload;
   /** Transport post (retry ladder included) to a NAMED endpoint url. */
   post: (endpointName: string, payload: Record<string, unknown>) => Promise<unknown>;
@@ -77,7 +77,7 @@ export function createLegacyServerBridge(options: LegacyServerBridgeOptions): Le
 }
 
 /** Graft `components.server` + `model.display.passcode` onto whatever owns
- *  `$MAIN_BLOCKPY_EDITOR` (the shim facade), or publish a stub owner —
+ *  `$MAIN_BLOCKPY_EDITOR` (the shim facade), or publish a stub owner -
  *  never overwriting a REAL editor's own surfaces. */
 export function ensureEditorBridge(
   globals: Record<string, unknown>,

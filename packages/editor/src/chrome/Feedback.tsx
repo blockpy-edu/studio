@@ -1,5 +1,5 @@
 /**
- * Feedback pane — Row 2 right (A8 §1/§4.5: category badge with the legacy
+ * Feedback pane - Row 2 right (A8 §1/§4.5: category badge with the legacy
  * `label-*` classes, bold label, HTML message; aria-live like legacy).
  * Message code blocks are highlighted on present (legacy feedback.js:218-220;
  * dead-in-legacy, made real per LD-10). Includes the rating response region
@@ -15,7 +15,7 @@ import { useEditorChromeStore } from './store';
 
 /**
  * Legacy updateFeedback ran EVERY presented message through the markdown
- * pipeline (feedback.js:213 — `utilities.markdown(message)` = the same
+ * pipeline (feedback.js:213 - `utilities.markdown(message)` = the same
  * EasyMDE/marked path as instructions) with the `<pre>\n` doubling quirk.
  * Inline HTML passes through marked untouched (D4-A: unsanitized).
  */
@@ -41,7 +41,7 @@ export interface FeedbackProps {
    * the rating region renders only when true AND a handler is attached.
    */
   onRate?: (rating: 'thumbs-up' | 'thumbs-down') => void;
-  /** display.instructor — score % + reset control in the header. */
+  /** display.instructor - score % + reset control in the header. */
   instructor?: boolean;
   /** submission.score (0-1); header shows (100*score)% for instructors. */
   score?: number;
@@ -77,7 +77,7 @@ export function Feedback({ size = 'col-md-6', ...props }: FeedbackProps) {
     try {
       localStorage.setItem(SHOW_RATING_KEY, String(next));
     } catch {
-      // Storage unavailable (sandboxed iframe) — the toggle still works.
+      // Storage unavailable (sandboxed iframe) - the toggle still works.
     }
   };
 
@@ -87,7 +87,7 @@ export function Feedback({ size = 'col-md-6', ...props }: FeedbackProps) {
     setThankYou(true);
     // Ledger LD-18: only a NEGATIVE rating suggests sharing after the 1 s
     // thank-you. Legacy opened the "having trouble?" prompted share dialog
-    // for ANY rating (blockpy.js:801-813, dead suggestShare param) —
+    // for ANY rating (blockpy.js:801-813, dead suggestShare param) -
     // thanking someone for a thumbs-up with a trouble dialog was noise.
     setTimeout(() => {
       setThankYou(false);
@@ -103,7 +103,7 @@ export function Feedback({ size = 'col-md-6', ...props }: FeedbackProps) {
     <div className={`blockpy-feedback blockpy-panel ${size}`} aria-live="polite">
       {/* One header row. Flex (not clearfix/float): a floated button inside
           the flex-column panel forced the row to button height while the
-          inline title sat on the top baseline — the "View Trace gap"
+          inline title sat on the top baseline - the "View Trace gap"
           (M3.2). */}
       <div className="blockpy-panel-header">
         <strong className="feedback-header">Feedback: </strong>
@@ -137,14 +137,14 @@ export function Feedback({ size = 'col-md-6', ...props }: FeedbackProps) {
       </div>
       {/* LD-38: the body scrolls inside this wrapper; the rating footer
           below stays pinned bottom-right in BOTH states (legacy pinned only
-          the collapsed variant — the expanded one floated up under short
+          the collapsed variant - the expanded one floated up under short
           messages and scrolled away under long ones). */}
       <div className="blockpy-feedback-body">
         <strong className="blockpy-feedback-label">{feedback.label}</strong>
         <div
           ref={messageRef}
           className="blockpy-feedback-message"
-          // Legacy renders feedback HTML unsanitized (D4-A applies here too —
+          // Legacy renders feedback HTML unsanitized (D4-A applies here too -
           // the message body comes from instructor Pedal scripts), AFTER the
           // markdown pass (feedback.js:213).
           dangerouslySetInnerHTML={{ __html: renderedMessage }}

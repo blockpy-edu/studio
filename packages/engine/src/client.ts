@@ -2,7 +2,7 @@
  * EngineClient (spec §6.2-6.3): the main-thread service every editor and
  * quiz on the page shares. Owns the worker lifecycle, the priority queue,
  * per-job streaming callbacks, the wall-clock watchdog, and the compat-mode
- * hard stop (worker termination + respawn — §6.6, the PRIMARY interrupt
+ * hard stop (worker termination + respawn - §6.6, the PRIMARY interrupt
  * path since SAB is unavailable in Canvas iframes).
  */
 import { JobQueue } from './queue';
@@ -37,10 +37,10 @@ export interface EngineClientOptions {
   workerFactory: () => EnginePort;
   /** Passed to the worker's Pyodide load (BootConfig.paths.pyodideIndexURL). */
   indexURL?: string;
-  /** Reported once per (re)spawn — log as the X-Engine.Mode event (§6.6). */
+  /** Reported once per (re)spawn - log as the X-Engine.Mode event (§6.6). */
   onMode?: (mode: EngineMode) => void;
   /**
-   * Fired whenever the interpreter is replaced with a fresh one — the
+   * Fired whenever the interpreter is replaced with a fresh one - the
    * worker healing a fatal crash ('runner-reloaded', §6.6) or a client
    * respawn (hard stop / restart-kernel). Interpreter state (installed
    * wheels, REPL namespace) is gone; callers reset caches keyed on it.
@@ -104,7 +104,7 @@ export class EngineClient {
     return this.mode;
   }
 
-  /** Enqueue a job (user phases preempt on_change — E5). */
+  /** Enqueue a job (user phases preempt on_change - E5). */
   run(job: EngineJob, callbacks: RunCallbacks = {}): Promise<EngineResult> {
     return new Promise((resolve) => {
       this.pendingCallbacks.set(job.id, { callbacks, resolve });

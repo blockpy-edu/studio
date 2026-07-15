@@ -6,13 +6,13 @@ import { useEditorChromeStore } from './store';
 
 describe('renderFeedbackMessage (feedback.js:213 markdown pass)', () => {
   it('renders markdown like legacy utilities.markdown', () => {
-    // Inline code backticks become <code> at PRESENTATION time — Pedal
+    // Inline code backticks become <code> at PRESENTATION time - Pedal
     // sends raw markdown; the legacy env relied on this exact client pass.
     expect(renderFeedbackMessage('Check your `total` variable')).toContain('<code>total</code>');
     // Inline HTML passes through (D4-A unsanitized).
     expect(renderFeedbackMessage('a <b>bold</b> claim')).toContain('<b>bold</b>');
     // The legacy <pre>\n doubling quirk (feedback.js:213) fires on literal
-    // instructor HTML — marked itself emits `<pre><code>` with no newline,
+    // instructor HTML - marked itself emits `<pre><code>` with no newline,
     // exactly as legacy's EasyMDE pipeline did.
     expect(renderFeedbackMessage('<pre>\nx = 1</pre>')).toContain('<pre>\n\n');
   });
@@ -36,7 +36,7 @@ describe('Feedback rating region (feedback.js:46-74, blockpy.js:789-817)', () =>
     vi.useRealTimers();
   });
 
-  it('thumbs-up: logs, dims the thumbs, thanks — and does NOT prompt a share', () => {
+  it('thumbs-up: logs, dims the thumbs, thanks - and does NOT prompt a share', () => {
     vi.useFakeTimers();
     const onRate = vi.fn();
     const { container } = render(<Feedback onRate={onRate} />);
@@ -46,7 +46,7 @@ describe('Feedback rating region (feedback.js:46-74, blockpy.js:789-817)', () =>
     expect((thumbsUp as HTMLElement).style.opacity).toBe('0.5');
     expect(container.querySelector('.blockpy-feedback-thank-you')!.className).toContain('show');
     // Ledger LD-18: the legacy quirk (ANY rating → prompted share after 1 s,
-    // blockpy.js:801-813) is fixed — positive ratings just say thanks.
+    // blockpy.js:801-813) is fixed - positive ratings just say thanks.
     act(() => vi.advanceTimersByTime(1000));
     expect(useEditorChromeStore.getState().promptedShare).toBe(false);
   });

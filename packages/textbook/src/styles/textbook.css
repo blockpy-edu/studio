@@ -1,5 +1,5 @@
 /**
- * Textbook page styles — port of the textbook.html:14-36 inline styles.
+ * Textbook page styles - port of the textbook.html:14-36 inline styles.
  */
 .book-item {
   cursor: pointer;
@@ -40,7 +40,7 @@
 }
 
 /* Bootstrap 4.6 list-group defaults the textbook sidebar relies on
-   (pinned like styles/bootstrap-subset.css — the app shell loads no real
+   (pinned like styles/bootstrap-subset.css - the app shell loads no real
    Bootstrap). */
 .blockpy-textbook .list-group {
   display: flex;

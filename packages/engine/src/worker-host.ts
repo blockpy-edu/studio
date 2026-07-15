@@ -3,14 +3,14 @@
  * entry so it is Node-testable (and reusable as an in-process "loopback"
  * engine for the dev harness). One host = one Pyodide runtime.
  *
- * Interrupts: in compat mode (the primary mode — SAB is unavailable in
+ * Interrupts: in compat mode (the primary mode - SAB is unavailable in
  * Canvas iframes) a running job cannot be interrupted cooperatively; the
  * client performs the hard stop by terminating the worker (§6.6). The
  * 'interrupt' message is therefore only honored between jobs here; the SAB
  * interrupt buffer is the isolated-mode enhancement (future work).
  *
  * Crash recovery (§6.6): a fatal Pyodide error (stack overflow from
- * unbounded recursion — students will do this) kills the interpreter but
+ * unbounded recursion - students will do this) kills the interpreter but
  * not the worker. Every reload remembers the init indexURL (reloading
  * without it resolves pyodide-lock.json against the wrong base and fails
  * with an HTML-as-JSON parse error), a post-job stack canary catches
@@ -32,7 +32,7 @@ export interface WorkerHostOptions {
 const FATAL_SIGNATURE = /call stack|stack overflow|fatally failed/i;
 
 const ENGINE_CRASH_MESSAGE =
-  'The Python engine crashed — this usually means unbounded recursion ' +
+  'The Python engine crashed - this usually means unbounded recursion ' +
   '(a function calling itself forever). The engine has been restarted; ' +
   'check your code and run again.';
 
@@ -47,7 +47,7 @@ export class WorkerHost {
    * Serializes init/run/restart handling. Without this, a job posted while
    * a crash reload is in flight would execute against the dead interpreter
    * (worker onmessage fires handle() fire-and-forget). input-response and
-   * interrupt bypass the chain — a queued run job AWAITS input-response,
+   * interrupt bypass the chain - a queued run job AWAITS input-response,
    * so serializing those would deadlock.
    */
   private chain: Promise<void> = Promise.resolve();
@@ -63,7 +63,7 @@ export class WorkerHost {
       }
       case 'input-response': {
         // Resumes the JSPI-suspended run (spec §6.5). Unknown/stale job
-        // ids are ignored — the run may have been hard-stopped meanwhile.
+        // ids are ignored - the run may have been hard-stopped meanwhile.
         const resolve = this.pendingInputs.get(message.jobId);
         this.pendingInputs.delete(message.jobId);
         resolve?.(message.value);
@@ -98,7 +98,7 @@ export class WorkerHost {
 
   /**
    * Replace a dead/poisoned interpreter with a fresh one. Reload failures
-   * are swallowed — the next run reports "not initialized". The client is
+   * are swallowed - the next run reports "not initialized". The client is
    * always told: installed wheels and the REPL namespace are gone either
    * way (the engine adapter re-arms the Pedal install path on this).
    */
@@ -170,7 +170,7 @@ export class WorkerHost {
           }),
       });
     } catch (error) {
-      // A crash inside execute (e.g. a fatal Pyodide error — JSPI stack
+      // A crash inside execute (e.g. a fatal Pyodide error - JSPI stack
       // exhaustion, unbounded recursion) must still resolve the job,
       // otherwise the client waits forever. A fatal error leaves the
       // interpreter DEAD, so reload a fresh runner before the next job
@@ -208,7 +208,7 @@ export class WorkerHost {
     this.options.post({ kind: 'result', result });
     // A stack-overflow fatal can poison the interpreter WITHOUT failing
     // the job (a fail-soft grading pass catches around it, or a caught
-    // deep-recursion unwind corrupts the stack pointer — pyodide#5987).
+    // deep-recursion unwind corrupts the stack pointer - pyodide#5987).
     // Probe now so the fatal never lands on the student's next Run. The
     // message chain holds any queued job until the reload settles.
     if (this.runner.healthCheck?.() === false) {

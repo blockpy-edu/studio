@@ -267,7 +267,7 @@ export function QuestionEditor(props: QuestionEditorProps) {
                   {Array.isArray(correct[statementIndex]) && (
                     <small className="text-muted">
                       {' '}
-                      (accepts any of: {(correct[statementIndex] as string[]).join(', ')} — edit in
+                      (accepts any of: {(correct[statementIndex] as string[]).join(', ')} - edit in
                       Advanced)
                     </small>
                   )}
@@ -323,7 +323,7 @@ export function QuestionEditor(props: QuestionEditorProps) {
               </div>
             ))}
             <JsonField
-              label="Blank options (blank_id → options) — add/remove blanks here"
+              label="Blank options (blank_id → options) - add/remove blanks here"
               value={question.answers ?? {}}
               onChange={(parsed) => setQ({ answers: parsed as Record<string, string[]> })}
             />
@@ -558,7 +558,7 @@ export function QuestionEditor(props: QuestionEditorProps) {
             onChange={(parsed) => props.onChangeQuestion(parsed as QuizQuestion)}
           />
           <JsonField
-            label="Check (on_run document entry — correct/feedback fields)"
+            label="Check (on_run document entry - correct/feedback fields)"
             value={check}
             onChange={(parsed) => props.onChangeCheck(parsed as Record<string, unknown>)}
           />

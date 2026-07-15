@@ -1,5 +1,5 @@
 /**
- * BlockPy design tokens — values are NORMATIVE, extracted from the legacy
+ * BlockPy design tokens - values are NORMATIVE, extracted from the legacy
  * stylesheets (docs/appendices/A8-ui-parity.md §2.2; B6 visual parity).
  * Do not "modernize" a value without a ledger entry.
  */
@@ -25,8 +25,8 @@
   --blockpy-status-info: #5bc0de; /* no-errors + instructions badges, server active */
   --blockpy-status-warning: #f0ad4e; /* feedback-error badge, run-running, server retrying */
   --blockpy-status-danger: #d9534f; /* runtime-error badge, run-error, server failed */
-  --blockpy-status-syntax: darkred; /* #8b0000 — syntax/editor error badge */
-  --blockpy-status-semantic: orangered; /* #ff4500 — semantic/analyzer badge, traceback lineno */
+  --blockpy-status-syntax: darkred; /* #8b0000 - syntax/editor error badge */
+  --blockpy-status-semantic: orangered; /* #ff4500 - semantic/analyzer badge, traceback lineno */
   --blockpy-status-internal: black; /* internal-error badge */
   --blockpy-status-offline: #333; /* server offline */
 

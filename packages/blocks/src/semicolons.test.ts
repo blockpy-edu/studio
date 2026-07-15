@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 /**
  * M7.5: semicolon-joined simple statements (`a = 1; b = 2`). The grammar
- * wraps them in a StatementGroup node the converter now flattens — matching
+ * wraps them in a StatementGroup node the converter now flattens - matching
  * BlockMirror, whose Skulpt AST yielded two same-line statements (its
  * grindlehook demo was full of them). Round trips NORMALIZE `;` to
  * newlines, exactly like legacy's generator; hence a dedicated
@@ -29,11 +29,11 @@ describe('semicolon statement groups (M7.5)', () => {
     ['two assignments', `a = 1; b = 2`, `a = 1\nb = 2`],
     ['trailing semicolon tolerated', `a = 1;`, `a = 1`],
     // `pass` drops: BlockMirror has no Pass block (converter returns null;
-    // `pass` re-synthesizes only for EMPTY bodies) — legacy parity,
+    // `pass` re-synthesizes only for EMPTY bodies) - legacy parity,
     // unrelated to semicolons.
     ['calls mix; pass drops like legacy', `print(1); pass; x = f()`, `print(1)\nx = f()`],
     // `return (a + b)`: ast_ReturnFull's generator always parenthesizes its
-    // value — pre-existing legacy generator behavior, not a semicolon
+    // value - pre-existing legacy generator behavior, not a semicolon
     // artifact (a no-semicolon `return a + b` does the same).
     [
       'inside a function body',

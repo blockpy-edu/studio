@@ -1,5 +1,5 @@
 /**
- * Frozen quiz JSON schema (appendix A3 §8, verbatim) — legacy-compatible
+ * Frozen quiz JSON schema (appendix A3 §8, verbatim) - legacy-compatible
  * shapes for the three documents a quiz assignment stores:
  * instructions (assignment.instructions), checks (assignment.on_run,
  * blanked for students), and the submission (submission.code).
@@ -35,7 +35,7 @@ export interface QuizInstructionsSettings {
   feedbackType?: QuizFeedbackType;
   /** -1 = all (default); UNIMPLEMENTED in legacy too. */
   questionsPerPage?: number;
-  /** Default: SEED (empty template) / ATTEMPT (backfill) — quiz.ts:77 vs :112. */
+  /** Default: SEED (empty template) / ATTEMPT (backfill) - quiz.ts:77 vs :112. */
   poolRandomness?: QuizPoolRandomness;
   /** Reading preamble: BlockPy id or assignment url slug. */
   readingId?: number | string | null;

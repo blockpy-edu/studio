@@ -4,7 +4,7 @@
  * Legacy keys almost everything on the `display.instructor` flag rather than
  * fine-grained roles (A1 §6.11), so the matrix takes a Role but only
  * distinguishes instructor vs not. Read-only mode (`display.readOnly`) blocks
- * persistence, not local edits — that gate lives in the persistence adapter,
+ * persistence, not local edits - that gate lives in the persistence adapter,
  * not here.
  */
 import { parse, type Space } from './legacy-names';
@@ -15,7 +15,7 @@ const isInstructor = (role: Role) => role === 'instructor';
 
 /**
  * Can this file appear in the file-tab UI for this role? (A1 §2 table.)
- * 'hidden' (?) files are entirely invisible to students — stronger than
+ * 'hidden' (?) files are entirely invisible to students - stronger than
  * read-only (A1 §4b). 'secret' ($) and 'bundle' (#) never appear for anyone.
  */
 export function visibleInUi(legacyName: string, role: Role): boolean {
@@ -39,7 +39,7 @@ export function visibleInUi(legacyName: string, role: Role): boolean {
  * Can this role edit the file's contents in an editor?
  *
  * D3-A (ledger LD-3): '&' read-only files are immutable to students in EVERY
- * editor — legacy enforced this in only four of six editors (A1 §7.2).
+ * editor - legacy enforced this in only four of six editors (A1 §7.2).
  */
 export function editableBy(legacyName: string, role: Role): boolean {
   const { space } = parse(legacyName);

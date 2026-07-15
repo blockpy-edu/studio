@@ -26,13 +26,13 @@ export interface LegacyUrlMap {
   /**
    * Group organizer (M4.6; STUDIO EXTENSION keys). The server routes are
    * legacy (`/assignment_group/edit|move_membership`) but the editor page
-   * never published them — templates add these keys to enable the UI.
+   * never published them - templates add these keys to enable the UI.
    */
   editAssignmentGroup?: string;
   moveMembership?: string;
   /**
    * `/assignments/by_url` (M4.7; closes LD-16): GET-only legacy route the
-   * editor page never published — templates add the key to enable textbook
+   * editor page never published - templates add the key to enable textbook
    * url-reference rehydration.
    */
   loadAssignmentByUrl?: string;
@@ -45,7 +45,7 @@ export interface ApiContext {
   courseId: number | null;
   submissionId: number | null;
   userId: number | null;
-  /** submission.version — goes on the wire as `version` (A2 §1.2). */
+  /** submission.version - goes on the wire as `version` (A2 §1.2). */
   submissionVersion: number;
   assignmentVersion: number;
   passcode: string;
@@ -58,7 +58,7 @@ export type WirePayload = Record<string, WireValue>;
 
 /**
  * The eleven base fields (A2 §1.2). `timestamp` is epoch **milliseconds**,
- * `timezone` is `getTimezoneOffset()` minutes — both stored verbatim by the
+ * `timezone` is `getTimezoneOffset()` minutes - both stored verbatim by the
  * server and parsed downstream by research code, so the encoding is
  * load-bearing (A2 §1.4).
  */

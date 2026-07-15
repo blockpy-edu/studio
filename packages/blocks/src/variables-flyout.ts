@@ -1,5 +1,5 @@
 /**
- * Variables toolbox category for `custom="VARIABLE"` — the BlockMirror
+ * Variables toolbox category for `custom="VARIABLE"` - the BlockMirror
  * override port (legacy `blockly_shims.js:64-119`) that Milestone 1.4 missed:
  * the flyout must serve `ast_Assign` / `ast_AugAssign` / `ast_Name` blocks
  * (the AST block set that round-trips), not Blockly's stock
@@ -8,7 +8,7 @@
  *
  * Blockly 11 captures `Variables.flyoutCategoryBlocks` as a module-local
  * binding when it registers the default VARIABLE callback, so the legacy
- * monkey-patch route is dead — `installVariablesFlyout` RE-registers the
+ * monkey-patch route is dead - `installVariablesFlyout` RE-registers the
  * category callback on the workspace instead (last registration wins).
  */
 import * as Blockly from 'blockly/core';
@@ -24,7 +24,7 @@ function hideGettersSetters(): boolean {
  *
  * Legacy fidelity note: legacy concatenated the raw VariableModel object
  * into the Assign/AugAssign XML strings (blockly_shims.js:70-76), which
- * serialized as `[object Object]` text — the starter blocks silently LOST
+ * serialized as `[object Object]` text - the starter blocks silently LOST
  * their most-recent-variable field. We emit the field element the code
  * plainly intended; gaps, shadow, mutation, sort order, and the hidden-mode
  * label fallback are quirk-exact.

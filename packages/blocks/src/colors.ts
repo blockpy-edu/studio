@@ -1,5 +1,5 @@
 /**
- * Block palette hues — verbatim from legacy `text_to_blocks.js`
+ * Block palette hues - verbatim from legacy `text_to_blocks.js`
  * (`BlockMirrorTextToBlocks.COLOR`). These are Blockly HSV hue numbers and a
  * B6 visual-parity conformance target (docs/appendices/A8-ui-parity.md).
  */

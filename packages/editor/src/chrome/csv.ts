@@ -2,7 +2,7 @@
  * Minimal RFC-4180-ish CSV parse/serialize for the grid editor (M4.4;
  * STUDIO EXTENSION, LD-26). Deliberately small: quoted fields, doubled
  * quotes, CRLF/LF rows. `parseCsv` returns null on structural failure
- * (unclosed quote) — the CodingEditor then degrades to the text editor.
+ * (unclosed quote) - the CodingEditor then degrades to the text editor.
  */
 
 export function parseCsv(text: string): string[][] | null {
@@ -58,7 +58,7 @@ export function parseCsv(text: string): string[][] | null {
   // Trailing newline means the last row was already pushed; otherwise flush.
   if (field !== '' || row.length > 0) pushRow();
   if (rows.length === 0) rows.push(['']);
-  // Ragged rows are permitted in the wild — pad to the widest so the grid
+  // Ragged rows are permitted in the wild - pad to the widest so the grid
   // is rectangular (serialization keeps the padding, a lossy-but-visible
   // normalization the editor surfaces immediately).
   const width = Math.max(...rows.map((r) => r.length));

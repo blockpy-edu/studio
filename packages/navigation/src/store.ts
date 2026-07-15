@@ -1,14 +1,14 @@
 /**
- * Assignment-group navigation store (spec §9) — the single source both
+ * Assignment-group navigation store (spec §9) - the single source both
  * header instances render from (the legacy macro is included twice and
  * kept in sync only because its jQuery selectors are document-wide).
  *
  * Ports, quirk for quirk:
- *   - loadNavigation()/loadNewAssignment/updateUI —
+ *   - loadNavigation()/loadNewAssignment/updateUI -
  *     blockpy-server templates/helpers/assignment_groups.html:40-121
- *   - markCorrect — assignment_groups.html:124-142
- *   - the time-spent clock — templates/blockpy/editor.html:393-451
- *   - the countdown / time-limit checker —
+ *   - markCorrect - assignment_groups.html:124-142
+ *   - the time-spent clock - templates/blockpy/editor.html:393-451
+ *   - the countdown / time-limit checker -
  *     frontend/components/assignment_interface.ts:20-45, 88-115, 160-256
  */
 import { formatAmount, formatClockDuration, parseTimeLimit } from './format';
@@ -27,22 +27,22 @@ export interface GroupNavAssignment {
 /** Structurally identical to the app's GroupBootData (spec §9.2). */
 export interface GroupNavBootData {
   assignments: GroupNavAssignment[];
-  /** OR of hidden — masks all statuses (legacy ns.any_secretive). */
+  /** OR of hidden - masks all statuses (legacy ns.any_secretive). */
   anySecretive: boolean;
   currentAssignmentId: number;
 }
 
 /**
- * assignment settings.time_limit + the per-submission override/start —
+ * assignment settings.time_limit + the per-submission override/start -
  * legacy reads these live from the loaded pair (assignment_interface.ts:
  * 186-193); the app feeds them on every assignment adoption.
  */
 export interface TimeLimitInfo {
   /** settings.time_limit ("Nmin" or plain minutes); absent = no limit. */
   timeLimit: string | null;
-  /** submission.timeLimit() — per-student "Nmin" absolute or "Nx" multiplier. */
+  /** submission.timeLimit() - per-student "Nmin" absolute or "Nx" multiplier. */
   studentTimeLimit: string | null;
-  /** submission.dateStarted() — countdown renders only once this is set. */
+  /** submission.dateStarted() - countdown renders only once this is set. */
   dateStarted: string | null;
 }
 
@@ -62,7 +62,7 @@ export interface GroupNavOptions {
   getGroupDuration?: () => Promise<number>;
   /** Timer telemetry (timer_expired/timer_cleared/timer_error, A2 §4). */
   logEvent?: (eventType: string, category: string, label: string, message: string) => void;
-  /** Live instructor check — instructors never get the expiry overlay. */
+  /** Live instructor check - instructors never get the expiry overlay. */
   isInstructor?: () => boolean;
   /** Server session start (epoch ms); 0/null falls back to now (A7 §5). */
   sessionStartTime?: number | null;
@@ -144,7 +144,7 @@ export class GroupNavStore {
       countdownText: '',
       notice: null,
     };
-    // `{{ (session_start_time or 0)|tojson }} || Date.now()` — 0 and null
+    // `{{ (session_start_time or 0)|tojson }} || Date.now()` - 0 and null
     // both fall back (editor.html:400, A7 §5 item 8).
     this.pageStartTime = options.sessionStartTime || Date.now();
   }
@@ -206,14 +206,14 @@ export class GroupNavStore {
     this.navigateTo(this.lastId);
   }
 
-  /** `INDICES[index+1] || LAST_ID` — next of last stays last (:83-87). */
+  /** `INDICES[index+1] || LAST_ID` - next of last stays last (:83-87). */
   next(): void {
     const indices = this.snapshot.entries.map((entry) => entry.id);
     const index = indices.indexOf(this.snapshot.currentId);
     this.navigateTo(indices[index + 1] || this.lastId);
   }
 
-  /** `INDICES[index-1] || FIRST_ID` — back of first stays first (:88-92). */
+  /** `INDICES[index-1] || FIRST_ID` - back of first stays first (:88-92). */
   back(): void {
     const indices = this.snapshot.entries.map((entry) => entry.id);
     const index = indices.indexOf(this.snapshot.currentId);
@@ -275,7 +275,7 @@ export class GroupNavStore {
       });
     }
     // Secretive groups: the only legacy action is re-writing "??" into the
-    // numerator (:138-140) — our render masks it whenever anySecretive.
+    // numerator (:138-140) - our render masks it whenever anySecretive.
   }
 
   // -- selector expansion (assignment_groups.html:94-120) ----------------------
@@ -290,7 +290,7 @@ export class GroupNavStore {
     try {
       localStorage.setItem(EXPANSION_KEY, String(next));
     } catch {
-      // Storage denied — the toggle still applies for this page.
+      // Storage denied - the toggle still applies for this page.
     }
   }
 
@@ -380,7 +380,7 @@ export class GroupNavStore {
   handleTimeCheck(): void {
     const globals = globalThis as Record<string, unknown>;
     if (this.timeChecker !== globals[TIME_CHECKER_GLOBAL]) {
-      // Superseded by another checker — stop and report (ts:160-178).
+      // Superseded by another checker - stop and report (ts:160-178).
       if (this.timeChecker != null) {
         clearInterval(this.timeChecker);
         this.timeChecker = null;
@@ -398,7 +398,7 @@ export class GroupNavStore {
     const remaining = timeLimit - elapsed;
     if (remaining <= 0) {
       // Both early returns skip the countdown update below, freezing the
-      // span at its last pre-expiry value (ts:201-246 — legacy-exact).
+      // span at its last pre-expiry value (ts:201-246 - legacy-exact).
       if (document.querySelector('.end-assignment-timer-box')) return;
       if (this.options.isInstructor?.()) return;
       const box = document.createElement('div');

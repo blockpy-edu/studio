@@ -1,5 +1,5 @@
 /**
- * Ellipsis literal (`...`) block (M3.6) — Studio addition, no BlockMirror
+ * Ellipsis literal (`...`) block (M3.6) - Studio addition, no BlockMirror
  * ancestor.
  */
 import { COLOR } from '../colors';

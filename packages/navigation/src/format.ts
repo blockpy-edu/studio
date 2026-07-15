@@ -2,10 +2,10 @@
  * Duration formatting and time-limit parsing, ported verbatim from the
  * legacy server frontend (blockpy-server):
  *
- *   - formatAmount: frontend/utilities/dates.ts:104-151 — the countdown span
+ *   - formatAmount: frontend/utilities/dates.ts:104-151 - the countdown span
  *     uses the COARSE tiers (`formatAmount(x, " elapsed", true)`,
  *     assignment_interface.ts:248-252).
- *   - parseTimeLimit: frontend/components/assignment_interface.ts:20-45 —
+ *   - parseTimeLimit: frontend/components/assignment_interface.ts:20-45 -
  *     `"Nmin"` base limits plus per-student `"Nmin"` (absolute) or `"Nx"`
  *     (multiplier) overrides from submission.timeLimit().
  */
@@ -85,7 +85,7 @@ export function parseTimeLimit(timeLimit: string, studentLimit: string | null): 
 }
 
 /**
- * Time-spent clock tiers — the `refreshClock` body from the legacy
+ * Time-spent clock tiers - the `refreshClock` body from the legacy
  * editor.html:403-425, as a pure function of the accumulated duration
  * (seconds). Precisions per A7 §5: cap at `hours >= 99`, singular
  * `~1 minute spent`, zero-padded minutes in the `~H:MM hours spent` tier.

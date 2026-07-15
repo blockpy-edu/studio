@@ -1,6 +1,6 @@
 /**
  * JobRunner: executes EngineJobs against one Pyodide instance (spec §6.2).
- * UI-free and Node-runnable — the worker host and the browser client wrap
+ * UI-free and Node-runnable - the worker host and the browser client wrap
  * this. Wall-clock enforcement lives client-side (compat mode's hard stop
  * is worker termination, §6.6); the runner is single-job-at-a-time.
  */
@@ -28,7 +28,7 @@ export interface StreamCallbacks {
   /**
    * Interactive input() (spec §6.5): called when scripted inputs run dry
    * and the job opted in (`interactiveInput`). The returned promise is
-   * awaited by Python via JSPI run_sync — the run stays suspended until
+   * awaited by Python via JSPI run_sync - the run stays suspended until
    * the user submits. Only consulted when the environment can suspend.
    */
   onInput?: (prompt: string) => Promise<string>;
@@ -130,7 +130,7 @@ export class JobRunner {
   /**
    * Post-job stack probe (§6.6 crash recovery): false means the interpreter
    * is dead (a prior fatal) or its stack is poisoned (a stack-overflow
-   * fatal survived by a fail-soft catch — the canary triggers the deferred
+   * fatal survived by a fail-soft catch - the canary triggers the deferred
    * fatal here, inside this try, instead of on the next job).
    */
   healthCheck(): boolean {
@@ -160,7 +160,7 @@ export class JobRunner {
     this.realRequestsReady = true;
   }
 
-  /** Lazy Pedal environment — wheels install on the first grading job. */
+  /** Lazy Pedal environment - wheels install on the first grading job. */
   private async ensurePedal(packages?: string[]): Promise<PedalEnvironment> {
     if (this.pedalEnv === null) {
       this.pedalEnv = await PedalEnvironment.install(
@@ -184,7 +184,7 @@ export class JobRunner {
       const feedback =
         request.evaluation !== undefined
           ? // on_eval pipeline (on_eval.js): reuses the last grading
-            // pass's report/sandbox — no staging, no student re-run.
+            // pass's report/sandbox - no staging, no student re-run.
             env.evaluateGrade({
               evaluation: request.evaluation,
               onEval: request.onRun,
@@ -239,7 +239,7 @@ export class JobRunner {
     try {
       await this.pyodide.loadPackagesFromImports?.(job.code);
     } catch {
-      // Ignored — the run itself reports the missing module.
+      // Ignored - the run itself reports the missing module.
     }
     if (job.allowRealRequests) {
       try {

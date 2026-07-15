@@ -1,7 +1,7 @@
 /**
  * Engine regression harness (§16.1.3 seed): run every Pedal grader in
  * courses/bakery_course.json through the PedalEnvironment against the
- * assignment's starting code. This is a smoke regression — it proves every
+ * assignment's starting code. This is a smoke regression - it proves every
  * grader in the curriculum *executes* under Pyodide and returns feedback
  * (correctness verdicts need recorded student submissions; see plan).
  *
@@ -25,7 +25,7 @@ console.log(`${graders.length} pedal graders in the corpus`);
 const { loadPyodide } = await import('pyodide');
 const pyodide = await loadPyodide({ indexURL: dirname(require.resolve('pyodide')) });
 
-// The environment source is a real .py file (M3.0) — read it directly.
+// The environment source is a real .py file (M3.0) - read it directly.
 const PEDAL_ENV_PY = readFileSync(
   join(repoRoot, 'packages', 'engine', 'src', 'pedal-env.py'),
   'utf8',
@@ -48,7 +48,7 @@ for (const assignment of graders) {
   if (n++ >= limit) break;
   try {
     // Stage the assignment's instructor extras (?, &, ! files) like the
-    // engine does — graders import them via _instructor and open() them.
+    // engine does - graders import them via _instructor and open() them.
     const extra = (assignment.extra_instructor_files ?? '').trim();
     const files = extra.startsWith('{') ? extra : '{}';
     const proxy = grade(assignment.starting_code ?? '', assignment.on_run, files, [], '{}');

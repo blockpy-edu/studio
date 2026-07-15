@@ -1,5 +1,5 @@
 /**
- * Modal dialog — port of the legacy `DIALOG_HTML` Bootstrap modal
+ * Modal dialog - port of the legacy `DIALOG_HTML` Bootstrap modal
  * (dialog.js:3-26): `.blockpy-dialog.modal > .modal-dialog.modal-lg >
  * .modal-content` with header (title + ×), body, and a footer holding
  * btn-white "Close" and btn-success "Okay". Legacy reuses a single jQuery

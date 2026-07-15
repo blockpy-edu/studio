@@ -1,17 +1,17 @@
 /**
- * AssignmentHost (spec §5.3) — replaces editor.html's `mainModel` +
+ * AssignmentHost (spec §5.3) - replaces editor.html's `mainModel` +
  * `loadAssignmentWrapper` (editor.html:304-338). Behavior preserved exactly:
  *
  * - Type dispatch by typeIndex membership in the legacy priority order
  *   quiz → reading → textbook → java → kettle(typescript) → explain →
  *   blockpy; unknown ids fall through to the editor (the fallback renderer).
- * - Non-blockpy types hide the coding editor (legacy `editor.hide()` — the
+ * - Non-blockpy types hide the coding editor (legacy `editor.hide()` - the
  *   container stays mounted) and mount the matching component; the six
  *   non-blockpy "current id" slots are reset on EVERY dispatch (only the
  *   active type keeps its id), which is what makes components unmount and
  *   remount rather than reload in place.
  * - The blockpy current id is set only in the editor branch's async
- *   completion (`whenDone`, editor.html:323-330) — viewing a quiz does NOT
+ *   completion (`whenDone`, editor.html:323-330) - viewing a quiz does NOT
  *   null it (legacy leaves it untouched in that branch).
  * - `loadAssignment(id): Promise<void>` is the modern
  *   `altAssignmentChangingFunction`; the host publishes the global (§15.3).
@@ -30,7 +30,7 @@ const NON_BLOCKPY_TYPES = ['quiz', 'reading', 'textbook', 'java', 'typescript', 
 
 /**
  * Membership classification in the legacy priority order
- * (editor.html:305-320). Unknown ids classify as 'blockpy' — the editor is
+ * (editor.html:305-320). Unknown ids classify as 'blockpy' - the editor is
  * the fallback renderer and surfaces its own load errors.
  */
 export function classifyAssignment(id: number, typeIndex: AssignmentTypeIndex): AssignmentType {
@@ -46,7 +46,7 @@ export function classifyAssignment(id: number, typeIndex: AssignmentTypeIndex): 
 /**
  * URL contract (§5.3): assignment switches update `assignment_id` in place
  * (preserving `assignment_group_id`, `assignment_group_url`, `embed`, …)
- * via history.replaceState — only outside embeds.
+ * via history.replaceState - only outside embeds.
  */
 export function replaceAssignmentIdInUrl(id: number, embed: boolean): void {
   if (embed || typeof history === 'undefined' || typeof location === 'undefined') return;
@@ -69,7 +69,7 @@ export interface AssignmentHostProps {
   renderAssignment?: Partial<
     Record<Exclude<AssignmentType, 'blockpy'>, (assignmentId: number) => ReactNode>
   >;
-  /** The coding-editor surface — stays mounted, hidden for other types. */
+  /** The coding-editor surface - stays mounted, hidden for other types. */
   children: ReactNode;
 }
 
@@ -108,7 +108,7 @@ export function AssignmentHost(props: AssignmentHostProps) {
     const type = classifyAssignment(id, typeIndex);
     const isBlockPy = typeIndex.blockpy.includes(id);
     // The six non-blockpy slots reset on EVERY dispatch
-    // (editor.html:332-337) — the per-type remount semantics.
+    // (editor.html:332-337) - the per-type remount semantics.
     setCurrentIds(
       (previous) =>
         ({
@@ -117,7 +117,7 @@ export function AssignmentHost(props: AssignmentHostProps) {
         }) as CurrentIds,
     );
     if (type !== 'blockpy') {
-      setEditorVisible(false); // editor.hide() — stays mounted
+      setEditorVisible(false); // editor.hide() - stays mounted
       setAssignmentType(type);
       return;
     }

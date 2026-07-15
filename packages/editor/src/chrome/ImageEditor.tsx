@@ -2,10 +2,10 @@
  * Image preview + pixel editor tab body (M4.5; STUDIO EXTENSION, LD-27).
  *
  * Storage decision (plan M4.5, investigated 2026-07-12): the editable
- * representation is the FILE'S VFS TEXT CONTENTS AS A DATA-URL — edits ride
+ * representation is the FILE'S VFS TEXT CONTENTS AS A DATA-URL - edits ride
  * the normal code-change path (VFS write → autosave → dirty), exactly like
  * every other working file. Server-side uploads (placement files) stay in
- * the ImagesManager (M1.6): preview/replace there, no pixel editing —
+ * the ImagesManager (M1.6): preview/replace there, no pixel editing -
  * their bytes never enter the VFS.
  *
  * - Preview: checkerboard backdrop, zoom, dimensions readout.
@@ -33,7 +33,7 @@ export interface ImageEditorProps {
   value: string;
   readOnly?: boolean;
   onChange(next: string): void;
-  /** "Raw text" escape hatch — the caller swaps in the text editor. */
+  /** "Raw text" escape hatch - the caller swaps in the text editor. */
   onRawView(): void;
 }
 
@@ -54,7 +54,7 @@ export function isImageDataUrl(value: string): boolean {
   return value.startsWith('data:image/');
 }
 
-/** Decode a data-URL into a grid (canvas work — null where unsupported). */
+/** Decode a data-URL into a grid (canvas work - null where unsupported). */
 function decodeToGrid(dataUrl: string): Promise<PixelGrid | null> {
   return new Promise((resolve) => {
     const image = new Image();
@@ -79,7 +79,7 @@ function decodeToGrid(dataUrl: string): Promise<PixelGrid | null> {
         context.drawImage(image, 0, 0);
         resolve(gridFromImageData(context.getImageData(0, 0, canvas.width, canvas.height)));
       } catch {
-        resolve(null); // jsdom / tainted canvas — preview-only.
+        resolve(null); // jsdom / tainted canvas - preview-only.
       }
     };
     image.onerror = () => resolve(null);
@@ -87,7 +87,7 @@ function decodeToGrid(dataUrl: string): Promise<PixelGrid | null> {
   });
 }
 
-/** Encode the grid to a PNG data-URL (canvas work — '' where unsupported). */
+/** Encode the grid to a PNG data-URL (canvas work - '' where unsupported). */
 function encodeGrid(grid: PixelGrid): string {
   try {
     const canvas = document.createElement('canvas');

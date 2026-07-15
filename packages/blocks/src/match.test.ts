@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * M3.6: match/case round-trip conformance — same bar as the BlockMirror
+ * M3.6: match/case round-trip conformance - same bar as the BlockMirror
  * corpus suite (§16.1.2): text → blocks → text must be EXACT (trimmed) and
  * stable on a second trip. Patterns are textual v1, so every pattern shape
  * (literal, capture, class, or-, guard, wildcard) must survive verbatim.
@@ -20,7 +20,7 @@ function trip(source: string): string {
 const PROGRAMS: [name: string, source: string][] = [
   [
     // Case bodies use print (a known statement-form signature): UNKNOWN
-    // bare calls in any nested body wrap in the legacy ast_Expr parens —
+    // bare calls in any nested body wrap in the legacy ast_Expr parens -
     // a pre-existing BlockMirror quirk unrelated to match (astCall.ts:632).
     'literal + wildcard cases',
     `match command:
@@ -43,7 +43,7 @@ const PROGRAMS: [name: string, source: string][] = [
   ],
   [
     // NOTE: empty class patterns (`case str():`) are rejected by
-    // @lezer/python 1.1.19's pattern grammar (probed 2026-07-12) — an
+    // @lezer/python 1.1.19's pattern grammar (probed 2026-07-12) - an
     // upstream gap like S2's valueless yield; they degrade to ast_Raw.
     'match nested in a function with trailing statements',
     `def act(cmd):

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * M3.1 regression suite: Blockly locale population (the right-click crash —
+ * M3.1 regression suite: Blockly locale population (the right-click crash -
  * empty `Blockly.Msg` made the default context menu throw on
  * `Msg.DELETE_X_BLOCKS.replace(...)`) and the BlockMirror variables-flyout
  * port (blockly_shims.js:64-119).
@@ -45,7 +45,7 @@ describe('variables flyout (BlockMirror port)', () => {
       'ast_Name',
     ]);
     // Starter blocks carry the MOST RECENT variable's field (the intent the
-    // legacy string concat silently dropped — see variables-flyout.ts).
+    // legacy string concat silently dropped - see variables-flyout.ts).
     const assignField = blocks[0]!.querySelector('field[name="VAR"]');
     expect(assignField?.textContent).toBe('apple');
     // AugAssign keeps the legacy shadow + simple mutation.
@@ -61,7 +61,7 @@ describe('variables flyout (BlockMirror port)', () => {
     const names = variablesFlyoutBlocks(ws)
       .filter((el) => el.getAttribute('type') === 'ast_Name')
       .map((el) => el.querySelector('field[name="VAR"]')?.textContent);
-    // 'Z' < 'a' in code-unit order — Blockly's locale compare would flip it.
+    // 'Z' < 'a' in code-unit order - Blockly's locale compare would flip it.
     expect(names).toEqual(['Zebra', 'apple']);
     ws.dispose();
   });

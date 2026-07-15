@@ -1,5 +1,5 @@
 /**
- * BootConfig — the typed union of everything the server's editor.html
+ * BootConfig - the typed union of everything the server's editor.html
  * currently injects (spec §5.2). This is the single contract between the
  * server's bootstrap page and the React app.
  */
@@ -30,7 +30,7 @@ export interface GroupBootData {
     /** From the paired submission. */
     correct: boolean;
   }>;
-  /** OR of hidden — masks all statuses in the group (spec §3, §9.1). */
+  /** OR of hidden - masks all statuses in the group (spec §3, §9.1). */
   anySecretive: boolean;
   currentAssignmentId: number;
 }
@@ -66,7 +66,7 @@ export interface BootConfig {
     assignmentData?: LegacyAssignmentPayload;
     /**
      * Standalone textbook route (M4.7): the raw `<path>` segment of
-     * `/blockpy/assignments/textbook/<path>?page=…` — resolved client-side
+     * `/blockpy/assignments/textbook/<path>?page=…` - resolved client-side
      * by url THEN numeric id (the load_textbook contract). Used only when
      * `currentAssignmentId` is null; the flagged server template supplies
      * it instead of resolving the assignment itself.
@@ -80,8 +80,8 @@ export interface BootConfig {
     readOnly: boolean;
     embed: boolean;
     /**
-     * Studio-only, default false: show the dev-shell chrome — the
-     * "Dev harness — …" header line (with the minified-editor swap button)
+     * Studio-only, default false: show the dev-shell chrome - the
+     * "Dev harness - …" header line (with the minified-editor swap button)
      * and, in the dev/demo entry, the assignment-group picker bar. Real
      * applications mounting the app omit this and get no harness chrome;
      * only the harness page (packages/app/index.html) turns it on.
@@ -99,7 +99,7 @@ export interface BootConfig {
      * Where the deployed server hosts the build's `assets/` directory
      * (the engine's module worker, `worker.entry.js`, lives there under a
      * stable name). Optional: unset keeps the build-time URL baked into
-     * the bundle. Same-origin only — module workers cannot be
+     * the bundle. Same-origin only - module workers cannot be
      * instantiated cross-origin.
      */
     assets?: string;
@@ -108,7 +108,7 @@ export interface BootConfig {
    * `settings-*` query params, prefix stripped (spec §15.2). Values are RAW
    * STRINGS, not parsed JSON: the legacy Jinja loop passes each query value
    * through verbatim and the client coerces per key (e.g. `"" + v === "true"`).
-   * Parsing them as JSON here would change behavior — see
+   * Parsing them as JSON here would change behavior - see
    * docs/appendices/A4-settings-inventory.md.
    */
   settings: Record<string, string>;

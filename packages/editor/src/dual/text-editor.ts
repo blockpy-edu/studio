@@ -1,5 +1,5 @@
 /**
- * Text half of the dual editor — port of legacy `BlockMirror/src/text_editor.js`
+ * Text half of the dual editor - port of legacy `BlockMirror/src/text_editor.js`
  * on CodeMirror 6 (legacy used CM5).
  *
  * Ported semantics (round-trip/UX conformance):
@@ -10,10 +10,10 @@
  *    the editor becomes visible again.
  *  - view-mode table: split 40% / text 100% / block hidden, with the 675px
  *    responsive breakpoint handled by the controller.
- *  - `setHighlightedLines(lines, style)` / `clearHighlightedLines(style)` —
+ *  - `setHighlightedLines(lines, style)` / `clearHighlightedLines(style)` -
  *    line classes drive the A8 highlight colors (editor-error-line, …).
  *  - Tab/Shift-Tab indent, Ctrl-Enter runs (legacy *intended* this; its
- *    binding read an undefined property — fixed here), Esc blurs.
+ *    binding read an undefined property - fixed here), Esc blurs.
  *
  * CM6 additions sanctioned by the milestone plan (not in legacy, which had
  * lint/autocomplete commented out): syntax lint from the shared Lezer parse
@@ -49,12 +49,12 @@ import { HighlightStyle } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
 import { parseSource } from '@blockpy/blocks';
 
-/** Themes the dual editor understands (M4.1; store `ThemeName` values —
+/** Themes the dual editor understands (M4.1; store `ThemeName` values -
  * win2000 is a chrome-only skin, so the code surface treats it as light). */
 export type EditorTheme = 'light' | 'dark' | 'win2000';
 
 /**
- * Dark syntax colors (M4.1, LD-23). NOT legacy-normative — themes are a
+ * Dark syntax colors (M4.1, LD-23). NOT legacy-normative - themes are a
  * Studio extension; palette is the familiar One-Dark family for AA contrast
  * on the #1e1e1e surface (themes.css owns the editor chrome colors).
  */
@@ -131,7 +131,7 @@ const highlightPlugin = EditorView.decorations.compute(['doc', highlightField], 
   return builder.finish();
 });
 
-/** Syntax lint from the shared Lezer parse — same gate as block generation. */
+/** Syntax lint from the shared Lezer parse - same gate as block generation. */
 function pythonSyntaxLinter() {
   return linter((view): Diagnostic[] => {
     const source = view.state.doc.toString();
@@ -199,7 +199,7 @@ export class DualTextEditor {
           bracketMatching(),
           indentUnit.of('    '),
           python(),
-          // Accessible name for the contenteditable (WCAG audit M6.1 —
+          // Accessible name for the contenteditable (WCAG audit M6.1 -
           // axe aria-input-field-name).
           EditorView.contentAttributes.of({ 'aria-label': 'Python code editor' }),
           syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
@@ -340,7 +340,7 @@ export class DualTextEditor {
 
   /**
    * Live-swap the code surface theme (M4.1). Dark flags CM6's dark base
-   * (selection/panel defaults) and swaps in the dark HighlightStyle — the
+   * (selection/panel defaults) and swaps in the dark HighlightStyle - the
    * `fallback: true` default style yields to it automatically. Light and
    * win2000 (chrome-only skin) leave the parity defaults in place.
    */

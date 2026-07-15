@@ -189,7 +189,7 @@ describe('Quizzer (quizzer.ts port, §11.3)', () => {
       feedback: {},
     });
     renderQuizzer({}, loadResult(code));
-    // Legacy quirk: 0 remaining renders "0 attempts left." — the
+    // Legacy quirk: 0 remaining renders "0 attempts left." - the
     // 'no attempts left!' string needs attempts to go NEGATIVE
     // (quiz.ts:163-168); canAttempt still gates the button at 0.
     await waitFor(() => {
@@ -273,7 +273,7 @@ describe('Quizzer (quizzer.ts port, §11.3)', () => {
     );
     await waitFor(() => expect(screen.getByText('Reading preamble 42')).toBeDefined());
     expect(lookupReadingId).toHaveBeenCalledWith('bakery_intro_cs_read');
-    // No toggle for students — the reading is simply part of the page.
+    // No toggle for students - the reading is simply part of the page.
     expect(screen.queryByRole('button', { name: 'Show Subordinate Reading' })).toBeNull();
   });
 

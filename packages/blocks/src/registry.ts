@@ -9,14 +9,14 @@
  *    from `TextToBlocksConverter.convert`.
  */
 import * as Blockly from 'blockly/core';
-// Standard block library — registers the extensions the ported blocks apply
+// Standard block library - registers the extensions the ported blocks apply
 // (e.g. `contextMenu_variableSetterGetter`), exactly as the legacy bundle
 // always had them loaded.
 import 'blockly/blocks';
 import * as En from 'blockly/msg/en';
 
-// Studio imports `blockly/core` directly, which — unlike the full `blockly`
-// entry — never populates `Blockly.Msg`. Without a locale the DEFAULT
+// Studio imports `blockly/core` directly, which - unlike the full `blockly`
+// entry - never populates `Blockly.Msg`. Without a locale the DEFAULT
 // context menu throws on `Msg.DELETE_X_BLOCKS.replace(...)` at right-click
 // and every Msg-driven label (variables flyout button, rename/delete
 // entries) renders blank (M3.1).

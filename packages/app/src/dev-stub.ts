@@ -1,5 +1,5 @@
 /**
- * Dev-harness server stub — the single source of truth for what the
+ * Dev-harness server stub - the single source of truth for what the
  * `/api/*` endpoints answer. Two hosts consume it:
  *
  *  - the vite dev middleware (vite.config.ts) for `pnpm dev` + e2e, where
@@ -10,8 +10,8 @@
  * Content: the original hand-written showcase fixtures (assignments
  * 101-108) plus the REAL bakery-curriculum groups (1A/6B) extracted into
  * demo/bakery-groups.json by tools/extract-demo-groups.mjs. Bakery quizzes
- * grade LOCALLY through the quizzer's own processQuiz — the same engine
- * the server runs — against the last-saved submission document.
+ * grade LOCALLY through the quizzer's own processQuiz - the same engine
+ * the server runs - against the last-saved submission document.
  */
 import type { AssignmentTypeIndex, GroupBootData } from './boot-config';
 import bakeryGroups from './demo/bakery-groups.json';
@@ -114,7 +114,7 @@ function gradeDemoQuiz(record: DemoAssignmentRecord, grader: DemoQuizGrader | un
 }
 
 // ---------------------------------------------------------------------------
-// Showcase fixtures (assignments 101-108) — hand-written demo content that
+// Showcase fixtures (assignments 101-108) - hand-written demo content that
 // exercises every surface; moved verbatim from vite.config.ts.
 // ---------------------------------------------------------------------------
 
@@ -656,7 +656,7 @@ const routes: Record<string, (params: URLSearchParams, grader?: DemoQuizGrader) 
   },
   '/api/load_history': devHistory,
   '/api/save_file': (params) => {
-    // Remember the answer document — quiz grading reads it back.
+    // Remember the answer document - quiz grading reads it back.
     const id = params.get('assignment_id');
     if (id && params.get('filename') === 'answer.py') {
       savedAnswers.set(id, params.get('code') ?? '');
@@ -691,7 +691,7 @@ const routes: Record<string, (params: URLSearchParams, grader?: DemoQuizGrader) 
           };
   },
   '/api/update_submission_status': () => ({ success: true }),
-  // GET-only by_url resolution (assignments.py:341-353) — quizzes resolve
+  // GET-only by_url resolution (assignments.py:341-353) - quizzes resolve
   // their subordinate-reading url slugs through this before rendering the
   // preamble. Demo records only; the showcase fixtures use numeric ids.
   '/api/assignments/by_url': (params) => {

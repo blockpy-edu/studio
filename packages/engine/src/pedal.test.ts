@@ -1,6 +1,6 @@
 /**
  * Pedal environment integration tests (spec §10.1). These install wheels
- * from PyPI via micropip, so they need network access — gated behind
+ * from PyPI via micropip, so they need network access - gated behind
  * PEDAL_IT=1 to keep offline/CI runs green:
  *
  *   PEDAL_IT=1 pnpm vitest run packages/engine/src/pedal.test.ts
@@ -105,7 +105,7 @@ assert_output(student, "? Hi Ada")
 
   it('stages support files readable by graders and student code', () => {
     // Note: the variable must be USED, else TIFA's unused-variable feedback
-    // outranks set_success in the resolver — correct grading behavior.
+    // outranks set_success in the resolver - correct grading behavior.
     const feedback = env.grade({
       studentCode: 'data = open("config.txt").read().strip()\nprint(data)',
       onRun: `
@@ -123,7 +123,7 @@ if student.data.get("data") == "expected-value":
   it('preloads the instructor namespace like the legacy wrapper', () => {
     // parse_program + core/sandbox commands available WITHOUT imports
     // (on_run.js:33-36); graders written against legacy rely on this.
-    // (The variable must be USED or TIFA outranks set_success — see above.)
+    // (The variable must be USED or TIFA outranks set_success - see above.)
     const feedback = env.grade({
       studentCode: 'x = 7\nprint(x)',
       onRun: `
@@ -149,7 +149,7 @@ if not get_output():
   });
 
   it('surfaces positives alongside the main feedback (on_run.js:78-88)', () => {
-    // NOTE: raw markdown (backticks etc.) stays raw HERE — the legacy
+    // NOTE: raw markdown (backticks etc.) stays raw HERE - the legacy
     // markdown pass happens at PRESENTATION (feedback.js:213), ported as
     // renderFeedbackMessage in the chrome.
     const feedback = env.grade({

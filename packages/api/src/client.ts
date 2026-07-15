@@ -93,7 +93,7 @@ export class ApiClient {
    * Group organizer endpoints (M4.6 slice 1). Server routes exist today
    * (`/assignment_group/edit`, `/assignment_group/move_membership`,
    * assignment_groups.py:89-137) but the legacy editor template never
-   * published their URLs — capability-detected via `isEndpointConnected`.
+   * published their URLs - capability-detected via `isEndpointConnected`.
    */
   async editAssignmentGroup(fields: {
     assignment_group_id: number;
@@ -109,7 +109,7 @@ export class ApiClient {
 
   /**
    * `/assignments/by_url` (M4.7; closes LD-16): resolve an assignment url
-   * slug to its record. GET-only route; returns null on any failure — the
+   * slug to its record. GET-only route; returns null on any failure - the
    * textbook renders unresolved refs as Missing Reading.
    */
   async loadAssignmentByUrl(
@@ -146,7 +146,7 @@ export class ApiClient {
    * `{id, url, name, redirect, edit}`. SERVER-TEAM FLAG: today's templates
    * publish `forkAssignment` = `blockpy.fork_assignment`
    * (editor.html:205), a half-finished route that never returns the
-   * fork's id (blockpy.py:1139-1178) — repoint it at
+   * fork's id (blockpy.py:1139-1178) - repoint it at
    * `url_for('assignments.fork')`. Callers must treat a success response
    * WITHOUT a numeric `id` as failure (the App does).
    */
@@ -196,7 +196,7 @@ export class ApiClient {
     );
   }
 
-  /** `status` is a STRING on the wire ("Submitted", "inProgress" — the
+  /** `status` is a STRING on the wire ("Submitted", "inProgress" - the
    *  server passes it verbatim to grade_submission, blockpy.py:567-585). */
   async updateSubmissionStatus(status: string): Promise<LegacyResponse> {
     if (this.guardReadOnly()) return { success: false, readOnly: true };
@@ -221,7 +221,7 @@ export class ApiClient {
   }
 
   /**
-   * Total time spent across the group's sessions — the clock's "activity"
+   * Total time spent across the group's sessions - the clock's "activity"
    * mode (spec §9.4). Legacy is a page-level `$.get` global with the ids
    * baked into the URL (editor.html:395-399); the endpoint takes GET or
    * POST (blockpy.py:1248-1262) and the base payload already carries
@@ -329,7 +329,7 @@ export class ApiClient {
       );
     }
     if (this.guardReadOnly() || !this.isEndpointConnected('logEvent')) return undefined;
-    // `overrides` lets a non-editor surface attach its OWN ids — the legacy
+    // `overrides` lets a non-editor surface attach its OWN ids - the legacy
     // reader/quiz AssignmentInterface builds its payload from its own loaded
     // pair, not the editor model (assignment_interface.ts:266-284, §12).
     const payload = this.buildPayload({

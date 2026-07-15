@@ -1,5 +1,5 @@
 /**
- * Walrus operator `target := value` block (M3.6) — Studio addition, no
+ * Walrus operator `target := value` block (M3.6) - Studio addition, no
  * BlockMirror ancestor (the legacy block set predates Python 3.8). Reported
  * at the lowest precedence so enclosing expressions re-parenthesize exactly
  * like the source (`if (n := f()) > 4:`).

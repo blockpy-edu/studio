@@ -1,10 +1,10 @@
 /**
- * `match`/`case` blocks (M3.6) — a STUDIO addition with no BlockMirror
+ * `match`/`case` blocks (M3.6) - a STUDIO addition with no BlockMirror
  * ancestor (the legacy block set predates Python 3.10). Shape follows the
  * ast_If idiom: a value input for the subject, then per-case a header row
  * and a statement input, with the case count carried in the mutation.
  *
- * v1 design decision (plan M3.6): case patterns are TEXTUAL — an editable
+ * v1 design decision (plan M3.6): case patterns are TEXTUAL - an editable
  * text field holding the raw pattern source (guards included). Patterns are
  * not expressions, so no pattern-block algebra; the round-trip suite is the
  * correctness gate.

@@ -1,5 +1,5 @@
 /**
- * Known function/method signature tables — port of legacy
+ * Known function/method signature tables - port of legacy
  * `ast/ast_functions.js`. Drives ast_Call's "known function" block shapes.
  *
  * Also home to:
@@ -21,7 +21,7 @@ import type * as ir from '../ir/types';
  * Custom call converter contract (legacy `signature.custom`):
  * ast_Call invokes `signature.custom(node, parent, converter)` inside a
  * try/catch and returns its result directly; THROWING falls back to the
- * default ast_Call rendering (legacy behavior — the legacy handler threw
+ * default ast_Call rendering (legacy behavior - the legacy handler threw
  * plain strings; we throw `Error`s, which the catch treats identically).
  */
 export type CustomCallConverter = (
@@ -441,7 +441,7 @@ makeTurtleBlock('bye', false, [], 'say goodbye to turtles ', []);
 MODULE_FUNCTION_SIGNATURES['matplotlib.pyplot'] = MODULE_FUNCTION_SIGNATURES['plt']!;
 
 /**
- * Build the toolbox XML for a known function/method/module-function call —
+ * Build the toolbox XML for a known function/method/module-function call -
  * port of the legacy `BlockMirrorTextToBlocks.getFunctionBlock` static.
  * `.name` selects a METHOD_SIGNATURES entry; `module` selects from
  * MODULE_FUNCTION_SIGNATURES.

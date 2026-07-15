@@ -2,13 +2,13 @@
 
 Codifies the rules the codebase already follows. CI enforces the
 mechanical ones (`pnpm lint` runs with `--max-warnings 0`; typecheck,
-tests, and format ride the same workflow). The rest are review policy —
+tests, and format ride the same workflow). The rest are review policy -
 this document is the PR checklist's reference.
 
 ## TypeScript
 
 - **No `any`.** `@typescript-eslint/no-explicit-any` stays at _error_
-  workspace-wide (M5.2 drove the count to zero — keep it there). Escape
+  workspace-wide (M5.2 drove the count to zero - keep it there). Escape
   hatch, in order of preference:
   1. a precise type (the IR unions in `packages/blocks/src/ir/types.ts`
      cover the converter surface; Blockly 11's own types cover most block
@@ -31,7 +31,7 @@ this document is the PR checklist's reference.
 
 - **Hook deps are exact.** No `react-hooks/exhaustive-deps` disables.
   When a hook needs props, destructure them first and depend on the
-  pieces — never on the whole `props` object:
+  pieces - never on the whole `props` object:
 
   ```tsx
   const { onCodeChange, runController } = props;
@@ -40,7 +40,7 @@ this document is the PR checklist's reference.
 
   If a value must be readable without retriggering (event handlers that
   want "latest"), use the ref-mirror pattern
-  (`const latest = useRef(props); latest.current = props;`) — see
+  (`const latest = useRef(props); latest.current = props;`) - see
   `DualEditorView`.
 
 - Construction-time configuration (Blockly workspaces, CM6 views) mounts
@@ -59,11 +59,11 @@ this document is the PR checklist's reference.
 - Packages export through their `src/index.ts`; cross-package imports go
   through the `@blockpy/*` workspace names, never relative paths.
 - Wire formats, prefixes, and event names come from the frozen appendices
-  (`docs/appendices/A1..A7`) — code cites the appendix, not folklore.
+  (`docs/appendices/A1..A7`) - code cites the appendix, not folklore.
 
 ## Comments
 
-- Comments state **constraints** — the legacy `file:line` being ported,
+- Comments state **constraints** - the legacy `file:line` being ported,
   the quirk being preserved, the invariant the next reader must not
   break. Never narration ("increment the counter"), never provenance of
   the edit itself. If a deviation is deliberate, the comment names the
@@ -74,11 +74,11 @@ this document is the PR checklist's reference.
 - **Conformance suites** (round-trip corpus in `packages/blocks`, API
   replay against golden transcripts, A8 UI-parity checks) pin legacy
   behavior; a failing conformance test is fixed in the code unless a
-  ledger entry authorizes the difference — then the test encodes the
+  ledger entry authorizes the difference - then the test encodes the
   ledger's exact wording.
 - **Unit tests** live beside the module (`x.test.ts[x]`), use vitest;
   jsdom files start with `// @vitest-environment jsdom` and register
-  `afterEach(cleanup)` when they render React (RTL auto-cleanup is off —
+  `afterEach(cleanup)` when they render React (RTL auto-cleanup is off -
   stale mounts leak window listeners).
 - Engine tests that need real wheels gate behind `PEDAL_IT=1`; full
   Pyodide e2e gates behind `PYODIDE_E2E=1`. Neither runs in default CI.

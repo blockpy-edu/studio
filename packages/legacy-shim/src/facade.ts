@@ -139,7 +139,7 @@ export interface BlockPyFacadeDeps {
 export class BlockPy {
   readonly config: BootConfig;
   readonly handle: StudioHandle;
-  /** Legacy `callback.success` — fires on markCorrect (§14.3, §15.3). */
+  /** Legacy `callback.success` - fires on markCorrect (§14.3, §15.3). */
   readonly successCallback: ((assignmentId: number) => void) | undefined;
 
   constructor(options: BlockPyOptions, deps: BlockPyFacadeDeps = {}) {

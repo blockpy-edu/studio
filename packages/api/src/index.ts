@@ -1,5 +1,5 @@
 /**
- * @blockpy/api — Typed client for the legacy blockpy-server REST API and
+ * @blockpy/api - Typed client for the legacy blockpy-server REST API and
  * the frozen event registry (spec §14). Conformance authorities:
  * docs/appendices/A2-event-vocabulary.md and the golden transcripts (A5).
  */

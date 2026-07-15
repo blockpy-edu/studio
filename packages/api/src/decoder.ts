@@ -1,7 +1,7 @@
 /**
  * Versioned assignment/submission decoder (spec §14.5): accepts every
- * payload the current server emits — including fields the rewrite doesn't
- * use — and round-trips unknown fields losslessly on save. The same
+ * payload the current server emits - including fields the rewrite doesn't
+ * use - and round-trips unknown fields losslessly on save. The same
  * merge-over-raw pattern implements D5-B for the settings blob (LD-5).
  */
 
@@ -35,7 +35,7 @@ export interface DecodedAssignment {
   courseId: number | null;
   forkedId: number | null;
   forkedVersion: number | null;
-  /** The complete original payload — never discard (spec §14.5). */
+  /** The complete original payload - never discard (spec §14.5). */
   raw: RawRecord;
 }
 
@@ -114,7 +114,7 @@ export function encodeAssignment(decoded: DecodedAssignment): RawRecord {
 /**
  * D5-B (ledger LD-5): merge edited known settings keys over the original
  * settings blob so unregistered keys (`time_limit`, `protected_ip_ranges`,
- * `poolRandomness`, …) survive an instructor save — legacy destroyed them.
+ * `poolRandomness`, …) survive an instructor save - legacy destroyed them.
  */
 export function mergeSettings(originalBlob: string, edits: RawRecord): string {
   let original: RawRecord = {};

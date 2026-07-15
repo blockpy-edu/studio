@@ -1,5 +1,5 @@
 /**
- * Reading settings surface — port of `parseAdditionalSettings` and the
+ * Reading settings surface - port of `parseAdditionalSettings` and the
  * voice-choice helpers (blockpy-server frontend/components/reader/
  * reader.ts:183-257). The settings JSON drives everything outside the
  * markdown body: videos, header/summary, slides download, popout, and the
@@ -21,7 +21,7 @@ export interface ReaderSettings {
   slides: string;
   allowPopout: boolean;
   startTimerButton: boolean;
-  /** Raw time_limit passthrough (unconverted — numeric values crash the
+  /** Raw time_limit passthrough (unconverted - numeric values crash the
    *  legacy checker the same way, see navigation's parseTimeLimit). */
   timeLimit: string | null;
 }
@@ -40,7 +40,7 @@ const safeSet = (key: string, value: string): void => {
   try {
     localStorage.setItem(key, value);
   } catch {
-    // Storage denied — the choice just doesn't persist.
+    // Storage denied - the choice just doesn't persist.
   }
 };
 
@@ -85,7 +85,7 @@ export function rememberVoiceChoice(voice: string): void {
   safeSet(VOICE_CHOICE_KEY, JSON.stringify(previous));
 }
 
-/** reader.ts:223-257 — note slides uses its own absolute-URL predicate
+/** reader.ts:223-257 - note slides uses its own absolute-URL predicate
  *  (`/^https?:\/\//`), different from the link-rewrite's `startsWith("http")`. */
 export function parseReaderSettings(
   settingsRaw: string,

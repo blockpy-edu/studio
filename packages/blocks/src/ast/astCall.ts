@@ -263,7 +263,7 @@ defineBlock('ast_Call', {
         const input = this.appendValueInput('ARG' + i)
           .setAlign(Blockly.inputs.Align.RIGHT)
           .appendField(field, 'ARGNAME' + i);
-        // Legacy called input.init() unconditionally — it always ran on a
+        // Legacy called input.init() unconditionally - it always ran on a
         // rendered workspace. Blockly 11's Input.init() has no headless
         // guard (Field.init touches the SVG root), so skip it headless;
         // rendered workspaces initialize fields during render anyway.
@@ -393,7 +393,7 @@ defineBlock('ast_Call', {
 
     const workspace = this.workspace as Blockly.WorkspaceSvg;
 
-    // Highlight Definition — built up field-by-field, exactly as legacy did.
+    // Highlight Definition - built up field-by-field, exactly as legacy did.
     const option = {
       enabled: true,
     } as Blockly.ContextMenuRegistry.LegacyContextMenuOption;
@@ -494,7 +494,7 @@ generator.forBlock['ast_Call'] = function (block) {
     funcName =
       generator.valueToCode(block, 'FUNC', generator.ORDER_FUNCTION_CALL) || generator.blank;
   }
-  // Legacy `this.name_` — Blockly invokes forBlock with the block as `this`.
+  // Legacy `this.name_` - Blockly invokes forBlock with the block as `this`.
   funcName += typed.name_;
   // Build the arguments
   const args: string[] = [];
@@ -520,7 +520,7 @@ generator.forBlock['ast_Call'] = function (block) {
 
 /**
  * Collapse a `Name`/`Attribute` chain into a dotted module string, or
- * `null`/`undefined` when the chain contains anything else — port of the
+ * `null`/`undefined` when the chain contains anything else - port of the
  * legacy `BlockMirrorTextToBlocks.prototype.getAsModule` (defined in
  * `ast_Call.js`). The implicit-`undefined` return on an unresolvable
  * Attribute chain is legacy behavior, preserved.

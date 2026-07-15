@@ -1,4 +1,4 @@
-/** Port of legacy `ast/ast_Name.js` — the variable-get block. */
+/** Port of legacy `ast/ast_Name.js` - the variable-get block. */
 import * as Blockly from 'blockly/core';
 import { COLOR } from '../colors';
 import { generator } from '../generator';

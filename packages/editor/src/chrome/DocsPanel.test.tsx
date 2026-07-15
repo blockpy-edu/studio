@@ -69,7 +69,7 @@ describe('DocsPanel (M4.3, LD-25)', () => {
     });
     const tocLinks = container.querySelectorAll('.blockpy-docs-toc a');
     expect([...tocLinks].map((a) => a.textContent)).toEqual(['Numbers']);
-    // Content stays complete — the filter is a TOC affordance only.
+    // Content stays complete - the filter is a TOC affordance only.
     expect(container.querySelector('.blockpy-docs-body')!.textContent).toContain('About ints.');
   });
 

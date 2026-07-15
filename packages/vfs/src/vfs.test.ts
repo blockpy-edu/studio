@@ -12,7 +12,7 @@ beforeEach(() => {
 });
 
 describe('search order (files.js:563-599, A1 §4a)', () => {
-  it("student: '?' outranks '&', plain, and '*' — not shadowable", () => {
+  it("student: '?' outranks '&', plain, and '*' - not shadowable", () => {
     vfs.write('data.txt', 'student');
     vfs.write('?data.txt', 'hidden');
     vfs.write('&data.txt', 'readonly');
@@ -182,13 +182,13 @@ describe('reset-to-start (blockpy.js:1045-1054)', () => {
 
 describe('wire bundles (files.js:283-299, server.js:131-133)', () => {
   it('encodes each space into its bundle, excluding individually-saved names', () => {
-    vfs.write('answer.py', 'code'); // individual saveFile — not bundled
+    vfs.write('answer.py', 'code'); // individual saveFile - not bundled
     vfs.write('data.txt', 'student extra');
     vfs.write('*plot.txt', 'artifact');
     vfs.write('!hidden_helper.py', 'inst extra');
     vfs.write('?dataset.csv', 'hidden');
     vfs.write('&readme.md', 'readonly');
-    vfs.write('!on_run.py', 'grader'); // individual saveFile — not bundled
+    vfs.write('!on_run.py', 'grader'); // individual saveFile - not bundled
     vfs.write('^extra_start.py', 'start extra');
 
     expect(JSON.parse(vfs.encodeBundle('#extra_student_files.blockpy'))).toEqual({
@@ -222,7 +222,7 @@ describe('dirty tracking & change events', () => {
     expect(vfs.isDirty('answer.py')).toBe(true);
     vfs.markClean('answer.py');
     expect(vfs.isDirty('answer.py')).toBe(false);
-    vfs.write('answer.py', 'v1'); // identical write — no dirty, no event
+    vfs.write('answer.py', 'v1'); // identical write - no dirty, no event
     expect(vfs.isDirty('answer.py')).toBe(false);
   });
 

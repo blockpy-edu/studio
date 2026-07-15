@@ -1,12 +1,12 @@
 /**
- * Filesystem tree rail (M3.7) — STUDIO EXTENSION with no legacy analog.
+ * Filesystem tree rail (M3.7) - STUDIO EXTENSION with no legacy analog.
  * Off by default (store `fileTree`, persisted); a collapsible left rail
  * listing `vfs.listVisible(role)` bucketed by namespace. Instructor view
  * labels every bucket AND row with its prefix so the namespace is obvious;
  * students see friendly bucket names only. In text-only mode the tree
  * REPLACES the horizontal tab strip (CodingEditor owns that swap).
  *
- * Row actions (LD-21): Rename / Move-namespace / Delete — rendered only
+ * Row actions (LD-21): Rename / Move-namespace / Delete - rendered only
  * when the host passes a handler AND the VFS capability guards allow it
  * (magic names immovable; role editability respected).
  */
@@ -30,7 +30,7 @@ export interface FileTreeProps {
   activeFile: string;
   onSelect(legacyName: string): void;
   instructor?: boolean;
-  /** LD-21 actions — omitted handler = no button. */
+  /** LD-21 actions - omitted handler = no button. */
   onRename?(legacyName: string): void;
   onMove?(legacyName: string): void;
   onDelete?(legacyName: string): void;

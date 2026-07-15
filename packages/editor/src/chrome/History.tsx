@@ -1,12 +1,12 @@
 /**
- * History toolbar — port of legacy `HISTORY_TOOLBAR_HTML` + `BlockPyHistory`
+ * History toolbar - port of legacy `HISTORY_TOOLBAR_HTML` + `BlockPyHistory`
  * (history.js): a full-width strip between the Python toolbar and the editor
  * (visible only in history mode) with Start / Previous / selector / Use /
  * Next / Most Recent controls.
  *
  * The selector lists every (filtered) history event with a pretty timestamp
  * and remapped caption; only File.Edit/File.Create events for the current
- * file are selectable ("edit events"), everything else renders disabled —
+ * file are selectable ("edit events"), everything else renders disabled -
  * exactly the legacy option list. Selection drives the editor pane, which in
  * Studio is a CM6 merge diff against the current code rather than legacy's
  * plain read-only swap (the M1.4 merge-view commitment).

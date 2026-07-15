@@ -1,5 +1,5 @@
 /**
- * Block-module barrel — importing this registers every block definition,
+ * Block-module barrel - importing this registers every block definition,
  * generator, and IR→XML converter (the legacy bundle's load-everything
  * equivalent). Modules self-register via side effects.
  */

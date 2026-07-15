@@ -1,5 +1,5 @@
 /**
- * Uploaded-files manager — the legacy "Image" editor for `images.blockpy`
+ * Uploaded-files manager - the legacy "Image" editor for `images.blockpy`
  * tabs (IMAGE_EDITOR_HTML, editor/images.js): the per-placement "Available
  * Files" tables with previews and Delete/Rename, plus the upload form.
  * Server calls go through the injected controller (the app layer owns the
@@ -7,7 +7,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 
-/** `{placement: [[filename, url], …]}` — the listUploadedFiles wire shape. */
+/** `{placement: [[filename, url], …]}` - the listUploadedFiles wire shape. */
 export type UploadedFilesMap = Record<string, Array<[string, string]>>;
 
 export interface UploadsController {
@@ -25,7 +25,7 @@ export interface UploadsController {
 
 export interface ImagesManagerProps {
   uploads: UploadsController;
-  /** display.instructor — placement choice + modify rights (blockpy.js:1118-1119). */
+  /** display.instructor - placement choice + modify rights (blockpy.js:1118-1119). */
   instructor?: boolean;
 }
 

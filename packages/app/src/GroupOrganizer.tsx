@@ -8,7 +8,7 @@
  * (`POST /assignment_group/move_membership`; `new_group_id = -1` removes).
  *
  * Reference investigated 2026-07-11: the legacy `courses/edit_settings.html`
- * is a bulk FORM, not a drag-drop UI, and the editor page never linked it —
+ * is a bulk FORM, not a drag-drop UI, and the editor page never linked it -
  * this is the group-scoped equivalent, not a port. Slice 2 (true
  * reordering, type changes, subordinate JSON toggles) needs server-team
  * flags (plan M4.6 / R10).
@@ -17,7 +17,7 @@
  * published (`editAssignmentGroup` / `moveMembership` are new template
  * keys; `saveAssignment` ships on every editor page today).
  *
- * Field semantics: ONLY fields the instructor touches go on the wire —
+ * Field semantics: ONLY fields the instructor touches go on the wire -
  * boot data doesn't carry points/public/reviewed, so untouched inputs are
  * "unknown", never "false".
  */
@@ -189,8 +189,8 @@ export function GroupOrganizer(props: GroupOrganizerProps) {
               <th>ID</th>
               <th>Name</th>
               <th>URL</th>
-              <th title="Only touched fields are saved — blank means unchanged.">Points</th>
-              <th title="Unknown until changed — checking/unchecking sends it.">Pub/Hid/Rev</th>
+              <th title="Only touched fields are saved - blank means unchanged.">Points</th>
+              <th title="Unknown until changed - checking/unchecking sends it.">Pub/Hid/Rev</th>
               <th />
             </tr>
           </thead>
@@ -292,7 +292,7 @@ export function GroupOrganizer(props: GroupOrganizerProps) {
         {!canEditGroup && !canMove && (
           <p>
             This server page has not published the group-management endpoints (
-            <code>editAssignmentGroup</code>, <code>moveMembership</code>) — only per-assignment
+            <code>editAssignmentGroup</code>, <code>moveMembership</code>) - only per-assignment
             saves are available.
           </p>
         )}

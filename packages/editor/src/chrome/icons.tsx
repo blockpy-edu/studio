@@ -1,11 +1,11 @@
 /**
- * Toolbar/chrome icons — Lucide replacements for the legacy Font Awesome 5
+ * Toolbar/chrome icons - Lucide replacements for the legacy Font Awesome 5
  * glyphs (B6 allows icon modernization with per-glyph rationale; A8 §3.2 is
  * the legacy inventory). Each mapping is semantically equivalent:
  *
  *   fa-play          → Play           (identical glyph)
  *   (Stop state)     → Square         (universal stop glyph; legacy kept
- *                                      fa-play while running — showing a stop
+ *                                      fa-play while running - showing a stop
  *                                      square during "Stop" is clearer)
  *   fa-th-large      → LayoutGrid     (2×2 grid = blocks)
  *   fa-columns       → Columns2       (identical glyph)
@@ -30,13 +30,13 @@
  *   fa-forward       → FastForward    (identical glyph, history next)
  *   fa-file-import   → FileInput      (identical semantics, history "Use")
  *   fa-thumbs-up/-down → ThumbsUp/ThumbsDown (identical glyphs, feedback
- *                       rating; legacy's rated state swapped solid→regular —
+ *                       rating; legacy's rated state swapped solid→regular -
  *                       Lucide has no solid pair, so rated dims instead)
  *   fa-minus-square/fa-plus-square → SquareMinus/SquarePlus (identical
  *                       glyphs, rating region collapse/expand)
  *
  * Size is fixed at 14 with the legacy 12px optical weight preserved via
- * 1.75 stroke — A8 §3.2 calls the 12px sizing layout-relevant.
+ * 1.75 stroke - A8 §3.2 calls the 12px sizing layout-relevant.
  */
 import type { ComponentType } from 'react';
 import {
@@ -122,7 +122,7 @@ const ICONS = {
   thumbsDown: ThumbsDown,
   rateCollapse: SquareMinus,
   rateExpand: SquarePlus,
-  // Autocomplete toggle (M3.3; Studio extension, no legacy glyph —
+  // Autocomplete toggle (M3.3; Studio extension, no legacy glyph -
   // WandSparkles = "the editor suggests for you").
   autocomplete: WandSparkles,
   // Theme cycler (M4.1; Studio extension, no legacy glyph).

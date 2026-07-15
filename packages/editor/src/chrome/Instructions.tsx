@@ -1,10 +1,10 @@
 /**
- * Instructions pane — Row 1 header region (A8 §1). Rendering per A6 §1:
+ * Instructions pane - Row 1 header region (A8 §1). Rendering per A6 §1:
  * `marked` with forced `breaks: true` (EasyMDE default path), raw HTML
- * allowed, **no sanitization** (maintainer decision D4-A — legacy parity),
+ * allowed, **no sanitization** (maintainer decision D4-A - legacy parity),
  * then `target="_blank"` added to links lacking a target. Code blocks are
  * highlighted 400 ms after render (legacy interface.js:38-47 debounce;
- * dead-in-legacy, made real per LD-10 — see chrome/highlight.ts).
+ * dead-in-legacy, made real per LD-10 - see chrome/highlight.ts).
  */
 import { useEffect, useMemo, useRef } from 'react';
 import { marked } from 'marked';

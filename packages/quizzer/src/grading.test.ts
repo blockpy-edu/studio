@@ -170,7 +170,7 @@ describe('processQuiz totals (quizzes.py:58-99)', () => {
       questions: { p1: { correct: true }, p2: { correct: true }, fixed: { correct: true } },
     };
     // No attempt context: pooled questions with absent answers are ambiguous
-    // (which one was shown?) — both excluded; the fixed blank still grades.
+    // (which one was shown?) - both excluded; the fixed blank still grades.
     const noContext = processQuiz(pooledInstructions, pooledChecks, {
       studentAnswers: {},
     });

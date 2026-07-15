@@ -1,8 +1,8 @@
 /**
- * Spike S3 — Pedal (+ curriculum-sneks) running natively in Pyodide.
+ * Spike S3 - Pedal (+ curriculum-sneks) running natively in Pyodide.
  *
  * Grades a REAL assignment from courses/bakery_course.json ("4A3.1) Convert
- * Pixels" — dataclasses, unit_test, coverage, cisc108-test checks) against
+ * Pixels" - dataclasses, unit_test, coverage, cisc108-test checks) against
  * a correct and an incorrect student submission, using the manual Pedal
  * pipeline the @blockpy/engine environment will implement:
  *   set_source → sandbox run → tifa → exec(!on_run.py) → resolve()

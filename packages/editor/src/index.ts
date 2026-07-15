@@ -1,9 +1,9 @@
 /**
- * @blockpy/editor — Dual block/text Python editor and coding-assignment
+ * @blockpy/editor - Dual block/text Python editor and coding-assignment
  * surface (spec §8, §11.1).
  *
  * The dual editor (`DualEditor`) is the port of legacy BlockMirror; the
- * React chrome around it (toolbar, console, feedback pane — A8 parity)
+ * React chrome around it (toolbar, console, feedback pane - A8 parity)
  * builds on top.
  */
 export {

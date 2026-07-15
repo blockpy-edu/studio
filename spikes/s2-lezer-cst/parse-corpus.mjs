@@ -1,5 +1,5 @@
 /**
- * Spike S2 — validate @lezer/python over the BlockMirror round-trip corpus.
+ * Spike S2 - validate @lezer/python over the BlockMirror round-trip corpus.
  *
  * For every program in BlockMirror's TESTS array (test/simple.html):
  *   1. Parse with @lezer/python; record error nodes (position + snippet).
@@ -22,7 +22,7 @@ const html = readFileSync(BLOCKMIRROR_TEST, 'utf8');
 const match = html.match(/var TESTS = (\[[\s\S]*?\n {8}\]);/);
 if (!match) throw new Error('Could not locate the TESTS array in simple.html');
 // The array literal is trusted local test data (JS strings, template
-// literals, concatenations, // comments) — evaluate it as-is.
+// literals, concatenations, // comments) - evaluate it as-is.
 const corpus = new Function(`return ${match[1]};`)();
 console.log(`Corpus: ${corpus.length} programs\n`);
 
@@ -93,7 +93,9 @@ console.log('--- Disagreements & Lezer-rejected programs ---');
 for (const r of rows) {
   if (!r.same || !r.lezerOk) {
     console.log(`\n#${r.i} lezer=${r.lezerOk ? 'OK' : 'ERROR'} cpython=${r.cpythonError ?? 'OK'}`);
-    console.log(`  code: ${JSON.stringify(r.code.length > 120 ? r.code.slice(0, 120) + '…' : r.code)}`);
+    console.log(
+      `  code: ${JSON.stringify(r.code.length > 120 ? r.code.slice(0, 120) + '…' : r.code)}`,
+    );
     for (const e of r.lezerErrors.slice(0, 3)) {
       console.log(`  lezer error at ${e.from}-${e.to}: near ${e.around}`);
     }
@@ -103,9 +105,7 @@ for (const r of rows) {
 console.log('\n--- Comment preservation check ---');
 const commentTest = corpus.findIndex((c) => c.includes('#'));
 const ct = lezerVerdict(corpus[commentTest]);
-console.log(
-  `#${commentTest} contains comments; Lezer Comment nodes found: ${ct.commentCount}`,
-);
+console.log(`#${commentTest} contains comments; Lezer Comment nodes found: ${ct.commentCount}`);
 
 console.log(`\n--- CST node-type inventory (${allNodeTypes.size} types) ---`);
 console.log([...allNodeTypes].sort().join(', '));

@@ -143,7 +143,7 @@ describe('BlockPy facade (§15.1)', () => {
     const editor = new BlockPy(EDITOR_HTML_OPTIONS, {
       mount: ((rootElement: HTMLElement) => {
         handle = new StudioHandle(rootElement, () => undefined);
-        return handle; // React has NOT committed yet — no actions registered
+        return handle; // React has NOT committed yet - no actions registered
       }) as never,
       globals: {},
       document,

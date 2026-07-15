@@ -1,5 +1,5 @@
 /**
- * Quiz authoring validation — a TypeScript port of the latest quiz
+ * Quiz authoring validation - a TypeScript port of the latest quiz
  * checking engine (bakery-exams src/formats/quizzes/quiz_check.py
  * `IssueTracker`, read 2026-07-11). The visual editor runs this live so
  * instructors see per-field issues as they type; severities follow the
@@ -29,7 +29,7 @@ export const QUESTION_TYPES = [
   'essay_question',
 ] as const;
 
-/** quiz_check.py:914-922 — every field that lives in the checks document. */
+/** quiz_check.py:914-922 - every field that lives in the checks document. */
 export const FEEDBACK_FIELDS = [
   'correct',
   'correct_exact',
@@ -40,7 +40,7 @@ export const FEEDBACK_FIELDS = [
   'feedback',
 ] as const;
 
-/** quiz_check.py:139-165 — accepted learning-objective aliases. */
+/** quiz_check.py:139-165 - accepted learning-objective aliases. */
 export const TAG_FIELDS = [
   'learning_objective',
   'lo',
@@ -727,10 +727,10 @@ export class QuizIssueTracker {
         }
       }
       // The server's rich fill-in feedback iteration is broken in python
-      // (quizzes.py:202) — REMOTE grading only honors strings reliably.
+      // (quizzes.py:202) - REMOTE grading only honors strings reliably.
       if ('feedback' in question) {
         this.add(
-          'Rich per-blank `feedback` grades correctly in local Try It, but the CURRENT server build crashes on it (quizzes.py:202) — prefer `wrong_any` until the server updates.',
+          'Rich per-blank `feedback` grades correctly in local Try It, but the CURRENT server build crashes on it (quizzes.py:202) - prefer `wrong_any` until the server updates.',
           name,
           'feedback',
           'warning',
@@ -767,7 +767,7 @@ export function validateQuiz(
     delete merged['id'];
     tracker.checkQuizQuestion(questionId, merged);
   }
-  // Orphaned checks (quiz.py:119 TODO — surfaced here).
+  // Orphaned checks (quiz.py:119 TODO - surfaced here).
   for (const questionId of Object.keys(checkMap)) {
     if (!(instructions.questions ?? {})[questionId]) {
       tracker.add(

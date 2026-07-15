@@ -1,17 +1,17 @@
 /**
- * AssignmentSurface — the single composition/nesting mechanism (spec §12).
+ * AssignmentSurface - the single composition/nesting mechanism (spec §12).
  *
  * Every assignment component (editor, reader, quizzer, textbook) renders
  * inside a surface that carries the OWNING assignment's identity: nested
  * editors in a reading log against the reading; a subordinate quiz logs
- * against the quiz's own id — matching legacy, where each knockout
+ * against the quiz's own id - matching legacy, where each knockout
  * AssignmentInterface built payloads from its own loaded pair.
  *
  * Variants describe how the surface is presented:
- *   - 'full'     — a top-level assignment body (group page, standalone).
- *   - 'embedded' — hosted by another assignment (preamble reading,
+ *   - 'full'     - a top-level assignment body (group page, standalone).
+ *   - 'embedded' - hosted by another assignment (preamble reading,
  *                  subordinate quiz, textbook page).
- *   - 'minified' — a §8.4 minified editor hydrated inside content.
+ *   - 'minified' - a §8.4 minified editor hydrated inside content.
  *
  * Depth guard: authored content can cycle (a reading whose quiz preambles
  * the same reading, …). Legacy had no guard because the compositions were
@@ -33,7 +33,7 @@ export type SurfaceLogEvent = (
 ) => void;
 
 export interface AssignmentSurfaceValue {
-  /** The owning assignment/submission pair — null until the surface's
+  /** The owning assignment/submission pair - null until the surface's
    *  component has loaded its own pair. */
   assignmentId: number | null;
   submissionId: number | null;
@@ -99,7 +99,7 @@ export function AssignmentSurface(props: AssignmentSurfaceProps) {
   if (depth > MAX_SURFACE_DEPTH) {
     console.warn(
       `BlockPy: refusing to nest assignment surfaces beyond depth ${MAX_SURFACE_DEPTH} ` +
-        `(assignment ${String(value.assignmentId)}) — the authored content may contain a cycle.`,
+        `(assignment ${String(value.assignmentId)}) - the authored content may contain a cycle.`,
     );
     return null;
   }

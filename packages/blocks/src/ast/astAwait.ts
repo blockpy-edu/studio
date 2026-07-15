@@ -1,5 +1,5 @@
 /**
- * `await ___` value block (M3.6) — Studio addition, no BlockMirror ancestor.
+ * `await ___` value block (M3.6) - Studio addition, no BlockMirror ancestor.
  * Statement-position awaits ride the ast_Expr wrapper (with its legacy
  * ORDER_ATOMIC paren quirk, same as unknown bare calls).
  */

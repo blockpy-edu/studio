@@ -20,9 +20,9 @@ export interface FileSaver {
 export interface AutosaverOptions {
   vfs: Vfs;
   api: FileSaver;
-  /** display.autoSave — when false, nothing persists automatically. */
+  /** display.autoSave - when false, nothing persists automatically. */
   autoSave?: () => boolean;
-  /** display.readOnly — blocks all persistence (A1 §2). */
+  /** display.readOnly - blocks all persistence (A1 §2). */
   readOnly?: () => boolean;
   /** Called when the server reports a version conflict on save. */
   onVersionChange?: (filename: string) => void;

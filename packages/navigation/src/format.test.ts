@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { formatAmount, formatClockDuration, parseTimeLimit } from './format';
 
-describe('formatAmount coarse tiers (dates.ts:118-133 — the countdown format)', () => {
+describe('formatAmount coarse tiers (dates.ts:118-133 - the countdown format)', () => {
   it.each([
     [-60, 'Time past!'],
     [0, 'At this time'],

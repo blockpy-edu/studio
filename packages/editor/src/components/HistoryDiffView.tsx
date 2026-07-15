@@ -1,5 +1,5 @@
 /**
- * History diff — the editor pane while history mode is on. Studio's upgrade
+ * History diff - the editor pane while history mode is on. Studio's upgrade
  * over legacy (which swapped the read-only editor contents wholesale): a CM6
  * side-by-side merge view, selected historical version on the left, current
  * code on the right, both read-only (the M1.4 "merge view for history"

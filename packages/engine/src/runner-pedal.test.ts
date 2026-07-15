@@ -1,7 +1,7 @@
 /**
  * JobRunner Pedal-job integration (spec §10.1): the `pedal` request on an
  * `instructor.on_run` job routes through PedalEnvironment inside the same
- * interpreter the runner owns. Installs wheels from PyPI via micropip —
+ * interpreter the runner owns. Installs wheels from PyPI via micropip -
  * gated behind PEDAL_IT=1 like pedal.test.ts:
  *
  *   PEDAL_IT=1 pnpm vitest run packages/engine/src/runner-pedal.test.ts
@@ -62,7 +62,7 @@ describe.skipIf(!enabled)('JobRunner pedal jobs (PEDAL_IT=1)', () => {
   // Plot-inspection (§10.2 open item): Pedal's OWN sandbox mocks
   // matplotlib.pyplot with MockPlt by default (sandbox.py
   // reset_default_overrides), so assert_plot reads the call log from the
-  // grader's re-execution of student code — independent of the student-run
+  // grader's re-execution of student code - independent of the student-run
   // job's real Agg backend. No Studio engine shim required.
   const PLOT_ON_RUN = `from pedal import *
 from pedal.extensions.plotting import assert_plot

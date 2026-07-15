@@ -1,5 +1,5 @@
 /**
- * Dev-harness entry — mirrors what a server bootstrap page does, PLUS the
+ * Dev-harness entry - mirrors what a server bootstrap page does, PLUS the
  * harness-only chrome: an assignment-group dropdown at the top that swaps
  * between the showcase fixtures and REAL bakery-curriculum groups
  * (1A/6B, demo/bakery-groups.json), remounting the app exactly like a
@@ -26,7 +26,7 @@ function readBaseConfig(): BootConfig {
   return JSON.parse(configElement.textContent) as BootConfig;
 }
 
-/** BootConfig for one demo group — what the server page would emit. */
+/** BootConfig for one demo group - what the server page would emit. */
 function configForGroup(base: BootConfig, group: DemoGroup | null): BootConfig {
   const config: BootConfig = {
     ...base,
@@ -121,7 +121,7 @@ function renderGroupPicker(onChange: (key: string) => void): void {
   const note = document.createElement('span');
   note.style.cssText = 'color: #666;';
   note.textContent =
-    'BlockPy Studio demo — bakery groups are real curriculum (grading runs in your browser).';
+    'BlockPy Studio demo - bakery groups are real curriculum (grading runs in your browser).';
   bar.append(label, select, note);
   document.body.insertBefore(bar, document.body.firstChild);
 }
@@ -146,7 +146,7 @@ let handle: StudioHandle | null = null;
 
 function mountGroup(key: string): void {
   handle?.unmount();
-  // A fresh mount node per group — exactly a new server page (no id: the
+  // A fresh mount node per group - exactly a new server page (no id: the
   // outer #blockpy-root keeps that contract).
   const freshRoot = document.createElement('div');
   root.replaceChildren(freshRoot);
@@ -156,7 +156,7 @@ function mountGroup(key: string): void {
 
 // The picker bar is part of the dev-shell chrome: one flag
 // (display.devHarness in #blockpy-config) hides it together with the
-// App's "Dev harness — …" header line. ?group= deep links still work.
+// App's "Dev harness - …" header line. ?group= deep links still work.
 if (baseConfig.display.devHarness ?? false) {
   renderGroupPicker((key) => {
     const url = new URL(location.href);

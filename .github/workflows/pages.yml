@@ -36,7 +36,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Project pages serve under /<repo>/ — vite rewrites asset URLs and
+      # Project pages serve under /<repo>/ - vite rewrites asset URLs and
       # dev.ts derives blockly-media from import.meta.env.BASE_URL.
       - run: pnpm --filter @blockpy/app exec vite build --base "/${{ github.event.repository.name }}/"
       - uses: actions/upload-pages-artifact@v3

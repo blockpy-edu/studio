@@ -23,7 +23,7 @@ describe('CodingEditor chrome', () => {
     resetStore();
   });
 
-  // RTL auto-cleanup is off (no vitest globals) — unmount stale editors so
+  // RTL auto-cleanup is off (no vitest globals) - unmount stale editors so
   // their window-level listeners (focused-mode keys, M4.2) don't stack.
   afterEach(cleanup);
 
@@ -187,7 +187,7 @@ describe('CodingEditor chrome', () => {
     let captured: import('../dual/dual-editor').DualEditor | null = null;
     render(<CodingEditor startingCode="a = 0" onEditorReady={(editor) => (captured = editor)} />);
     expect(captured).not.toBeNull();
-    // jsdom has no SVG layout (getBBox) — the legacy-ported fail-soft path
+    // jsdom has no SVG layout (getBBox) - the legacy-ported fail-soft path
     // must resolve '' instead of throwing (block_editor.js:381-383).
     await expect(captured!.blockEditor.getPng()).resolves.toBe('');
   });
@@ -256,7 +256,7 @@ describe('CodingEditor chrome', () => {
     expect(container.querySelector('.blockpy-header')).toBeNull();
     expect(container.querySelector('.blockpy-quick-menu')).toBeNull();
     expect(container.querySelector('.blockpy-python-toolbar')).not.toBeNull();
-    // Drawer: OPEN by default (M7.6, amends LD-24) — console + feedback are
+    // Drawer: OPEN by default (M7.6, amends LD-24) - console + feedback are
     // visible on entry; the toggle collapses to the slim bar and the badge
     // re-expands.
     expect(container.querySelector('.blockpy-focus-drawer')).not.toBeNull();

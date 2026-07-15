@@ -1,5 +1,5 @@
 /**
- * File tab strip — Row 3 (A8 §1: `ul.nav.nav-tabs` with the "View:" label
+ * File tab strip - Row 3 (A8 §1: `ul.nav.nav-tabs` with the "View:" label
  * pseudo-tab; §4.4 states). Driven by the VFS:
  *  - answer.py first (always student-visible),
  *  - instructor special tabs in the legacy fixed order, starred ones hidden

@@ -11,23 +11,23 @@ recorded in the [approved-differences ledger](approved-differences.md).
 
 | #   | Topic                                          | Recommendation        | Decision                                          |
 | --- | ---------------------------------------------- | --------------------- | ------------------------------------------------- |
-| D1  | Unseeded quiz option shuffle                   | B (fix: seed it)      | **B — seed it**                                   |
-| D2  | Event-logging bugs (paste size, retry queue)   | B (fix, keep names)   | **B — fix** + central id registry w/ deprecation  |
-| D3  | Read-only `&` files editable in some editors   | A (enforce read-only) | **A — enforce** + persist run artifacts (backend) |
-| D4  | No HTML sanitization of instructions/readings  | C (audit first)       | **A — replicate (no sanitization)**               |
-| D5  | Settings save destroys unregistered keys       | B (round-trip keys)   | **B — round-trip unknown keys**                   |
-| D6  | `settings-*` URL params unrestricted           | A (replicate)         | **A — replicate**                                 |
-| D7  | Hidden pool questions' answers dropped on save | B (preserve)          | **B — preserve** (pending server-tolerance check) |
+| D1  | Unseeded quiz option shuffle                   | B (fix: seed it)      | **B - seed it**                                   |
+| D2  | Event-logging bugs (paste size, retry queue)   | B (fix, keep names)   | **B - fix** + central id registry w/ deprecation  |
+| D3  | Read-only `&` files editable in some editors   | A (enforce read-only) | **A - enforce** + persist run artifacts (backend) |
+| D4  | No HTML sanitization of instructions/readings  | C (audit first)       | **A - replicate (no sanitization)**               |
+| D5  | Settings save destroys unregistered keys       | B (round-trip keys)   | **B - round-trip unknown keys**                   |
+| D6  | `settings-*` URL params unrestricted           | A (replicate)         | **A - replicate**                                 |
+| D7  | Hidden pool questions' answers dropped on save | B (preserve)          | **B - preserve** (pending server-tolerance check) |
 
 ---
 
-## D1 — Quiz matching/dropdown option order is unseeded
+## D1 - Quiz matching/dropdown option order is unseeded
 
-**Legacy behavior** (A3 — [quiz schema](appendices/A3-quiz-schema.md)): question
+**Legacy behavior** (A3 - [quiz schema](appendices/A3-quiz-schema.md)): question
 _pool membership_ is seeded by submission id (± attempt count), so which
 questions appear reproduces identically after reload. But the option order of
 matching and multiple-dropdown questions is shuffled with **unseeded
-`Math.random` on every render** — reload the page and the choices reorder.
+`Math.random` on every render** - reload the page and the choices reorder.
 The spec draft (§11.3.2) wrongly assumed full reproducibility.
 
 **Why it matters:** students who note "my answer was the third option" lose
@@ -37,10 +37,10 @@ nondeterministic code.
 
 **Options:**
 
-- **A — Replicate:** keep unseeded shuffle per render. Byte-faithful, no ledger
+- **A - Replicate:** keep unseeded shuffle per render. Byte-faithful, no ledger
   entry, preserves the (accidental) anti-memorization property across
   attempts _and_ reloads.
-- **B — Fix:** seed the option shuffle with the same submission-id seed used
+- **B - Fix:** seed the option shuffle with the same submission-id seed used
   for pooling, so one attempt always renders the same order (reloads stable;
   new attempts still reshuffle). Ledger entry; invisible to the server.
 
@@ -53,33 +53,33 @@ researchers would expect; the wire format is untouched.
 
 ---
 
-## D2 — Event-logging client bugs
+## D2 - Event-logging client bugs
 
-**Legacy behavior** (A2 — [event vocabulary](appendices/A2-event-vocabulary.md)):
+**Legacy behavior** (A2 - [event vocabulary](appendices/A2-event-vocabulary.md)):
 
-1. `X-Editor.Paste` always logs `{characters: 0}` — a shadowed constant means
+1. `X-Editor.Paste` always logs `{characters: 0}` - a shadowed constant means
    the pasted-size is never recorded (legacy `python.js:239-241`).
 2. The offline retry queue's `_dequeueData` calls one-argument
    `splice(index)`, which deletes the entry **and the whole queue tail**
-   (`server.js:271`) — queued offline events beyond the first are silently
+   (`server.js:271`) - queued offline events beyond the first are silently
    destroyed.
 3. `_postRetry` passes a string into `checkIP`, effectively disabling
    `X-IP.Change` detection on the retry path (`server.js:295`).
 
 **Why it matters:** research pipelines consume this stream. Replicating means
 knowingly logging wrong data; fixing means post-rewrite data has properties
-(paste sizes, complete offline queues) the legacy data lacks — a discontinuity
+(paste sizes, complete offline queues) the legacy data lacks - a discontinuity
 researchers must know about.
 
 **Options:**
 
-- **A — Replicate bug-for-bug:** identical data quality before/after rewrite;
+- **A - Replicate bug-for-bug:** identical data quality before/after rewrite;
   simplest comparability story.
-- **B — Fix, same event names/fields:** correct paste sizes, a working retry
+- **B - Fix, same event names/fields:** correct paste sizes, a working retry
   queue, working IP-change detection. Ledger entries + a note in the research
   documentation ("fields trustworthy from version X"). Spec §14.4 allows
   behavior deltas flagged as `X-` where they alter timing/semantics.
-- **C — Fix and rename** (`X-`-prefixed variants for changed semantics, e.g.
+- **C - Fix and rename** (`X-`-prefixed variants for changed semantics, e.g.
   the paste event): maximally explicit for researchers, slightly noisier
   vocabulary.
 
@@ -93,11 +93,11 @@ distributions across the boundary, C for the paste event only.)
 
 ---
 
-## D3 — `&` (read-only space) files editable in some editors
+## D3 - `&` (read-only space) files editable in some editors
 
-**Legacy behavior** (A1 — [filename prefixes](appendices/A1-filename-prefixes.md)):
+**Legacy behavior** (A1 - [filename prefixes](appendices/A1-filename-prefixes.md)):
 `&`-prefixed files are instructor-authored, student-visible, and documented
-read-only (`files.js:184, 406-409`) — but the read-only flag is enforced only
+read-only (`files.js:184, 406-409`) - but the read-only flag is enforced only
 by the Text/JSON/Quiz/Toolbox editors. The **Python and Markdown editors let
 students edit `&` files**, and the rename/manual-save paths for them are dead
 or broken code, so edits generally don't persist anywhere meaningful.
@@ -109,10 +109,10 @@ of the new VFS permission matrix.
 
 **Options:**
 
-- **A — Enforce read-only uniformly** across all editors, matching the
+- **A - Enforce read-only uniformly** across all editors, matching the
   documented intent and the majority of editors. Ledger entry (a student who
   used to type into an `&` python file no longer can).
-- **B — Replicate the inconsistency:** faithful, but requires deliberately
+- **B - Replicate the inconsistency:** faithful, but requires deliberately
   building per-editor permission exceptions into the clean VFS design.
 
 **Recommendation: A.** The legacy behavior is an enforcement gap, not a
@@ -124,13 +124,13 @@ feature; edits don't persist anyway, so nothing observable on the wire changes.
 
 ---
 
-## D4 — No sanitization of instructions/reading HTML
+## D4 - No sanitization of instructions/reading HTML
 
-**Legacy behavior** (A6 — [markdown extensions](appendices/A6-markdown-extensions.md)):
+**Legacy behavior** (A6 - [markdown extensions](appendices/A6-markdown-extensions.md)):
 neither renderer sanitizes. Instructions use EasyMDE's bundled `marked`
 (forces `breaks: true`, adds `target="_blank"`); readings use `markdown-it`
 with `html: true` plus a link/image rewrite to `download_file`. Instructor
-HTML — including `<script>`, `<iframe>`, inline handlers — renders verbatim.
+HTML - including `<script>`, `<iframe>`, inline handlers - renders verbatim.
 The spec draft (§11.1) assumed "sanitized HTML" was already legacy behavior;
 it is not. Real course content may depend on raw HTML/JS (custom widgets,
 YouTube embeds, styling).
@@ -142,23 +142,23 @@ radius decision of the seven.
 
 **Options:**
 
-- **A — Replicate (no sanitization):** nothing breaks; keeps the XSS surface;
+- **A - Replicate (no sanitization):** nothing breaks; keeps the XSS surface;
   simplest parity.
-- **B — Sanitize now** (rehype-sanitize with an allowlist per spec §4):
+- **B - Sanitize now** (rehype-sanitize with an allowlist per spec §4):
   safest, but _will_ break content until the allowlist is tuned; needs a
   breakage-report channel.
-- **C — Audit first, then decide:** run a scan over production course content
+- **C - Audit first, then decide:** run a scan over production course content
   (instructions + reading bodies) counting tags/attributes that a default
   allowlist would strip; tune the allowlist against real usage; ship
   sanitization behind a per-course flag with a "render legacy (unsanitized)"
   fallback during migration.
-- **D — Sanitize readings only / instructions only** (split decision by
+- **D - Sanitize readings only / instructions only** (split decision by
   surface).
 
 **Recommendation: C.** The audit is cheap (course dumps like
 `courses/bakery_course.json` are already the right shape) and converts an
 unknown risk into a known allowlist. Also note `breaks: true` (marked) vs
-markdown-it defaults changes line-break rendering — the audit should flag
+markdown-it defaults changes line-break rendering - the audit should flag
 content relying on it.
 
 **Decision:** A
@@ -167,13 +167,13 @@ content relying on it.
 
 ---
 
-## D5 — Settings save destroys unregistered keys
+## D5 - Settings save destroys unregistered keys
 
-**Legacy behavior** (A4 — [settings inventory](appendices/A4-settings-inventory.md)):
+**Legacy behavior** (A4 - [settings inventory](appendices/A4-settings-inventory.md)):
 `saveAssignmentSettings` (`assignment_settings.js:309-320`) serializes only
 the keys in the client's `ASSIGNMENT_SETTINGS` registry. Any other key in the
-`!assignment_settings.blockpy` blob — including the **server-consumed**
-`protected_ip_ranges`, `time_limit`, and `poolRandomness` — is silently
+`!assignment_settings.blockpy` blob - including the **server-consumed**
+`protected_ip_ranges`, `time_limit`, and `poolRandomness` - is silently
 deleted the next time an instructor saves settings through the legacy editor.
 
 **Why it matters:** this is active data loss. Spec §14.5 already mandates
@@ -183,14 +183,15 @@ destroys exam time limits when an instructor touches any setting.
 
 **Options:**
 
-- **A — Replicate:** faithful, knowingly destructive.
-- **B — Fix: round-trip unknown keys** (parse → edit known keys → merge back
+- **A - Replicate:** faithful, knowingly destructive.
+- **B - Fix: round-trip unknown keys** (parse → edit known keys → merge back
   over the original blob). Ledger entry; strictly less destructive; the wire
   format is unchanged when no edit occurs.
 
 **Recommendation: B**, and treat it as required by the spirit of §14.5/G3
 (the spec's "unknown keys pass through untouched" §11.1 line was aspirational
-— make it real).
+
+- make it real).
 
 **Decision:** B
 **By / date:**
@@ -198,7 +199,7 @@ destroys exam time limits when an instructor touches any setting.
 
 ---
 
-## D6 — `settings-*` URL parameters are unrestricted
+## D6 - `settings-*` URL parameters are unrestricted
 
 **Legacy behavior** (A4): the Jinja loop (`editor.html:287-291`) applies any
 `settings-<key>=<value>` query parameter for **any role**, last-wins. A
@@ -216,11 +217,11 @@ adds a role check that legacy content/tests using `settings-*` deep links
 
 **Options:**
 
-- **A — Replicate:** keep the unrestricted loop; document loudly that
+- **A - Replicate:** keep the unrestricted loop; document loudly that
   security is server-side and instructor UI must never embed secrets in the
   client bundle (this constrains the rewrite's design: no instructor-only
   data in BootConfig for students).
-- **B — Gate cosmetically:** ignore `display.instructor`/role-flipping keys
+- **B - Gate cosmetically:** ignore `display.instructor`/role-flipping keys
   for non-instructors while allowing benign ones. Ledger entry; breaks any
   legitimate use of those links by graders/TAs whose role detection differs.
 
@@ -234,7 +235,7 @@ shouldn't see, so UI flags can stay harmless.
 
 ---
 
-## D7 — Hidden pool questions' answers are dropped on quiz save
+## D7 - Hidden pool questions' answers are dropped on quiz save
 
 **Legacy behavior** (A3): when a quiz uses pools, saving serializes only the
 **visible** questions' answers. If pooling later shows a different subset
@@ -248,19 +249,19 @@ complete record of what the student ever answered (research/regrade impact).
 
 **Options:**
 
-- **A — Replicate:** store visible answers only; byte-identical save payloads
+- **A - Replicate:** store visible answers only; byte-identical save payloads
   (easiest for the golden-transcript gate).
-- **B — Preserve:** merge new answers over the previously stored answer map so
+- **B - Preserve:** merge new answers over the previously stored answer map so
   hidden-question answers survive. Wire format stays the same shape (same
   JSON structure, more keys); server-side `process_quiz` grades submitted
   answers regardless. Ledger entry; verify the server tolerates extra keys
-  (A3 indicates it iterates the checks, not the answers — confirm in the
+  (A3 indicates it iterates the checks, not the answers - confirm in the
   Milestone 2.4 fixtures).
-- **C — Defer to Milestone 2.4:** decide when the quizzer fixtures exist;
+- **C - Defer to Milestone 2.4:** decide when the quizzer fixtures exist;
   default to A until then.
 
 **Recommendation: B**, pending the server-tolerance check in 2.4 fixtures
-(fall back to A if the server chokes on extra keys — unlikely per A3).
+(fall back to A if the server chokes on extra keys - unlikely per A3).
 
 **Decision:** B
 **By / date:**
