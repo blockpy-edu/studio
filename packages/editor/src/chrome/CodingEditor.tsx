@@ -35,7 +35,12 @@ import { convertIpynbToPython, downloadPlan, triggerBrowserDownload } from './fi
 import { QuickMenu, type QuickMenuProps } from './QuickMenu';
 import { SettingsEditor, type AssignmentFields } from './SettingsEditor';
 import { TraceExplorer } from './TraceExplorer';
-import { useEditorChromeStore, type FeedbackState, type TraceStepView } from './store';
+import {
+  useEditorChromeStore,
+  resolveStartPythonMode,
+  type FeedbackState,
+  type TraceStepView,
+} from './store';
 
 /**
  * Resolve the legacy `toolbox` settings key (A4: enum normal/ct/ct2/minimal/
@@ -234,6 +239,12 @@ export interface CodingEditorProps {
    */
   enableAutocomplete?: boolean;
   /**
+   * Legacy `start_view` setting: the editor mode the assignment recommends
+   * opening in. Only consulted when the user has never picked a mode via
+   * the toolbar (that choice is remembered in localStorage and wins).
+   */
+  startView?: string;
+  /**
    * Legacy `disable_feedback` setting (engine.js:115): skip the instructor
    * grading pass entirely - runs report only their own success/errors.
    */
@@ -339,6 +350,7 @@ export function CodingEditor(props: CodingEditorProps) {
     runController,
     hideEvaluate,
     enableAutocomplete,
+    startView,
     disableFeedback,
     allowRealRequests,
     disableTifa,
@@ -586,6 +598,14 @@ export function CodingEditor(props: CodingEditorProps) {
       editorRef.current.blockEditor.remakeToolbox(toolboxSpec);
     }
   }, [toolboxSpec]);
+
+  // Opening mode: remembered user choice, else the assignment's
+  // `start_view`, else text (legacy assignment_settings.js:334). Runs once
+  // per assignment (keyed remount).
+  useEffect(() => {
+    store.getState().applyPythonMode(resolveStartPythonMode(startView));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // `enable_autocomplete` assignment setting → live CM6 reconfigure (M7.2;
   // default off - an ASSIGNMENT setting, not a user toggle).

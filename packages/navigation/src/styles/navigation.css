@@ -71,7 +71,7 @@
  * and its colors above are hardcoded, so the M4.1 token overrides never
  * reached it - every rule needs an explicit dark variant. data-theme is
  * already global on :root (store.ts applyThemeAttribute); values follow the
- * themes.css dark ramp. Win2000 deliberately stays editor-scoped.
+ * themes.css dark ramp. Win2000 gets its own block below.
  */
 :root[data-theme='dark'] .assignment-selector-div .row {
   border-color: #4a4234;
@@ -106,4 +106,49 @@
 
 :root[data-theme='dark'] .secret-submission {
   background-color: #24304d;
+}
+
+/*
+ * Windows 2000 skin: the nav sits outside .blockpy-content, so the
+ * themes.css bevel/gray rules never reach it - mirror them here. System
+ * gray row, raised-bevel buttons, sunken select; option colors unchanged.
+ */
+:root[data-theme='win2000'] .assignment-selector-div .row {
+  border-color: #808080;
+  background-color: #c0c0c0;
+}
+
+:root[data-theme='win2000'] .assignment-selector-btn {
+  border-radius: 0;
+  box-shadow:
+    inset -1px -1px 0 #000000,
+    inset 1px 1px 0 #ffffff,
+    inset -2px -2px 0 #808080,
+    inset 2px 2px 0 #dfdfdf;
+}
+
+:root[data-theme='win2000'] .assignment-selector-btn:active {
+  box-shadow:
+    inset 1px 1px 0 #000000,
+    inset -1px -1px 0 #ffffff,
+    inset 2px 2px 0 #808080,
+    inset -2px -2px 0 #dfdfdf;
+}
+
+:root[data-theme='win2000'] .assignment-selector-btn:not(.btn-success) {
+  background-color: #c0c0c0;
+  color: #000;
+  border-color: #c0c0c0;
+}
+
+:root[data-theme='win2000'] .assignment-selector-btn:disabled:not(.btn-success) {
+  background-color: #c0c0c0;
+  color: #808080;
+}
+
+:root[data-theme='win2000'] .assignment-selector {
+  border-radius: 0;
+  box-shadow:
+    inset 1px 1px 0 #808080,
+    inset -1px -1px 0 #ffffff;
 }

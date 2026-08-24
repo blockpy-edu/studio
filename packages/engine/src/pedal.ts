@@ -94,7 +94,10 @@ export interface PedalEvalOptions {
 
 // curriculum-ctvt is NOT on PyPI (unlike curriculum-sneks) - it joins this
 // list when its wheel is bundled with the deployment (spec §10.1).
-export const DEFAULT_PEDAL_PACKAGES = ['pedal', 'curriculum-sneks', 'bakery'];
+// pedal >= 3.0.3: CAIT no longer tags the CPython 3.13+ shared ast ctx
+// singletons (Load/Store/Del) and CaitNode.__getattr__ guards `astNode` -
+// older releases crash every runPython after the first grade.
+export const DEFAULT_PEDAL_PACKAGES = ['pedal>=3.0.3', 'curriculum-sneks', 'bakery'];
 
 interface FeedbackProxy {
   toJs(options: { dict_converter: typeof Object.fromEntries }): PedalFeedback;

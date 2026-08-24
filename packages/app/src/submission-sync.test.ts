@@ -125,6 +125,20 @@ describe('version_change banner (LD-11, spec §7.4)', () => {
     await sync.saveFileNow('answer.py', 'v2');
     expect(onVersionChange).toHaveBeenCalledTimes(1);
   });
+
+  it("swallows the one version_change caused by this client's own instructor-file save", async () => {
+    const onVersionChange = vi.fn();
+    const { sync, setResponse } = harness({ onVersionChange });
+    setResponse({ success: true });
+    await sync.saveFileNow('!on_run.py', 'give_partial(0.5)');
+    // The next student save reports the bump the instructor just made.
+    setResponse({ success: true, version_change: true });
+    await sync.saveFileNow('answer.py', 'v1');
+    expect(onVersionChange).not.toHaveBeenCalled();
+    // A later, unrelated change still surfaces.
+    await sync.saveFileNow('answer.py', 'v2');
+    expect(onVersionChange).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('force update (blockpy.js:1202-1208)', () => {

@@ -16,7 +16,9 @@
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write \"**/*.{ts,tsx,css,json,html,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,css,json,html,yml,yaml}\"",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "sync:server": "node scripts/deploy-local.mjs",
+    "build:sync": "pnpm build && pnpm sync:server"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",

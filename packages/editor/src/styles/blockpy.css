@@ -278,6 +278,13 @@
   border-bottom: none;
 }
 
+/* Assignment-load marker: quiet, so it reads as a divider, not output. */
+.blockpy-dev-console .blockpy-dev-printer .blockpy-printer-separator {
+  color: var(--blockpy-neutral-500);
+  font-style: italic;
+  margin-top: 4px;
+}
+
 /* Unseen-entry count on the console/dev-console toggle button. */
 .blockpy-console-toggle .blockpy-console-toggle-badge {
   background-color: var(--blockpy-status-danger);

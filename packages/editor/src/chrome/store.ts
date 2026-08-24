@@ -8,8 +8,11 @@ import { create } from 'zustand';
 import type { DualEditorMode } from '../dual/dual-editor';
 
 export interface ConsoleEntry {
-  /** 'eval' = a frozen (submitted) Evaluate line, legacy disabled-input look. */
-  kind: 'stdout' | 'stderr' | 'input-prompt' | 'value' | 'image' | 'eval';
+  /**
+   * 'eval' = a frozen (submitted) Evaluate line, legacy disabled-input look.
+   * 'separator' = a muted marker line (dev console only: assignment loads).
+   */
+  kind: 'stdout' | 'stderr' | 'input-prompt' | 'value' | 'image' | 'eval' | 'separator';
   text: string;
   /** For frozen 'input-prompt' lines: the value the user submitted. */
   value?: string;
@@ -173,7 +176,10 @@ export interface EditorChromeState {
    */
   engineBooting: string | null;
 
+  /** User-driven mode change (toolbar): applied AND remembered. */
   setPythonMode(mode: DualEditorMode): void;
+  /** Programmatic mode change (assignment load): applied, NOT remembered. */
+  applyPythonMode(mode: DualEditorMode): void;
   toggleHistoryMode(): void;
   setHistoryMode(on: boolean): void;
   setRunState(state: RunState): void;
@@ -211,6 +217,14 @@ export interface EditorChromeState {
   setInstructionsOverride(instructions: string | null): void;
   setGraderError(traceback: string | null): void;
   setEngineBooting(label: string | null): void;
+  /**
+   * Drop everything that belonged to the previous assignment (legacy
+   * loadAssignmentData_ cleared the printer/feedback; the rest are Studio
+   * fields that would otherwise leak across the switch). User settings,
+   * server badges, engine state, queued inputs and the dev console survive;
+   * the dev console gets a subtle separator naming the new assignment.
+   */
+  resetForAssignment(label: string): void;
 }
 
 /**
@@ -245,6 +259,35 @@ const THEME_KEY = 'BLOCKPY_display.theme';
 const DOCS_PANEL_KEY = 'BLOCKPY_display.docsPanel';
 /** localStorage key for Blockly keyboard navigation (M6.2). */
 const KEYBOARD_NAV_KEY = 'BLOCKPY_display.blockKeyboardNav';
+/**
+ * localStorage key for the block/split/text editor mode. Written only when
+ * the user picks a mode via the toolbar; while unset, each assignment's
+ * `start_view` setting (or `text`) decides.
+ */
+const PYTHON_MODE_KEY = 'BLOCKPY_display.pythonMode';
+
+export const PYTHON_MODES: readonly DualEditorMode[] = ['block', 'split', 'text'];
+
+/** The user's remembered editor mode, or null if they never chose one. */
+export function readStoredPythonMode(): DualEditorMode | null {
+  try {
+    const stored = localStorage.getItem(PYTHON_MODE_KEY);
+    return PYTHON_MODES.includes(stored as DualEditorMode) ? (stored as DualEditorMode) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolve the mode an assignment should open in: the user's remembered
+ * choice wins; otherwise the assignment's `start_view` recommendation;
+ * otherwise legacy's default (`text`).
+ */
+export function resolveStartPythonMode(startView?: string | null): DualEditorMode {
+  const stored = readStoredPythonMode();
+  if (stored) return stored;
+  return PYTHON_MODES.includes(startView as DualEditorMode) ? (startView as DualEditorMode) : 'text';
+}
 
 function readStoredFlag(key: string): boolean {
   try {
@@ -331,7 +374,15 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   graderError: null,
   engineBooting: null,
 
-  setPythonMode: (mode) => set({ pythonMode: mode }),
+  setPythonMode: (mode) => {
+    try {
+      localStorage.setItem(PYTHON_MODE_KEY, mode);
+    } catch {
+      // Storage unavailable - the mode still applies for this session.
+    }
+    set({ pythonMode: mode });
+  },
+  applyPythonMode: (mode) => set({ pythonMode: mode }),
   toggleHistoryMode: () => set((state) => ({ historyMode: !state.historyMode })),
   setHistoryMode: (on) => set({ historyMode: on }),
   setRunState: (runState) => set({ runState }),
@@ -440,4 +491,25 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   clearPromptedShare: () => set({ promptedShare: false }),
   setGraderError: (graderError) => set({ graderError }),
   setEngineBooting: (engineBooting) => set({ engineBooting }),
+  resetForAssignment: (label) => {
+    consoleInputResolver = null;
+    set((state) => ({
+      runState: 'idle',
+      console: [],
+      evalState: 'hidden',
+      consoleUnseen: 0,
+      feedback: EMPTY_FEEDBACK,
+      traceSteps: [],
+      traceStep: 0,
+      traceVisible: false,
+      graderError: null,
+      dirtySubmission: true,
+      historyMode: false,
+      pendingInput: null,
+      promptedShare: false,
+      instructionsOverride: null,
+      devConsole: [...state.devConsole, { kind: 'separator', text: `Loaded ${label}` }],
+      devUnseen: state.activeConsole === 'student' ? state.devUnseen + 1 : state.devUnseen,
+    }));
+  },
 }));

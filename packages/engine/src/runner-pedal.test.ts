@@ -151,3 +151,68 @@ if not assert_plot('line', [1, 2, 3]):
     expect(result.stdout).toContain('42');
   }, 60_000);
 });
+
+// Regressions found on the deployed server (2026-08-24): a graded
+// assignment's FIRST student run failed with "No module named 'bakery'"
+// (wheels only installed by the later grading pass) and the SECOND run
+// crashed the interpreter ("Maximum call stack size exceeded") - pedal
+// <= 3.0.2's CAIT tagged the interpreter-wide ast.Load/Store singletons
+// (CPython 3.13+), and Pyodide deep-copies a cached AST on every
+// runPython whose last statement is an expression. Fixed upstream in
+// pedal 3.0.3 (DEFAULT_PEDAL_PACKAGES pins it).
+describe.skipIf(!enabled)('curriculum wheels + interpreter health (PEDAL_IT=1)', () => {
+  const BAKERY_CODE = 'from bakery import assert_equal\nassert_equal(1 + 1, 2)\n';
+  let runner: JobRunner;
+
+  beforeAll(async () => {
+    const require = createRequire(import.meta.url);
+    const pyodide = await loadPyodide({
+      indexURL: dirname(require.resolve('pyodide')),
+    });
+    runner = JobRunner.create(pyodide as never);
+  }, 300_000);
+
+  it('warmPedal makes bakery importable on the first student run', async () => {
+    const result = await runner.execute({
+      id: 'warm-1',
+      phase: 'student.run',
+      files: {},
+      code: BAKERY_CODE,
+      warmPedal: true,
+    });
+    expect(result.error?.message ?? '').not.toContain("No module named 'bakery'");
+    expect(result.success).toBe(true);
+  }, 300_000);
+
+  it('student runs keep working after a grading pass (pedal >= 3.0.3)', async () => {
+    const grade = await runner.execute({
+      id: 'health-grade',
+      phase: 'instructor.on_run',
+      files: {},
+      code: BAKERY_CODE,
+      pedal: { onRun: 'from pedal import *\nensure_ast("Call")\n' },
+    });
+    expect(grade.success).toBe(true);
+    // Any runPython ending in an expression deep-copies Pyodide's template
+    // AST - this is what blew the stack before the scrub.
+    for (let n = 0; n < 2; n++) {
+      const run = await runner.execute({
+        id: `health-run-${n}`,
+        phase: 'student.run',
+        files: {},
+        code: 'print(1 + 1)\n',
+      });
+      expect(run.success).toBe(true);
+      expect(run.stdout).toBe('2\n');
+      const regrade = await runner.execute({
+        id: `health-regrade-${n}`,
+        phase: 'instructor.on_run',
+        files: {},
+        code: BAKERY_CODE,
+        pedal: { onRun: 'from pedal import *\nset_success()\n' },
+      });
+      expect(regrade.success).toBe(true);
+      expect(regrade.feedback!.success).toBe(true);
+    }
+  }, 300_000);
+});

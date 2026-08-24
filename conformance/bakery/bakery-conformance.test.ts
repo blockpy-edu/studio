@@ -70,7 +70,20 @@ const groups: CourseGroup[] = gate
 
 const corpus = JSON.parse(readFileSync(join(BAKERY_DIR, 'solutions.json'), 'utf8')) as {
   solutions: Record<string, string>;
+  /** Hand-authored answers for questions the deriver can't solve (regex). */
+  quizAnswers?: Record<string, Record<string, unknown>>;
 };
+// Corpus-building workflow: an extra overlay file (same shape) merges over
+// the committed corpus, and the report basename is overridable, so several
+// solution-authoring sessions can validate concurrently without clobbering
+// each other's reports.
+if (process.env.BAKERY_SOLUTIONS_EXTRA) {
+  const extra = JSON.parse(readFileSync(process.env.BAKERY_SOLUTIONS_EXTRA, 'utf8')) as {
+    solutions?: Record<string, string>;
+  };
+  Object.assign(corpus.solutions, extra.solutions ?? {});
+}
+const REPORT_BASENAME = process.env.BAKERY_REPORT ?? 'bakery-report';
 
 const report = new ProblemReport();
 let runner: JobRunner | null = null;
@@ -94,6 +107,16 @@ async function grade(
     }
   }
   Object.assign(files, instructorFiles(assignment));
+  // Honor the assignment's grading settings like the app does (App.tsx →
+  // RunOptions): mutation-testing lectures set disable_tifa (the student
+  // submission calls a grader-supplied function TIFA would flag) and
+  // disable_instructor_run.
+  let settings: Record<string, unknown> = {};
+  try {
+    settings = JSON.parse(assignment.settings ?? '{}') as Record<string, unknown>;
+  } catch {
+    /* unparseable settings surface elsewhere */
+  }
   const result = await runner!.execute({
     id: `conformance-${assignment.url}-${Math.random().toString(36).slice(2)}`,
     phase: 'instructor.on_run',
@@ -107,6 +130,8 @@ async function grade(
       packages: PACKAGES,
       studentFiles: {},
       seed: String(assignment.id),
+      skipTifa: settings['disable_tifa'] === true,
+      skipRun: settings['disable_instructor_run'] === true,
     },
   });
   if (!result.success || !result.feedback) {
@@ -142,7 +167,7 @@ describe.skipIf(!gate)('bakery curriculum conformance', () => {
   }, 300_000);
 
   afterAll(() => {
-    report.write(join(BAKERY_DIR, 'bakery-report'), {
+    report.write(join(BAKERY_DIR, REPORT_BASENAME), {
       groups: groups.length,
       packages: PACKAGES.join(', '),
       filters: groupFilter.join(',') || '(all groups)',
@@ -181,6 +206,16 @@ describe.skipIf(!gate)('bakery curriculum conformance', () => {
             report.covered('quiz');
             let instructions: QuizInstructions;
             let checks: QuizChecksDocument;
+            // Distinguish unauthored (empty) documents from real JSON rot.
+            if (!(assignment.instructions ?? '').trim() || !(assignment.on_run ?? '').trim()) {
+              problem(
+                'quiz-invalid-json',
+                group,
+                assignment,
+                'UNAUTHORED: instructions and/or checks document is empty',
+              );
+              return;
+            }
             try {
               instructions = JSON.parse(assignment.instructions) as QuizInstructions;
             } catch (error) {
@@ -195,6 +230,19 @@ describe.skipIf(!gate)('bakery curriculum conformance', () => {
             }
             const visible = selectVisibleQuestions(instructions, assignment.id, 0);
             const derived = deriveQuiz(instructions, checks, visible);
+            // Hand-authored answers rescue underivable questions (regex-only
+            // checks). They join both passes: a guaranteed-wrong answer is
+            // not derivable for a regex either, so the wrong pass reuses the
+            // correct value (LD-35 needs the question answered).
+            const manual = corpus.quizAnswers?.[assignment.url];
+            if (manual) {
+              for (const [questionId, answer] of Object.entries(manual)) {
+                if (derived.underivable[questionId] === undefined) continue;
+                delete derived.underivable[questionId];
+                derived.correctAnswers[questionId] = answer as never;
+                derived.wrongAnswers[questionId] = answer as never;
+              }
+            }
             for (const note of derived.notes) {
               problem('quiz-authoring-smell', group, assignment, note);
             }
@@ -288,8 +336,11 @@ describe.skipIf(!gate)('bakery curriculum conformance', () => {
             );
           }
 
-          // 3) Fix pass: the known-good solution must grade success.
-          const solution = bundledSolution(assignment) ?? corpus.solutions[assignment.url] ?? null;
+          // 3) Fix pass: the known-good solution must grade success. The
+          // CURATED corpus beats the bundled !correct.py — corpus entries
+          // exist precisely where the shipped solution is wrong/incomplete
+          // (e.g. coverage lectures shipping only the test delta).
+          const solution = corpus.solutions[assignment.url] ?? bundledSolution(assignment) ?? null;
           if (solution === null) {
             if (!startingPasses) {
               problem('solution-missing', group, assignment, 'no !correct.py and no corpus entry');

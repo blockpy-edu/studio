@@ -56,6 +56,14 @@ export interface BootConfig {
     name?: string;
     role: string;
     courseId: number | null;
+    /**
+     * Optional: every course id in which this user holds an instructor
+     * role (helpers.py:55 `user.is_instructor(course_id)`). When the
+     * server publishes it, the not-owned notice is shown proactively for
+     * assignments whose course is NOT in this list; when absent, the
+     * notice waits for save_assignment to reject with `forkable: true`.
+     */
+    instructorCourseIds?: number[];
   };
   /** window.accessToken passthrough. */
   accessToken?: string;

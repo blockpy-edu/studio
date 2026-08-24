@@ -49,6 +49,8 @@ const groups: CourseGroup[] = gate
 
 const corpus = JSON.parse(readFileSync(join(BAKERY_DIR, 'solutions.json'), 'utf8')) as {
   solutions: Record<string, string>;
+  /** Hand-authored answers for questions the deriver can't solve (regex). */
+  quizAnswers?: Record<string, Record<string, unknown>>;
 };
 
 const report = new ProblemReport();
@@ -221,6 +223,13 @@ async function walkQuiz(
       deriveQuestion(instructions.questions![id]!, (checkMap[id] ?? {}) as Record<string, unknown>),
     ]),
   );
+  // Hand-authored corpus answers rescue underivable (regex-only) questions.
+  for (const [id, answer] of Object.entries(corpus.quizAnswers?.[assignment.url] ?? {})) {
+    const entry = derived.get(id);
+    if (entry?.underivable !== undefined) {
+      derived.set(id, { correct: answer as never, notes: entry.notes });
+    }
+  }
   const underivable = presented.filter((id) => derived.get(id)!.underivable !== undefined);
   if (underivable.length > 0) {
     report.add({
@@ -346,7 +355,7 @@ async function walkBlockpy(
     });
   }
 
-  const solution = bundledSolution(assignment) ?? corpus.solutions[assignment.url] ?? null;
+  const solution = corpus.solutions[assignment.url] ?? bundledSolution(assignment) ?? null;
   if (solution === null) return; // Node layer reports solution-missing
 
   // Fix pass: replace the editor content with the solution.

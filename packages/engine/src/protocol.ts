@@ -63,6 +63,16 @@ export interface EngineJob {
    */
   allowRealRequests?: boolean;
   /**
+   * Install the Pedal wheels (DEFAULT_PEDAL_PACKAGES) BEFORE this student
+   * run. The grading pass installs them lazily, but it chains AFTER the
+   * student run - so on a fresh interpreter the student's own
+   * `from bakery import assert_equal` would fail with ModuleNotFoundError
+   * on the first Run. Clients set this on the first run of a graded
+   * assignment (and again after a crash-recovery reload). Fail-soft:
+   * an install failure leaves the run to report the missing module.
+   */
+  warmPedal?: boolean;
+  /**
    * Pedal grading request (spec §10.1) - set on `instructor.on_run` /
    * `instructor.on_eval` jobs. The job's `code` is the student submission;
    * the S3 pipeline (set_source → queue_input → start_trace → run → tifa →

@@ -4,4 +4,6 @@ dist-lib
 coverage
 playwright-report
 test-results
+conformance/bakery/bakery-report*
+conformance/bakery/ui-report*
 pnpm-lock.yaml

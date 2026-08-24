@@ -42,12 +42,32 @@ export interface SubmissionSyncOptions {
   cancel?: (timer: number) => void;
 }
 
+/** Assignment-owned filenames (server Assignment.INSTRUCTOR_FILENAMES). */
+function isInstructorFile(filename: string): boolean {
+  return (
+    filename.startsWith('!') ||
+    filename.startsWith('^') ||
+    filename === '#extra_instructor_files.blockpy' ||
+    filename === '#extra_starting_files.blockpy'
+  );
+}
+
 export class SubmissionSync {
   /** Monotonic display score (legacy submission.score), seeded on load. */
   private score = 0;
   /** Monotonic display correctness (legacy submission.correct OR-chain). */
   private correct = false;
   private timers = new Map<string, number>();
+  /**
+   * This client saved an instructor file since the last version check.
+   * Server-side, save_instructor_file bumps assignment.version, and the
+   * NEXT student-file save reports `version_change` because the
+   * submission row still carries the old assignment_version (save_code
+   * then re-syncs it, so the flag fires exactly once). That "change" is
+   * the instructor's own edit - not something to reload for - so the
+   * one flag it produces is swallowed.
+   */
+  private selfBumpedVersion = false;
   private schedule: (fn: () => void, ms: number) => number;
   private cancel: (timer: number) => void;
 
@@ -84,6 +104,7 @@ export class SubmissionSync {
    * latest-wins per filename - a newer edit cancels the pending POST.
    */
   saveFileDebounced(filename: string, contents: string): void {
+    if (isInstructorFile(filename)) this.selfBumpedVersion = true;
     const pending = this.timers.get(filename);
     if (pending !== undefined) this.cancel(pending);
     this.timers.set(
@@ -97,6 +118,7 @@ export class SubmissionSync {
 
   /** Immediate save (legacy `saveFile(..., null)` - run start, run.js:13). */
   async saveFileNow(filename: string, contents: string): Promise<void> {
+    if (isInstructorFile(filename)) this.selfBumpedVersion = true;
     const pending = this.timers.get(filename);
     if (pending !== undefined) {
       // The immediate save IS the latest - drop the queued older one.
@@ -123,7 +145,11 @@ export class SubmissionSync {
       } else {
         this.options.setStatus('saveFile', 'ready');
         if (response['version_change'] === true) {
-          this.options.onVersionChange?.();
+          if (this.selfBumpedVersion) {
+            this.selfBumpedVersion = false;
+          } else {
+            this.options.onVersionChange?.();
+          }
         }
       }
     } catch {

@@ -90,8 +90,11 @@ export function instructorFiles(assignment: CourseAssignment): Record<string, st
   }
 }
 
-/** The instructor solution when the curriculum ships one (45/223 do). */
+/** The instructor solution when the curriculum ships one (45/223 do).
+ *  Blank files count as absent (bakery_lecture_testing_nesting_2 ships an
+ *  empty !correct.py). */
 export function bundledSolution(assignment: CourseAssignment): string | null {
   const files = instructorFiles(assignment);
-  return files['!correct.py'] ?? files['correct.py'] ?? null;
+  const solution = files['!correct.py'] ?? files['correct.py'] ?? null;
+  return solution !== null && solution.trim() !== '' ? solution : null;
 }

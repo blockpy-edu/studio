@@ -249,6 +249,17 @@ export class JobRunner {
         // requests` raises Python's own ModuleNotFoundError.
       }
     }
+    if (job.warmPedal) {
+      // Graded assignment: the student code may import the curriculum
+      // wheels (bakery, curriculum-sneks) that only the grading pass would
+      // otherwise install - after this run. Install them first.
+      try {
+        await this.ensurePedal();
+      } catch {
+        // Fail-soft (offline/PyPI down): the run reports the missing
+        // module; the grading pass retries the install itself.
+      }
+    }
     // Stage via a Python-side JSON parse to avoid proxy lifetime headaches.
     this.pyodide.runPython(
       `_studio_runtime.stage_files(__import__('json').loads(${JSON.stringify(

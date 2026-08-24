@@ -10,6 +10,7 @@ import {
   type HistoryEntry,
   type UploadedFilesMap,
   type UploadsController,
+  type RunController,
 } from '@blockpy/editor';
 import { Vfs } from '@blockpy/vfs';
 import {
@@ -166,6 +167,9 @@ export function App({ config, extras, registerActions }: AppProps) {
   const [forkUrl, setForkUrl] = useState('');
   const [forkBusy, setForkBusy] = useState(false);
   const [forkError, setForkError] = useState('');
+  // Assignment ids whose save_assignment was rejected with forkable=true:
+  // the server's word that THIS user cannot edit them.
+  const [forkRejectedIds, setForkRejectedIds] = useState<ReadonlySet<number>>(() => new Set());
 
   // -- server client (spec §14): built once per mount ------------------------
   const apiBundle = useMemo(() => {
@@ -231,6 +235,10 @@ export function App({ config, extras, registerActions }: AppProps) {
     });
   }, [api, config.display.readOnly, markCorrectEverywhere, store]);
 
+  // The run controller is built further down (it only depends on paths);
+  // a ref lets adoption stop an in-flight run without reordering the hooks.
+  const runControllerRef = useRef<RunController | null>(null);
+
   // -- assignment adoption (legacy loadAssignmentData_, blockpy.js:491) ------
   const adoptAssignmentData = useCallback(
     (data: LegacyAssignmentPayload) => {
@@ -252,6 +260,12 @@ export function App({ config, extras, registerActions }: AppProps) {
       // Monotonic score/correct state starts from the stored submission
       // (loadSubmission, blockpy.js:473-484; wire score is a 0-1 float).
       sync?.seed(submission?.score ?? 0, submission?.correct ?? false);
+      // Stale output/feedback/trace/run state belongs to the previous
+      // problem (legacy loadAssignmentData_ cleared the printer + feedback).
+      // An in-flight run is interrupted first so the Run button never shows
+      // the old problem's spinner/error state over the new one.
+      runControllerRef.current?.stop?.();
+      store.getState().resetForAssignment(`assignment ${decoded.id} (${decoded.name})`);
       setCorrect(submission?.correct ?? false);
       setScore(submission?.score ?? 0);
       setSubmissionStatus(String(submission?.raw['submission_status'] ?? 'unknown'));
@@ -263,7 +277,7 @@ export function App({ config, extras, registerActions }: AppProps) {
       });
       setLoadError(null);
     },
-    [api, sync],
+    [api, sync, store],
   );
 
   const loadAssignment = useCallback(
@@ -475,6 +489,24 @@ export function App({ config, extras, registerActions }: AppProps) {
   }, []);
 
   const active: LoadedAssignment | null = loaded;
+  // Can this instructor save edits to `active`? Mirrors save_assignment
+  // (blockpy.py:972-983): owner always may; otherwise the user needs an
+  // instructor role in the assignment's OWN course - which the page's
+  // course id says nothing about (an instructor of both courses may
+  // edit). So: owner => yes; server-published instructorCourseIds =>
+  // decide from that; else assume yes until save_assignment rejects with
+  // forkable=true (helpers.py:55-60), which is recorded in forkRejectedIds.
+  const canEditActive = useMemo(() => {
+    if (active === null) return true;
+    const { id, ownerId, courseId } = active.assignment;
+    if (id != null && forkRejectedIds.has(id)) return false;
+    if (ownerId != null && user.id != null && ownerId === user.id) return true;
+    const instructorCourseIds = user.instructorCourseIds;
+    if (instructorCourseIds !== undefined && courseId != null) {
+      return instructorCourseIds.includes(courseId);
+    }
+    return true;
+  }, [active, forkRejectedIds, user.id, user.instructorCourseIds]);
   const activeVfsRef = useRef<Vfs | null>(null);
   activeVfsRef.current = active?.vfs ?? null;
 
@@ -646,6 +678,7 @@ export function App({ config, extras, registerActions }: AppProps) {
       }),
     [paths.pyodideIndexURL, paths.assets],
   );
+  runControllerRef.current = runController;
 
   // -- reading + quiz slots (spec §11.2/§11.3, M2.3/M2.4) -----------------------
   // Each component keeps its OWN loaded pair (legacy posts loadAssignment
@@ -1058,12 +1091,7 @@ export function App({ config, extras, registerActions }: AppProps) {
       {loadError !== null && <div className="alert alert-warning">{loadError}</div>}
       {/* Proactive not-owned notice (M7.9, LD-42): decoded ownership predicts
           the fork BEFORE the first rejected save is the discovery moment. */}
-      {instructorView &&
-        !focusedMode &&
-        api !== null &&
-        active?.assignment.courseId != null &&
-        api.context.courseId != null &&
-        active.assignment.courseId !== Number(api.context.courseId) && (
+      {instructorView && !focusedMode && api !== null && active !== null && !canEditActive && (
           <div className="alert alert-warning blockpy-fork-notice">
             This assignment belongs to another course (course ID {active.assignment.courseId}), so
             your edits cannot be saved to it.{' '}
@@ -1232,6 +1260,11 @@ export function App({ config, extras, registerActions }: AppProps) {
             // enable_autocomplete ASSIGNMENT setting (M7.2, Studio
             // extension): default off; no per-user toggle exists.
             enableAutocomplete={settingBool(settings['enable_autocomplete'] ?? false)}
+            // start_view: the assignment's recommended editor mode; a mode
+            // the user picked via the toolbar is remembered and wins.
+            startView={
+              typeof settings['start_view'] === 'string' ? settings['start_view'] : undefined
+            }
             hideEvaluate={
               settings['hide_evaluate'] !== undefined
                 ? settingBool(settings['hide_evaluate'])
@@ -1305,6 +1338,10 @@ export function App({ config, extras, registerActions }: AppProps) {
                     // forkable=true (helpers.py:55-60) - offer the fork
                     // (M7.9, LD-42; legacy startPossibleFork, server.js:657).
                     if (response.success === false && response['forkable'] === true) {
+                      if (active.assignment.id != null) {
+                        const rejectedId = active.assignment.id;
+                        setForkRejectedIds((prev) => new Set(prev).add(rejectedId));
+                      }
                       setForkError('');
                       setForkOffer({ message: String(response['message'] ?? '') });
                     }

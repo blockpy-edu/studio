@@ -125,6 +125,21 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
       // run - collected so the grading pass replays the SAME stdin the
       // student run consumed (legacy execution.input()).
       const typedInputs: string[] = [];
+      // Per-run script (the live !on_run.py from the VFS) beats the
+      // static fallback; empty/whitespace means "no grader".
+      const onRun = runOptions?.onRun !== undefined ? runOptions.onRun : options.onRunScript;
+      const gradingEnabled = Boolean(onRun && onRun.trim() !== '' && !runOptions?.disableFeedback);
+      // Graded assignment + wheels not installed yet: the student code may
+      // import bakery/curriculum-sneks, which the grading pass installs
+      // only AFTER this run - so the run itself installs them first. That
+      // one-time download needs the install-length wall clock.
+      const warmPedal = gradingEnabled && !pedalReady;
+      if (warmPedal) {
+        options.onBootStateChange?.(
+          true,
+          'Loading the feedback engine - one-time setup, may take a little while…',
+        );
+      }
       try {
         const result = await engine.run(
           {
@@ -136,13 +151,14 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
             filename: 'answer.py',
             trace: runOptions?.trace ?? false,
             allowRealRequests: runOptions?.allowRealRequests,
+            warmPedal,
             // Queued inputs from the quick-menu dialog replay first
             // (M1.3.4); when they run dry AND the caller has an input UI,
             // the run suspends on the console input line instead of
             // raising EOFError.
             inputsPrefill: runOptions?.inputs,
             interactiveInput: handlers.onInput !== undefined,
-            limits: { wallMs: options.wallMs ?? 5000 },
+            limits: { wallMs: warmPedal ? 180_000 : (options.wallMs ?? 5000) },
           },
           {
             onStdout: (chunk) => handlers.stdout(chunk),
@@ -169,14 +185,11 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
         const studentError = result.success
           ? null
           : result.error?.traceback || result.error?.message || 'Execution failed.';
-        // Per-run script (the live !on_run.py from the VFS) beats the
-        // static fallback; empty/whitespace means "no grader".
-        const onRun = runOptions?.onRun !== undefined ? runOptions.onRun : options.onRunScript;
         // Legacy parity (engine.js:109-124): the grading pass chains after
         // EVERY run - `failure()` resolves, so student syntax/runtime errors
         // reach Pedal, whose own set_source → run captures them as feedback.
         // Only the disable_feedback setting skips grading.
-        if (onRun && onRun.trim() !== '' && !runOptions?.disableFeedback) {
+        if (gradingEnabled && onRun) {
           // The grading sandbox replays queued inputs PLUS whatever the
           // user typed interactively during the run (legacy parity: the
           // sandbox sees the same stdin the student saw).
@@ -241,6 +254,9 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
         // A fatal boot failure (worker death) throws before the success
         // path flips `booted` - never leave the indicator stuck (LD-37).
         if (isBootRun && !booted) options.onBootStateChange?.(false);
+        // Same for the wheel-install wait a warm run started: a worker
+        // death mid-install would otherwise leave it on forever.
+        if (warmPedal) options.onBootStateChange?.(false);
       }
     },
 
