@@ -519,8 +519,9 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
       pendingInput: null,
       promptedShare: false,
       instructionsOverride: null,
+      // A load separator is a divider, not instructor output: it never
+      // bumps the unseen badge.
       devConsole: [...state.devConsole, { kind: 'separator', text: `Loaded ${label}` }],
-      devUnseen: state.activeConsole === 'student' ? state.devUnseen + 1 : state.devUnseen,
     }));
   },
 }));

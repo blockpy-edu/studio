@@ -280,6 +280,9 @@ export function Textbook(props: TextbookProps) {
     const isCollapsed = hasChildren && collapsedKeys.has(key);
     // A row is interactive when it opens a reading OR toggles a subtree.
     const togglesOnly = !clickable && hasChildren && label !== null;
+    // A reading with children needs two controls; keep them siblings.
+    const splitControls = clickable && hasChildren;
+    const rowIsButton = togglesOnly || (clickable && !hasChildren);
     // Instructor diagnosability (M7.8): a missing reading says WHY instead
     // of sitting silently disabled (LD-16 - url refs need the by_url
     // endpoint published, or the ref itself is bad).
@@ -293,8 +296,13 @@ export function Textbook(props: TextbookProps) {
           <div
             className={`list-group-item list-group-item-action book-item${classStyle}${active ? ' active' : ''}`}
             style={{ paddingLeft: `${5 + indent * 8}px` }}
-            role={clickable || togglesOnly ? 'button' : undefined}
-            aria-expanded={hasChildren ? !isCollapsed : undefined}
+            // The row is the button only when it has a single action
+            // (axe nested-interactive): a header that merely toggles, or a
+            // leaf reading. A reading WITH children splits into two sibling
+            // controls - the chevron toggles, the label opens.
+            role={rowIsButton ? 'button' : undefined}
+            tabIndex={rowIsButton ? 0 : undefined}
+            aria-expanded={togglesOnly ? !isCollapsed : undefined}
             title={missingHint}
             onClick={
               clickable
@@ -303,29 +311,69 @@ export function Textbook(props: TextbookProps) {
                   ? () => toggleCollapsed(key)
                   : undefined
             }
+            onKeyDown={
+              rowIsButton
+                ? (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      if (clickable) openReading(reading!);
+                      else toggleCollapsed(key);
+                    }
+                  }
+                : undefined
+            }
           >
             {hasChildren && (
               <span
                 className="book-item-chevron"
-                role="button"
-                tabIndex={0}
-                aria-label={isCollapsed ? 'Expand section' : 'Collapse section'}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  toggleCollapsed(key);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    toggleCollapsed(key);
-                  }
-                }}
+                // Decorative inside a toggling row; its own control beside
+                // a reading label.
+                aria-hidden={togglesOnly ? true : undefined}
+                role={splitControls ? 'button' : undefined}
+                tabIndex={splitControls ? 0 : undefined}
+                aria-expanded={splitControls ? !isCollapsed : undefined}
+                aria-label={splitControls ? (isCollapsed ? 'Expand section' : 'Collapse section') : undefined}
+                onClick={
+                  splitControls
+                    ? (event) => {
+                        event.stopPropagation();
+                        toggleCollapsed(key);
+                      }
+                    : undefined
+                }
+                onKeyDown={
+                  splitControls
+                    ? (event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          toggleCollapsed(key);
+                        }
+                      }
+                    : undefined
+                }
               >
                 {isCollapsed ? '▸' : '▾'}
               </span>
             )}{' '}
-            {label}
+            {splitControls ? (
+              <span
+                role="button"
+                tabIndex={0}
+                className="book-item-label"
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    openReading(reading!);
+                  }
+                }}
+              >
+                {label}
+              </span>
+            ) : (
+              label
+            )}
             {missingHint && (
               <small className="book-item-missing-hint"> (unresolved - LD-16?)</small>
             )}

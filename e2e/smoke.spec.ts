@@ -584,7 +584,10 @@ test('Run boots the engine lazily; system messages go to status + dev console', 
   await page.locator('#blockpy-as-instructor').check();
   const toggle = page.locator('.blockpy-console-toggle');
   await expect(toggle).toContainText('Dev Console');
-  await expect(toggle.locator('.blockpy-console-toggle-badge')).toHaveText('1');
+  // One unseen message per engine boot announcement (the Python engine,
+  // then the feedback engine); the "Loaded assignment" separator is not
+  // counted.
+  await expect(toggle.locator('.blockpy-console-toggle-badge')).toHaveText(/^[12]$/);
   await toggle.click();
   await expect(page.locator('.blockpy-dev-console')).toBeVisible();
   await expect(page.locator('.blockpy-dev-console')).toContainText('Loading Python engine');
@@ -883,6 +886,10 @@ test('focused editor mode: enter grows the editor, drawer serves feedback, Esc r
   // The drawer bar shows the feedback badge while collapsed.
   const badge = page.locator('.blockpy-focus-feedback-badge');
   await expect(badge).toBeVisible();
+  // The drawer defaults OPEN (M7.6, amends LD-24); collapsing it leaves
+  // only the slim bar.
+  await expect(page.locator('.blockpy-printer')).toBeVisible();
+  await page.locator('.blockpy-focus-drawer-toggle').click();
   await expect(page.locator('.blockpy-printer')).toHaveCount(0);
   // State survives a run/feedback cycle: run, watch the badge stay put,
   // then expand the drawer from the badge and see console + feedback.
