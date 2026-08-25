@@ -82,6 +82,37 @@ describe('navigation (assignment_groups.html:62-92)', () => {
     expect(idAtLoadTime).toBe(104);
   });
 
+  it('reverts the selection when the dispatch rejects (failed load)', async () => {
+    const store = makeStore({}, { loadAssignment: () => Promise.reject(new Error('nope')) });
+    store.navigateTo(104);
+    expect(store.getSnapshot().currentId).toBe(104); // optimistic first
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(store.getSnapshot().currentId).toBe(101);
+  });
+
+  it('a failed load never undoes a LATER navigation', async () => {
+    let rejectFirst!: (error: Error) => void;
+    let calls = 0;
+    const store = makeStore(
+      {},
+      {
+        loadAssignment: () => {
+          calls += 1;
+          return calls === 1
+            ? new Promise<void>((_resolve, reject) => {
+                rejectFirst = reject;
+              })
+            : Promise.resolve();
+        },
+      },
+    );
+    store.navigateTo(103);
+    store.navigateTo(104);
+    rejectFirst(new Error('stale'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(store.getSnapshot().currentId).toBe(104);
+  });
+
   it('falls back to window.altAssignmentChangingFunction when no dispatch is injected', () => {
     const alt = vi.fn();
     (globalThis as Record<string, unknown>)['altAssignmentChangingFunction'] = alt;

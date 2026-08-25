@@ -155,25 +155,33 @@ export function Textbook(props: TextbookProps) {
         }
         // Rehydrate url-string references (LD-16) before first render so
         // the sidebar names/ids are stable.
+        // Lookups run concurrently; each failure only marks its own entry.
         const resolve = propsRef.current.resolveAssignment;
+        const lookups: Array<Promise<void>> = [];
         for (const item of walkItems(doc.content)) {
           for (const key of ['reading', 'group'] as const) {
             const ref = item[key];
             if (!ref || ref.id !== null || ref.missing) continue;
+            const missing = { ...ref, name: MISSING_READING.name, missing: true };
             if (!resolve) {
-              item[key] = { ...ref, name: MISSING_READING.name, missing: true };
+              item[key] = missing;
               continue;
             }
-            try {
-              const resolved = await resolve(ref.url);
-              item[key] = resolved
-                ? { id: resolved.id, name: resolved.name, url: resolved.url, missing: false }
-                : { ...ref, name: MISSING_READING.name, missing: true };
-            } catch {
-              item[key] = { ...ref, name: MISSING_READING.name, missing: true };
-            }
+            lookups.push(
+              Promise.resolve()
+                .then(() => resolve(ref.url))
+                .then((resolved) => {
+                  item[key] = resolved
+                    ? { id: resolved.id, name: resolved.name, url: resolved.url, missing: false }
+                    : missing;
+                })
+                .catch(() => {
+                  item[key] = missing;
+                }),
+            );
           }
         }
+        await Promise.all(lookups);
         if (cancelled) return;
         setLoaded({ assignment: result.assignment, submission: result.submission, document: doc });
         setDraftInstructions(result.assignment.instructions);
@@ -183,6 +191,19 @@ export function Textbook(props: TextbookProps) {
         const requested = pageParam();
         const initial = (requested ? findReadingByPage(doc, requested) : null) ?? firstReading(doc);
         setPage(initial);
+        // Stamp the boot entry so popstate back to it restores this page
+        // (a state-less initial entry would be a no-op, textbook.html:130).
+        if (initial) {
+          try {
+            window.history.replaceState(
+              { id: initial.id, url: initial.url, name: initial.name },
+              '',
+              window.location.href,
+            );
+          } catch {
+            // Sandboxed/about: pages - navigation state just stays local.
+          }
+        }
       })
       .catch((error) => {
         if (!cancelled) {

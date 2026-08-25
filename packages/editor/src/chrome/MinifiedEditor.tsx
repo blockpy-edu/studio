@@ -24,6 +24,7 @@ import { categoryPresentation } from './categories';
 import { highlightCodeBlocks } from './highlight';
 import { Icon } from './icons';
 import type { RunController } from './CodingEditor';
+import { renderFeedbackMessage } from './Feedback';
 import type { ConsoleEntry, FeedbackState } from './store';
 
 export interface MinifiedEditorProps {
@@ -105,7 +106,7 @@ export function MinifiedEditor(props: MinifiedEditorProps) {
 
   const handleReset = useCallback(() => {
     setCode(initialCode);
-    editorRef.current?.setCode(initialCode);
+    editorRef.current?.setCode(initialCode, false, false);
     onCodeChange?.(initialCode);
   }, [initialCode, onCodeChange]);
 
@@ -151,8 +152,9 @@ export function MinifiedEditor(props: MinifiedEditorProps) {
           <div
             ref={feedbackRef}
             className="blockpy-feedback-message"
-            // D4-A: feedback HTML renders unsanitized, like the main pane.
-            dangerouslySetInnerHTML={{ __html: feedback.message }}
+            // D4-A: feedback HTML renders unsanitized, like the main pane -
+            // and through the same markdown pass (feedback.js:213).
+            dangerouslySetInnerHTML={{ __html: renderFeedbackMessage(feedback.message) }}
           />
         </div>
       </div>

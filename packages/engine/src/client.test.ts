@@ -249,3 +249,202 @@ describe('disable_timeout (non-finite wallMs)', () => {
     expect(result.success).toBe(false);
   });
 });
+
+describe('EngineClient failure paths', () => {
+  const okResult = (jobId: string) => ({
+    jobId,
+    success: true,
+    stdout: '',
+    stderr: '',
+    artifacts: {},
+    durationMs: 1,
+  });
+
+  it('settles coalesced on_change jobs as superseded instead of leaking them', async () => {
+    const { factory } = fakePortFactory({
+      onRun: (message, post) => post({ kind: 'result', result: okResult(message.job.id) }),
+    });
+    const client = new EngineClient({
+      workerFactory: factory,
+      schedule: (fn, ms) => {
+        if (ms > 0) return () => undefined; // debounce never fires here
+        queueMicrotask(fn);
+        return () => undefined;
+      },
+    });
+    const first = client.run({ ...job('c1'), phase: 'instructor.on_change' });
+    void client.run({ ...job('c2'), phase: 'instructor.on_change' });
+    const result = await first;
+    expect(result.success).toBe(false);
+    expect(result.error?.type).toBe('KeyboardInterrupt');
+    expect(result.error?.message).toMatch(/superseded/i);
+    expect(client['pendingCallbacks'].has('c1')).toBe(false);
+  });
+
+  it('a job waiting on boot survives restartKernel() while idle', async () => {
+    // The first worker never says ready; restartKernel replaces it with
+    // one that does. The job must run on the NEW worker, not hang.
+    let spawnCount = 0;
+    const factory = (): EnginePort => {
+      const generation = ++spawnCount;
+      let listener: ((m: WorkerToClient) => void) | null = null;
+      return {
+        postMessage(message) {
+          if (message.kind === 'init' && generation > 1) {
+            queueMicrotask(() => listener?.({ kind: 'ready', mode: 'compat' }));
+          } else if (message.kind === 'run') {
+            queueMicrotask(() => listener?.({ kind: 'result', result: okResult(message.job.id) }));
+          }
+        },
+        onMessage(callback) {
+          listener = callback;
+        },
+        terminate() {},
+      };
+    };
+    const client = new EngineClient({ workerFactory: factory });
+    const pending = client.run(job('waits'));
+    await new Promise((r) => setTimeout(r, 0));
+    client.restartKernel();
+    const result = await pending;
+    expect(result.success).toBe(true);
+    expect(spawnCount).toBe(2);
+  });
+
+  it('a Pyodide load failure resolves runs as EngineError and reports onInitError', async () => {
+    const factory = (): EnginePort => {
+      let listener: ((m: WorkerToClient) => void) | null = null;
+      return {
+        postMessage(message) {
+          if (message.kind === 'init') {
+            queueMicrotask(() => listener?.({ kind: 'init-error', error: 'offline' }));
+          }
+        },
+        onMessage(callback) {
+          listener = callback;
+        },
+        terminate() {},
+      };
+    };
+    const errors: string[] = [];
+    const client = new EngineClient({ workerFactory: factory, onInitError: (e) => errors.push(e) });
+    const result = await client.run(job('never'));
+    expect(result.success).toBe(false);
+    expect(result.error?.type).toBe('EngineError');
+    expect(result.error?.message).toContain('offline');
+    expect(errors).toEqual(['offline']);
+  });
+
+  it('dispose() settles the active and queued jobs and disarms the watchdog', async () => {
+    const { factory, spawned } = fakePortFactory({ onRun: () => undefined /* hangs */ });
+    const timers: Array<() => void> = [];
+    const client = new EngineClient({
+      workerFactory: factory,
+      defaultWallMs: 100,
+      schedule: (fn, ms) => {
+        if (ms > 0) timers.push(fn);
+        else queueMicrotask(fn);
+        return () => undefined;
+      },
+    });
+    const active = client.run(job('active'));
+    const queued = client.run(job('queued'));
+    const change = client.run({ ...job('change'), phase: 'instructor.on_change' });
+    await new Promise((r) => setTimeout(r, 0));
+    client.dispose();
+    for (const result of await Promise.all([active, queued, change])) {
+      expect(result.success).toBe(false);
+      expect(result.error?.message).toBe('Engine disposed');
+    }
+    // The stale watchdog is a no-op: no respawn after dispose.
+    timers.forEach((fire) => fire());
+    expect(spawned).toHaveLength(1);
+    expect(spawned[0]!.terminated).toBe(true);
+    // Runs after dispose settle immediately.
+    const late = await client.run(job('late'));
+    expect(late.error?.message).toBe('Engine disposed');
+  });
+
+  it('interrupting a QUEUED job resolves it without reaching the worker', async () => {
+    const ran: string[] = [];
+    const { factory } = fakePortFactory({
+      onRun: (message, post) => {
+        ran.push(message.job.id);
+        if (message.job.id !== 'blocker') {
+          post({ kind: 'result', result: okResult(message.job.id) });
+        }
+      },
+    });
+    const client = new EngineClient({ workerFactory: factory });
+    const blocker = client.run(job('blocker'));
+    const queued = client.run(job('queued'));
+    await new Promise((r) => setTimeout(r, 0));
+    client.interrupt('queued');
+    client.interrupt('blocker'); // hard stop → respawn; the queued interrupt survives it
+    expect((await blocker).error?.type).toBe('KeyboardInterrupt');
+    expect((await queued).error?.type).toBe('KeyboardInterrupt');
+    expect(ran).toEqual(['blocker']);
+  });
+});
+
+describe('EngineClient interactive input failure paths (§6.5)', () => {
+  function inputPort() {
+    const posted: ClientToWorker[] = [];
+    let postToClient: ((m: WorkerToClient) => void) | null = null;
+    const factory = (): EnginePort => ({
+      postMessage(message) {
+        posted.push(message);
+        if (message.kind === 'init') {
+          queueMicrotask(() => postToClient?.({ kind: 'ready', mode: 'compat' }));
+        } else if (message.kind === 'run') {
+          queueMicrotask(() =>
+            postToClient?.({ kind: 'input-request', jobId: message.job.id, prompt: '?' }),
+          );
+        } else if (message.kind === 'input-response') {
+          queueMicrotask(() =>
+            postToClient?.({
+              kind: 'result',
+              result: {
+                jobId: message.jobId,
+                success: !message.eof,
+                stdout: '',
+                stderr: '',
+                artifacts: {},
+                durationMs: 1,
+              },
+            }),
+          );
+        }
+      },
+      onMessage(callback) {
+        postToClient = callback;
+      },
+      terminate() {},
+    });
+    return { factory, posted };
+  }
+
+  it('a rejected onInput answers EOF so the run finishes', async () => {
+    const { factory, posted } = inputPort();
+    const client = new EngineClient({ workerFactory: factory });
+    const result = await client.run(job('i1'), {
+      onInput: () => Promise.reject(new Error('prompt dismissed')),
+    });
+    expect(posted.find((m) => m.kind === 'input-response')).toMatchObject({
+      jobId: 'i1',
+      eof: true,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('a job with interactiveInput but no onInput is answered EOF, not left suspended', async () => {
+    const { factory, posted } = inputPort();
+    const client = new EngineClient({ workerFactory: factory });
+    const result = await client.run({ ...job('i2'), interactiveInput: true });
+    expect(posted.find((m) => m.kind === 'input-response')).toMatchObject({
+      jobId: 'i2',
+      eof: true,
+    });
+    expect(result.success).toBe(false);
+  });
+});

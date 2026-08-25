@@ -34,6 +34,7 @@
  * type's empty answer → incorrect, points counted); questions pooled OUT of
  * the attempt stay excluded. Server-team flag filed to mirror the fix.
  */
+import { compilePythonRegex } from './regex';
 import { defaultAnswer, selectVisibleQuestions } from './documents';
 import type {
   QuestionId,
@@ -66,10 +67,10 @@ export function compareStringEquality(submitted: string, expected: unknown): boo
   return false;
 }
 
-/** Python re.match = anchored-at-start search. */
+/** Python re.match = anchored-at-start search (Python-only syntax translated). */
 function reMatch(pattern: string, value: string): boolean {
   try {
-    return new RegExp(pattern).exec(value)?.index === 0;
+    return compilePythonRegex(pattern).exec(value)?.index === 0;
   } catch {
     return false;
   }
@@ -79,6 +80,11 @@ const asRecord = (value: unknown): Record<string, unknown> =>
   value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
+
+/** Own-property lookup for student-typed keys (`constructor`, `__proto__`
+ *  must not resolve through the prototype chain). */
+const ownLookup = (record: Record<string, unknown>, key: string): unknown =>
+  Object.hasOwn(record, key) ? record[key] : undefined;
 
 interface QuestionResult {
   score: number;
@@ -171,7 +177,9 @@ export function checkQuizQuestion(
     return {
       score: correct ? 1 : 0,
       correct,
-      message: !correct ? (asRecord(check['feedback'])[chosen] ?? 'Incorrect') : 'Correct',
+      message: !correct
+        ? (ownLookup(asRecord(check['feedback']), chosen) ?? 'Incorrect')
+        : 'Correct',
     };
   } else if (type === 'multiple_answers_question') {
     const options = (question.answers ?? []) as string[];
@@ -213,7 +221,7 @@ export function checkQuizQuestion(
       if (!isCorrect) {
         let feedback = asRecord(check['feedback'])[blankId];
         if (feedback && typeof feedback === 'object' && !Array.isArray(feedback)) {
-          feedback = asRecord(feedback)[String(chosen[blankId])];
+          feedback = ownLookup(asRecord(feedback), String(chosen[blankId]));
         }
         if (feedback) feedbacks.push(String(feedback));
       }
@@ -236,10 +244,10 @@ export function checkQuizQuestion(
     let feedback: unknown;
     if ('correct' in check) {
       correct = compareStringEquality(answer, check['correct']);
-      feedback = asRecord(check['feedback'])[answer] ?? wrongAny;
+      feedback = ownLookup(asRecord(check['feedback']), answer) ?? wrongAny;
     } else if ('correct_exact' in check) {
       correct = compareStringEquality(answer, check['correct_exact']);
-      feedback = asRecord(check['feedback'])[answer] ?? wrongAny;
+      feedback = ownLookup(asRecord(check['feedback']), answer) ?? wrongAny;
     } else if ('correct_regex' in check) {
       const regexes = (check['correct_regex'] ?? []) as string[];
       correct = regexes.some((pattern) => reMatch(pattern, answer));
@@ -247,7 +255,7 @@ export function checkQuizQuestion(
       // the MATCHED correct_regex entry, not the feedback keys.
       const matched = regexes
         .filter((pattern) => reMatch(pattern, answer))
-        .map((pattern) => asRecord(check['feedback'])[pattern]);
+        .map((pattern) => ownLookup(asRecord(check['feedback']), pattern));
       feedback = matched.length ? (matched[0] ?? '') : wrongAny;
     } else {
       return {

@@ -36,11 +36,19 @@ const ENGINE_CRASH_MESSAGE =
   '(a function calling itself forever). The engine has been restarted; ' +
   'check your code and run again.';
 
+const noop = (): void => undefined;
+
+const errorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
+
 export class WorkerHost {
   private runner: JobRunner | null = null;
   private interrupted = new Set<string>();
-  /** Per-job resolver for the in-flight interactive input() request. */
-  private pendingInputs = new Map<string, (value: string) => void>();
+  /** Per-job settlers for the in-flight interactive input() request. */
+  private pendingInputs = new Map<
+    string,
+    { resolve: (value: string) => void; reject: (error: Error) => void }
+  >();
   /** Remembered from 'init' so crash/restart reloads hit the same base. */
   private indexURL: string | undefined;
   /**
@@ -64,14 +72,21 @@ export class WorkerHost {
       case 'input-response': {
         // Resumes the JSPI-suspended run (spec §6.5). Unknown/stale job
         // ids are ignored - the run may have been hard-stopped meanwhile.
-        const resolve = this.pendingInputs.get(message.jobId);
+        const pending = this.pendingInputs.get(message.jobId);
         this.pendingInputs.delete(message.jobId);
-        resolve?.(message.value);
+        if (!pending) return Promise.resolve();
+        // EOF: the runtime turns the rejection into Python's EOFError.
+        if (message.eof) pending.reject(new Error('No input available'));
+        else pending.resolve(message.value);
         return Promise.resolve();
       }
       default: {
-        this.chain = this.chain.then(() => this.process(message));
-        return this.chain;
+        // process() never rejects (every branch reports failures as
+        // messages), but the chain must survive even if it did - a
+        // rejected link would silently skip every later message.
+        const link = this.chain.then(() => this.process(message));
+        this.chain = link.then(noop, noop);
+        return link;
       }
     }
   }
@@ -80,8 +95,7 @@ export class WorkerHost {
     switch (message.kind) {
       case 'init': {
         this.indexURL = message.indexURL;
-        this.runner = await this.options.loadRunner(message.indexURL);
-        this.options.post({ kind: 'ready', mode: this.options.mode });
+        await this.loadFresh();
         return;
       }
       case 'run': {
@@ -89,11 +103,30 @@ export class WorkerHost {
         return;
       }
       case 'restart-kernel': {
-        this.runner = await this.options.loadRunner(this.indexURL);
-        this.options.post({ kind: 'ready', mode: this.options.mode });
+        // A fresh interpreter: interrupts aimed at jobs the old one never
+        // received are meaningless now (§6.6).
+        this.interrupted.clear();
+        await this.loadFresh();
         return;
       }
     }
+  }
+
+  /**
+   * Boot ('init') / reboot ('restart-kernel'). A load failure (offline
+   * CDN, wrong indexURL) is reported as 'init-error' rather than thrown:
+   * the worker stays responsive and every job resolves as an EngineError
+   * until a later restart succeeds.
+   */
+  private async loadFresh(): Promise<void> {
+    try {
+      this.runner = await this.options.loadRunner(this.indexURL);
+    } catch (error) {
+      this.runner = null;
+      this.options.post({ kind: 'init-error', error: errorMessage(error) });
+      return;
+    }
+    this.options.post({ kind: 'ready', mode: this.options.mode });
   }
 
   /**
@@ -164,23 +197,26 @@ export class WorkerHost {
         // Interactive input() (spec §6.5): the run suspends on this
         // promise until an 'input-response' arrives for the job.
         onInput: (prompt) =>
-          new Promise<string>((resolve) => {
-            this.pendingInputs.set(job.id, resolve);
+          new Promise<string>((resolve, reject) => {
+            this.pendingInputs.set(job.id, { resolve, reject });
             this.options.post({ kind: 'input-request', jobId: job.id, prompt });
           }),
       });
     } catch (error) {
-      // A crash inside execute (e.g. a fatal Pyodide error - JSPI stack
-      // exhaustion, unbounded recursion) must still resolve the job,
-      // otherwise the client waits forever. A fatal error leaves the
-      // interpreter DEAD, so reload a fresh runner before the next job
-      // rather than reusing the corpse (which would fault again, often
-      // as "Maximum call stack size exceeded" on the very next
-      // runPython).
+      // A crash inside execute must still resolve the job, otherwise the
+      // client waits forever. Only a FATAL Pyodide error (JSPI stack
+      // exhaustion, unbounded recursion) leaves the interpreter DEAD and
+      // warrants replacing it - reusing the corpse would fault again on
+      // the very next runPython. Ordinary escapes (an OSError from
+      // staging, a destroyed proxy) keep the runner: a reload would throw
+      // away installed wheels and the REPL namespace for nothing. The
+      // canary decides the ambiguous cases.
       this.pendingInputs.delete(job.id);
-      const message = error instanceof Error ? error.message : String(error);
-      await this.reloadRunner();
+      const message = errorMessage(error);
       const crashed = FATAL_SIGNATURE.test(message);
+      if (crashed || this.runner.healthCheck?.() === false) {
+        await this.reloadRunner();
+      }
       this.options.post({
         kind: 'result',
         result: {

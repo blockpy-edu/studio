@@ -236,7 +236,7 @@ export function dedent(text: string, levels: number, isDocString: boolean): stri
 // all. Ported byte-for-byte - do not "fix".
 /* eslint-disable no-useless-backreference, no-useless-escape */
 const STRING_IMAGE_URL =
-  /((["'])(?:https?:\/\/[-a-zA-Z0-9@:%._\/\+~#=]+(?:png|jpg|jpeg|gif|svg)+)|(?:blob:null\/[A-Fa-f0-9-]+)|(?:data:image\/(?:png|jpg|jpeg|gif|svg\+xml|webp|bmp)(?:;charset=utf-8)?;base64,(?:[A-Za-z0-9]|[+/])+={0,2})\2)/g;
+  /((["'])(?:https?:\/\/[-a-zA-Z0-9@:%._\/\+~#=]+(?:png|jpg|jpeg|gif|svg)+)|(?:blob:null\/[A-Fa-f0-9-]+)|(?:data:image\/(?:png|jpg|jpeg|gif|svg\+xml|webp|bmp)(?:;charset=utf-8)?;base64,(?:[A-Za-z0-9]|[+/])+={0,2})\2)/;
 /* eslint-enable no-useless-backreference, no-useless-escape */
 const CONSTRUCTOR_IMAGE_URL = /(?:^|\W)(Image\((["'])(.+?)\2\))/g;
 const REGEX_PATTERNS: Record<string, RegExp | false> = {

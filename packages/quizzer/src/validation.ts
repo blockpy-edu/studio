@@ -12,6 +12,7 @@
  * (server list-form and bakery statement-dict form), and the per-blank
  * rich fill-in feedback grammar.
  */
+import { pythonRegexError } from './regex';
 import { getBracketed } from './documents';
 import type { QuizInstructions, QuizQuestion } from './types';
 import type { QuizChecksDocument } from './grading';
@@ -72,14 +73,9 @@ const isDictOfStrings = (value: unknown): value is Record<string, string> =>
 const isDictOfStringLists = (value: unknown): value is Record<string, string[]> =>
   isRecord(value) && Object.values(value).every(isStringList);
 
-function regexError(pattern: string): string | null {
-  try {
-    new RegExp(pattern);
-    return null;
-  } catch (error) {
-    return String(error);
-  }
-}
+/** Compiles the pattern as Python-flavored regex (regex.ts); the failure
+ *  message notes that Python `re` (the server) may still accept it. */
+const regexError = pythonRegexError;
 
 /** The authored question + its check fields merged (the bakery shape). */
 export type MergedQuestion = Record<string, unknown>;
@@ -591,7 +587,7 @@ export class QuizIssueTracker {
             const failure = regexError(pattern);
             if (failure) {
               this.add(
-                `Invalid regex in the \`correct_regex\` field: ${pattern}\n${failure}`,
+                `Could not compile regex in the \`correct_regex\` field: ${pattern}\n${failure}`,
                 name,
                 'correct_regex',
               );
@@ -610,7 +606,7 @@ export class QuizIssueTracker {
               const failure = regexError(pattern);
               if (failure) {
                 this.add(
-                  `Invalid regex in the \`feedback\` field: ${pattern}\n${failure}`,
+                  `Could not compile regex in the \`feedback\` field: ${pattern}\n${failure}`,
                   name,
                   'feedback',
                 );
@@ -708,7 +704,7 @@ export class QuizIssueTracker {
               const failure = regexError(pattern);
               if (failure) {
                 this.add(
-                  `Invalid regex in the \`correct_regex\` field: ${pattern}\n${failure}`,
+                  `Could not compile regex in the \`correct_regex\` field: ${pattern}\n${failure}`,
                   name,
                   'correct_regex',
                 );

@@ -160,6 +160,62 @@ describe('Quizzer (quizzer.ts port, §11.3)', () => {
     expect((screen.getByLabelText('True') as HTMLInputElement).disabled).toBe(true);
   });
 
+  it('overlapping saves: an older save landing cannot clear dirty for a newer edit', async () => {
+    const pending: Array<() => void> = [];
+    const saveAnswer = vi.fn(
+      (_assignmentId: number, _submissionId: number | null, _code: string) =>
+        new Promise<{ success: boolean }>((resolve) => {
+          pending.push(() => resolve({ success: true }));
+        }),
+    );
+    const submitQuiz = vi.fn(async () => ({ success: true, correct: true, feedbacks: {} }));
+    renderQuizzer({ saveAnswer, submitQuiz });
+    await start();
+    // The Start save is in flight (pending[0]); resolve it so the baseline is clean.
+    await waitFor(() => expect(pending.length).toBe(1));
+    pending.shift()!();
+    const submitButton = () =>
+      screen.getAllByRole('button', { name: 'Submit answer' })[0] as HTMLButtonElement;
+    await waitFor(() => expect(submitButton().disabled).toBe(false));
+    // Edit A → save A starts; edit B → save B starts (both pending).
+    fireEvent.click(screen.getByLabelText('True'));
+    await waitFor(() => expect(pending.length).toBe(1));
+    fireEvent.click(screen.getByLabelText('False'));
+    await waitFor(() => expect(pending.length).toBe(2));
+    // Save A completes first: the submission is still dirty (B unsaved).
+    pending.shift()!();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(submitButton().disabled).toBe(true);
+    // Save B completes: now clean, and submit goes through after the latest save.
+    pending.shift()!();
+    await waitFor(() => expect(submitButton().disabled).toBe(false));
+    fireEvent.click(submitButton());
+    await waitFor(() => expect(submitQuiz).toHaveBeenCalledWith(102, 5002));
+    expect(
+      (JSON.parse(saveAnswer.mock.calls.at(-1)![2]) as QuizSubmission).studentAnswers?.['tf1'],
+    ).toBe('false');
+  });
+
+  it('a failed submit keeps the attempt open and shows the error', async () => {
+    const submitQuiz = vi.fn(async () => ({
+      success: false,
+      correct: false,
+      message: 'Server said no.',
+    }));
+    renderQuizzer({ submitQuiz });
+    await start();
+    fireEvent.click(screen.getByLabelText('True'));
+    await waitFor(() => {
+      const submit = screen.getAllByRole('button', { name: 'Submit answer' })[0]!;
+      expect((submit as HTMLButtonElement).disabled).toBe(false);
+    });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Submit answer' })[0]!);
+    await waitFor(() => expect(submitQuiz).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getAllByText(/Server said no/).length).toBeGreaterThan(0));
+    expect(screen.getAllByText('Quiz In Progress!').length).toBe(2);
+    expect((screen.getByLabelText('True') as HTMLInputElement).disabled).toBe(false);
+  });
+
   it('feedbackType NONE hides feedback from students but not instructors', async () => {
     const submitQuiz = vi.fn(async () => ({
       success: true,

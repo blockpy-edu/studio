@@ -11,8 +11,16 @@
  *   legacy quirk: EVEN when the server responded success: false
  * - saveFile: per-filename trailing debounce (TIMER_DELAY 1000 ms),
  *   latest-wins; run start saves answer.py immediately (run.js:13)
+ *
+ * Studio hardening over legacy:
+ * - every save/grade snapshots the wire ids (assignment, submission, …) at
+ *   the moment of the edit, so a debounced save that fires after an
+ *   assignment switch still lands on the assignment it belongs to
+ * - saves are serialized per filename; a save superseded before it left
+ *   is skipped, so an older POST can never overwrite a newer one
+ * - pending debounced saves flush (keepalive) on dispose / page unload
  */
-import type { ApiClient } from '@blockpy/api';
+import type { ApiClient, WirePayload } from '@blockpy/api';
 import type { GradeResult, ServerEndpoint, ServerStatusState } from '@blockpy/editor';
 
 const TIMER_DELAY_MS = 1000; // legacy server.js:43
@@ -52,12 +60,33 @@ function isInstructorFile(filename: string): boolean {
   );
 }
 
+/** The wire ids frozen at edit time (createServerData's id fields). */
+export interface ContextSnapshot extends WirePayload {
+  assignment_id: number | null;
+  assignment_group_id: number | null;
+  course_id: number | null;
+  submission_id: number | null;
+  version: number;
+  assignment_version: number;
+  part_id: string;
+}
+
+interface PendingSave {
+  timer: number;
+  contents: string;
+  snapshot: ContextSnapshot;
+}
+
 export class SubmissionSync {
   /** Monotonic display score (legacy submission.score), seeded on load. */
   private score = 0;
   /** Monotonic display correctness (legacy submission.correct OR-chain). */
   private correct = false;
-  private timers = new Map<string, number>();
+  private pending = new Map<string, PendingSave>();
+  /** Per-filename save chain: an older POST never overtakes a newer one. */
+  private inflight = new Map<string, Promise<void>>();
+  /** Per-filename sequence: the newest requested save wins. */
+  private latestSequence = new Map<string, number>();
   /**
    * This client saved an instructor file since the last version check.
    * Server-side, save_instructor_file bumps assignment.version, and the
@@ -65,7 +94,8 @@ export class SubmissionSync {
    * submission row still carries the old assignment_version (save_code
    * then re-syncs it, so the flag fires exactly once). That "change" is
    * the instructor's own edit - not something to reload for - so the
-   * one flag it produces is swallowed.
+   * one flag it produces is swallowed. Set only once the save actually
+   * went out and succeeded; a failed save bumps nothing server-side.
    */
   private selfBumpedVersion = false;
   private schedule: (fn: () => void, ms: number) => number;
@@ -85,6 +115,20 @@ export class SubmissionSync {
     }
   }
 
+  /** Freeze the ids a payload built RIGHT NOW would carry. */
+  snapshotContext(): ContextSnapshot {
+    const ctx = this.options.api.context;
+    return {
+      assignment_id: ctx.assignmentId,
+      assignment_group_id: ctx.assignmentGroupId,
+      course_id: ctx.courseId,
+      submission_id: ctx.submissionId,
+      version: ctx.submissionVersion,
+      assignment_version: ctx.assignmentVersion,
+      part_id: ctx.partId,
+    };
+  }
+
   /** Reset the monotonic state from a freshly loaded submission. */
   seed(score: number, correct: boolean): void {
     this.score = score;
@@ -99,32 +143,71 @@ export class SubmissionSync {
     return this.correct;
   }
 
-  /**
-   * Debounced autosave (legacy saveFile default TIMER_DELAY): trailing,
-   * latest-wins per filename - a newer edit cancels the pending POST.
-   */
-  saveFileDebounced(filename: string, contents: string): void {
-    if (isInstructorFile(filename)) this.selfBumpedVersion = true;
-    const pending = this.timers.get(filename);
-    if (pending !== undefined) this.cancel(pending);
-    this.timers.set(
-      filename,
-      this.schedule(() => {
-        this.timers.delete(filename);
-        void this.saveFileNow(filename, contents);
-      }, TIMER_DELAY_MS),
-    );
+  /** Filenames with a debounced save still waiting (tests, diagnostics). */
+  get pendingFiles(): string[] {
+    return [...this.pending.keys()];
   }
 
-  /** Immediate save (legacy `saveFile(..., null)` - run start, run.js:13). */
-  async saveFileNow(filename: string, contents: string): Promise<void> {
-    if (isInstructorFile(filename)) this.selfBumpedVersion = true;
-    const pending = this.timers.get(filename);
+  private cancelPending(filename: string): PendingSave | undefined {
+    const pending = this.pending.get(filename);
     if (pending !== undefined) {
-      // The immediate save IS the latest - drop the queued older one.
-      this.cancel(pending);
-      this.timers.delete(filename);
+      this.cancel(pending.timer);
+      this.pending.delete(filename);
     }
+    return pending;
+  }
+
+  /**
+   * Debounced autosave (legacy saveFile default TIMER_DELAY): trailing,
+   * latest-wins per filename - a newer edit cancels the pending POST. The
+   * wire ids are frozen NOW, not when the timer fires.
+   */
+  saveFileDebounced(filename: string, contents: string): void {
+    this.cancelPending(filename);
+    const snapshot = this.snapshotContext();
+    const timer = this.schedule(() => {
+      this.pending.delete(filename);
+      void this.saveFileNow(filename, contents, snapshot);
+    }, TIMER_DELAY_MS);
+    this.pending.set(filename, { timer, contents, snapshot });
+  }
+
+  /**
+   * Immediate save (legacy `saveFile(..., null)` - run start, run.js:13).
+   * Serialized per filename behind any in-flight save of the same file.
+   */
+  async saveFileNow(
+    filename: string,
+    contents: string,
+    snapshot: ContextSnapshot = this.snapshotContext(),
+  ): Promise<void> {
+    // The immediate save IS the latest - drop the queued older one.
+    this.cancelPending(filename);
+    const sequence = (this.latestSequence.get(filename) ?? 0) + 1;
+    this.latestSequence.set(filename, sequence);
+    // Nothing in flight: start synchronously (the POST leaves before any
+    // caller's next tick); otherwise queue behind the older save.
+    const previous = this.inflight.get(filename);
+    const run = previous
+      ? previous.then(() => this.performSave(filename, contents, snapshot, sequence))
+      : this.performSave(filename, contents, snapshot, sequence);
+    this.inflight.set(filename, run);
+    try {
+      await run;
+    } finally {
+      if (this.inflight.get(filename) === run) this.inflight.delete(filename);
+    }
+  }
+
+  private async performSave(
+    filename: string,
+    contents: string,
+    snapshot: ContextSnapshot,
+    sequence: number,
+  ): Promise<void> {
+    // Superseded while queued behind an older POST: the newer save carries
+    // the newer contents, so this one would only reorder them.
+    if (this.latestSequence.get(filename) !== sequence) return;
     if (this.options.readOnly()) {
       this.options.setStatus('saveFile', 'offline');
       return;
@@ -135,28 +218,57 @@ export class SubmissionSync {
     }
     this.options.setStatus('saveFile', 'active');
     try {
-      const response = await this.options.api.saveFile(filename, contents);
+      const response = await this.options.api.saveFile(filename, contents, snapshot, {
+        onRetry: () => this.options.setStatus('saveFile', 'retrying'),
+      });
       if (response.success === false) {
         this.options.setStatus(
           'saveFile',
           'failed',
           typeof response['message'] === 'string' ? response['message'] : '',
         );
-      } else {
-        this.options.setStatus('saveFile', 'ready');
-        if (response['version_change'] === true) {
-          if (this.selfBumpedVersion) {
-            this.selfBumpedVersion = false;
-          } else {
-            this.options.onVersionChange?.();
-          }
+        return;
+      }
+      this.options.setStatus('saveFile', 'ready');
+      if (isInstructorFile(filename)) this.selfBumpedVersion = true;
+      if (response['version_change'] === true) {
+        if (this.selfBumpedVersion) {
+          this.selfBumpedVersion = false;
+        } else {
+          this.options.onVersionChange?.();
         }
       }
-    } catch {
-      // Transport.postRetry only rejects when a test caps retries; legacy
-      // keeps retrying forever and shows RETRYING meanwhile.
-      this.options.setStatus('saveFile', 'retrying');
+    } catch (error) {
+      // Retries exhausted (or a non-retryable 4xx): the save is lost.
+      this.options.setStatus('saveFile', 'failed', String(error));
     }
+  }
+
+  /**
+   * Fire every pending debounced save right now with the ids frozen at
+   * edit time. `keepalive` is the unload path: one fire-and-forget POST
+   * per file that the browser lets outlive the page.
+   */
+  flushPending(options: { keepalive?: boolean } = {}): Promise<void> {
+    const saves: Promise<void>[] = [];
+    for (const filename of [...this.pending.keys()]) {
+      const pending = this.cancelPending(filename);
+      if (!pending) continue;
+      if (options.keepalive) {
+        if (this.options.readOnly() || !this.options.api.isEndpointConnected('saveFile')) continue;
+        void this.options.api
+          .saveFile(filename, pending.contents, pending.snapshot, { keepalive: true })
+          .catch(() => undefined);
+      } else {
+        saves.push(this.saveFileNow(filename, pending.contents, pending.snapshot));
+      }
+    }
+    return Promise.all(saves).then(() => undefined);
+  }
+
+  /** Unmount: flush what is pending (keepalive) and stop scheduling. */
+  dispose(): void {
+    void this.flushPending({ keepalive: true });
   }
 
   /**
@@ -170,6 +282,7 @@ export class SubmissionSync {
     this.options.setStatus('updateSubmission', 'active');
     try {
       const response = await this.options.api.updateSubmission({
+        ...this.snapshotContext(),
         score: this.score,
         correct: this.correct,
         hidden_override: false,
@@ -200,6 +313,7 @@ export class SubmissionSync {
     this.options.setStatus('updateSubmission', 'active');
     try {
       const response = await this.options.api.updateSubmission({
+        ...this.snapshotContext(),
         score: 0,
         correct: false,
         hidden_override: true,
@@ -218,13 +332,15 @@ export class SubmissionSync {
 
   /**
    * The §14.3 grading sequence (on_run.js:164-175 + server.js:663-693).
-   * Call AFTER the feedback pane presented.
+   * Call AFTER the feedback pane presented. The ids are frozen before any
+   * await so a switch during the POST never credits the wrong assignment.
    */
   async handleGraded(grade: GradeResult): Promise<void> {
     // Display state: monotonic OR / clamp + max (on_run.js:165-171).
     this.correct = grade.success || this.correct;
     const clamped = Math.max(0, Math.min(1, grade.score));
     this.score = Math.max(this.score, clamped);
+    const snapshot = this.snapshotContext();
     if (this.options.readOnly()) {
       this.options.setStatus('updateSubmission', 'offline');
       return;
@@ -235,15 +351,19 @@ export class SubmissionSync {
     this.options.setStatus('updateSubmission', 'active');
     let response;
     try {
-      response = await this.options.api.updateSubmission({
-        score: this.score,
-        correct: grade.success, // RAW success of THIS run, not the OR
-        hidden_override: grade.hideCorrectness,
-        force_update: false,
-        // Legacy awaits getPngFromBlocks before POSTing (server.js:675) -
-        // the image field is always present, '' when capture yields none.
-        image: await this.captureImage(),
-      });
+      response = await this.options.api.updateSubmission(
+        {
+          ...snapshot,
+          score: this.score,
+          correct: grade.success, // RAW success of THIS run, not the OR
+          hidden_override: grade.hideCorrectness,
+          force_update: false,
+          // Legacy awaits getPngFromBlocks before POSTing (server.js:675) -
+          // the image field is always present, '' when capture yields none.
+          image: await this.captureImage(),
+        },
+        { onRetry: () => this.options.setStatus('updateSubmission', 'retrying') },
+      );
     } catch (error) {
       this.options.setStatus('updateSubmission', 'failed', String(error));
       return;
@@ -258,10 +378,10 @@ export class SubmissionSync {
       );
     }
     // Legacy quirk (server.js:687-689): markCorrect fires on the response
-    // REGARDLESS of response.success - only hide/correct gate it.
+    // REGARDLESS of response.success - only hide/correct gate it. It marks
+    // the assignment that was GRADED, not whatever is current now.
     if (!grade.hideCorrectness && grade.success && this.options.markCorrect) {
-      const assignmentId = this.options.api.context.assignmentId;
-      if (assignmentId !== null) this.options.markCorrect(assignmentId);
+      if (snapshot.assignment_id !== null) this.options.markCorrect(snapshot.assignment_id);
     }
   }
 }

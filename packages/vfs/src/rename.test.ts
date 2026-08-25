@@ -59,3 +59,28 @@ describe('Vfs.changeSpace (M3.7, net-new)', () => {
     expect(vfs.changeSpace('answer.py', 'instructor')).toBe(false);
   });
 });
+
+describe('target basename validation (shared by rename and changeSpace)', () => {
+  it('throws for empty basenames and ones starting with a namespace prefix', () => {
+    const vfs = new Vfs();
+    vfs.write('!helpers.py', 'x');
+    expect(() => vfs.rename('!helpers.py', '')).toThrow(/cannot be empty/);
+    expect(() => vfs.rename('!helpers.py', '   ')).toThrow(/cannot be empty/);
+    for (const bad of ['!x.py', '^x.py', '?x.py', '&x.py', '$x.py', '*x.py', '#x.py']) {
+      expect(() => vfs.rename('!helpers.py', bad)).toThrow(/prefix character/);
+    }
+    // Nothing moved and no phantom file landed in another space.
+    expect(vfs.read('!helpers.py')).toBe('x');
+    expect(vfs.list()).toHaveLength(1);
+  });
+
+  it('changeSpace checks the clobber guard in the TARGET space', () => {
+    const vfs = new Vfs();
+    vfs.write('?a.txt', 'hidden');
+    vfs.write('!a.txt', 'instructor');
+    expect(vfs.changeSpace('?a.txt', 'instructor')).toBe(false);
+    expect(vfs.read('!a.txt')).toBe('instructor');
+    expect(vfs.changeSpace('?a.txt', 'readonly')).toBe(true);
+    expect(vfs.read('&a.txt')).toBe('hidden');
+  });
+});

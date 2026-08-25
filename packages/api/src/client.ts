@@ -6,7 +6,14 @@
 import { createServerData, type ApiContext, type LegacyUrlMap, type WirePayload } from './context';
 import { decodeAssignment, decodeSubmission, type RawRecord } from './decoder';
 import { clientMayEmit } from './events';
-import type { LegacyResponse, Transport } from './transport';
+import type { LegacyResponse, RetryOptions, Transport } from './transport';
+
+/**
+ * Per-call transport knobs for the persistence endpoints: `keepalive`
+ * sends ONE un-retried POST that survives page unload (autosave flush);
+ * `onRetry`/`signal` ride the retry loop.
+ */
+export type SaveOptions = Pick<RetryOptions, 'keepalive' | 'onRetry' | 'signal'>;
 
 export interface ApiClientOptions {
   urls: LegacyUrlMap;
@@ -76,12 +83,16 @@ export class ApiClient {
     filename: string,
     code: string,
     overrides: WirePayload = {},
+    options: SaveOptions = {},
   ): Promise<LegacyResponse> {
     if (this.guardReadOnly()) return { success: false, readOnly: true };
-    return this.options.transport.postRetry(
-      this.url('saveFile'),
-      this.buildPayload({ filename, code, ...overrides }),
-    );
+    const payload = this.buildPayload({ filename, code, ...overrides });
+    if (options.keepalive) {
+      // Unload path: no retry loop can outlive the page, so one keepalive
+      // POST is the best available effort.
+      return this.options.transport.post(this.url('saveFile'), payload, { keepalive: true });
+    }
+    return this.options.transport.postRetry(this.url('saveFile'), payload, options);
   }
 
   async saveAssignment(fields: WirePayload): Promise<LegacyResponse> {
@@ -188,11 +199,13 @@ export class ApiClient {
    */
   async updateSubmission(
     fields: { status?: number; correct?: boolean; score?: number; image?: string } & WirePayload,
+    options: SaveOptions = {},
   ): Promise<LegacyResponse> {
     if (this.guardReadOnly()) return { success: false, readOnly: true };
     return this.options.transport.postRetry(
       this.url('updateSubmission'),
       this.buildPayload(fields),
+      options,
     );
   }
 

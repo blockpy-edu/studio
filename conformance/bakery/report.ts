@@ -4,7 +4,7 @@
  * lands here with a category and enough context to investigate, then the
  * whole run is written as bakery-report.md / bakery-report.json.
  */
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 /** Problem taxonomy — each category is one investigation queue. */
@@ -65,7 +65,7 @@ export class ProblemReport {
       totalProblems: this.problems.length,
       problems: this.problems,
     };
-    writeFileSync(`${basePath}.json`, JSON.stringify(json, null, 2) + '\n');
+    writeIfChanged(`${basePath}.json`, JSON.stringify(json, null, 2) + '\n');
 
     const lines: string[] = [];
     lines.push('# Bakery curriculum conformance report');
@@ -97,6 +97,21 @@ export class ProblemReport {
       lines.push('No problems found.');
       lines.push('');
     }
-    writeFileSync(`${basePath}.md`, lines.join('\n'));
+    writeIfChanged(`${basePath}.md`, lines.join('\n'));
   }
+}
+
+const GENERATED_LINE = /^\s*"?[Gg]enerated"?:.*$/m;
+
+/**
+ * Only rewrite the report when something OTHER than the `generated`
+ * timestamp changed, so an unchanged run does not dirty git. Set
+ * BAKERY_REPORT_FORCE=1 to always rewrite (fresh timestamp).
+ */
+function writeIfChanged(path: string, content: string): void {
+  if (!process.env['BAKERY_REPORT_FORCE'] && existsSync(path)) {
+    const previous = readFileSync(path, 'utf8');
+    if (previous.replace(GENERATED_LINE, '') === content.replace(GENERATED_LINE, '')) return;
+  }
+  writeFileSync(path, content);
 }

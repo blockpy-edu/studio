@@ -96,6 +96,30 @@ describe('AssignmentHost dispatch (loadAssignmentWrapper port)', () => {
     expect(loadEditorAssignment).toHaveBeenCalledWith(999);
   });
 
+  it('a failed editor load restores the previous surface instead of a half-switch', async () => {
+    const loadEditorAssignment = vi.fn(() => Promise.reject(new Error('load failed')));
+    const { view, dispatch } = mountHost(loadEditorAssignment);
+    await act(() => dispatch(102)); // quiz showing, editor hidden
+    // (Catch INSIDE act: a rejected act leaves React's act queue broken.)
+    let caught: unknown;
+    await act(() =>
+      dispatch(101).catch((error: unknown) => {
+        caught = error;
+      }),
+    );
+    expect(String(caught)).toContain('load failed');
+    const editorWrap = view.container.querySelector('.blockpy-host-editor') as HTMLElement;
+    expect(editorWrap.style.display).toBe('none');
+    expect(view.container.querySelector('.blockpy-host-quiz')?.textContent).toContain(
+      'quiz assignment 102',
+    );
+    // The global alias swallows the rejection for un-awaiting legacy callers.
+    const globals = window as unknown as Record<string, unknown>;
+    await act(() =>
+      (globals['altAssignmentChangingFunction'] as (id: number) => Promise<void>)(101),
+    );
+  });
+
   it('updates assignment_id in the URL preserving other params (§5.3)', async () => {
     history.replaceState(null, '', '/?assignment_id=101&assignment_group_id=11&embed=false');
     const { dispatch } = mountHost();

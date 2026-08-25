@@ -55,11 +55,30 @@ import type { MountExtras, StudioActions } from './studio-handle';
  * LD-33: legacy appends "?placement=…" blindly (plugins.ts:272), which
  * produces a double question mark when the configured downloadFile url
  * already carries a query string. Join with "&" instead (the transport's
- * getJson separator rule); the filename stays unencoded, as legacy.
+ * getJson separator rule). The filename is URL-encoded (legacy left it
+ * raw, so names with `&`, `#` or spaces broke the query string).
  */
 export function buildDownloadUrl(base: string, assignmentId: number, filename: string): string {
   const separator = base.includes('?') ? '&' : '?';
-  return `${base}${separator}placement=assignment&directory=${assignmentId}&filename=${filename}`;
+  const encoded = encodeURIComponent(filename);
+  return `${base}${separator}placement=assignment&directory=${assignmentId}&filename=${encoded}`;
+}
+
+/**
+ * localStorage when the browser allows it (private mode / blocked storage
+ * throws on access) - the offline event queue must survive a reload, so
+ * the transport's MemoryStorage fallback is a last resort only.
+ */
+function persistentStorage(): Storage | undefined {
+  try {
+    const storage = window.localStorage;
+    const probe = '__blockpy_storage_probe__';
+    storage.setItem(probe, '1');
+    storage.removeItem(probe);
+    return storage;
+  } catch {
+    return undefined;
+  }
 }
 
 interface LoadedAssignment {
@@ -188,9 +207,14 @@ export function App({ config, extras, registerActions }: AppProps) {
     // Late-bound so the transport's IP-change hook can log through the
     // client it belongs to (LD-2c: detection is live on every path).
     const holder: { client: ApiClient | null } = { client: null };
+    const storage = persistentStorage();
     const transport = new Transport({
       accessToken: config.accessToken,
       fetch: extras?.fetch ?? ((url, init) => fetch(url, init)),
+      // The offline event queue persists across reloads (legacy
+      // localStorage FaultResistantCache); memory only when storage is
+      // unavailable.
+      ...(storage ? { storage } : {}),
       onIpChange: (oldIp, newIp) => {
         void holder.client
           ?.logEvent('X-IP.Change', '', '', JSON.stringify({ old: oldIp, new: newIp }))
@@ -208,6 +232,16 @@ export function App({ config, extras, registerActions }: AppProps) {
     return { client: holder.client, transport };
   }, [config, assignment, user, extras]);
   const api = apiBundle?.client ?? null;
+
+  // A7 §1: the passcode the prompt collected (chrome store) rides every
+  // payload - mirror it into the wire context whenever it changes.
+  useEffect(() => {
+    if (!api) return;
+    api.context.passcode = store.getState().passcode;
+    return store.subscribe((state, previous) => {
+      if (state.passcode !== previous.passcode) api.context.passcode = state.passcode;
+    });
+  }, [api, store]);
 
   // Grading success reaches the group header (spec §9.3) AND any host-page
   // hook; the ref breaks the memo cycle (sync → markCorrect → navStore →
@@ -235,9 +269,27 @@ export function App({ config, extras, registerActions }: AppProps) {
     });
   }, [api, config.display.readOnly, markCorrectEverywhere, store]);
 
+  // Pending debounced saves flush (keepalive) when the page goes away and
+  // when this shell unmounts - the ids were frozen at edit time, so a save
+  // that fires late still lands on the assignment it belongs to.
+  useEffect(() => {
+    if (!sync) return;
+    const flush = () => sync.flushPending({ keepalive: true });
+    window.addEventListener('pagehide', flush);
+    window.addEventListener('beforeunload', flush);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      window.removeEventListener('beforeunload', flush);
+      sync.dispose();
+    };
+  }, [sync]);
+
   // The run controller is built further down (it only depends on paths);
   // a ref lets adoption stop an in-flight run without reordering the hooks.
   const runControllerRef = useRef<RunController | null>(null);
+  // The id of the assignment currently adopted into the editor - callbacks
+  // that outlive a switch (a late grade) compare against it.
+  const activeAssignmentIdRef = useRef<number | null>(null);
 
   // -- assignment adoption (legacy loadAssignmentData_, blockpy.js:491) ------
   const adoptAssignmentData = useCallback(
@@ -258,6 +310,10 @@ export function App({ config, extras, registerActions }: AppProps) {
         ...config.settings,
       };
       const partId = typeof loadedSettings['part_id'] === 'string' ? loadedSettings['part_id'] : '';
+      // Edits still waiting on their debounce belong to the OLD pair: send
+      // them now with the ids frozen at edit time, before the context moves.
+      void sync?.flushPending();
+      activeAssignmentIdRef.current = decoded.id;
       if (api) {
         // The wire context follows the loaded pair (legacy createServerData
         // reads the live model): every later call carries these ids.
@@ -290,11 +346,17 @@ export function App({ config, extras, registerActions }: AppProps) {
     [api, sync, store, config.settings],
   );
 
+  // Request generation: overlapping loads (fast Next clicks, a deep link
+  // racing the boot load) only ever adopt the LATEST response; a stale one
+  // is dropped silently, whatever it carried.
+  const loadGenerationRef = useRef(0);
   const loadAssignment = useCallback(
     async (assignmentId: number) => {
       if (!api?.isEndpointConnected('loadAssignment')) {
         throw new Error('BlockPy Studio: no loadAssignment endpoint configured');
       }
+      const generation = ++loadGenerationRef.current;
+      const isLatest = () => generation === loadGenerationRef.current;
       // Legacy _postBlocking badge lifecycle: active → ready/failed.
       store.getState().setServerStatus('loadAssignment', 'active');
       setLoading(true);
@@ -302,19 +364,24 @@ export function App({ config, extras, registerActions }: AppProps) {
         const response = await withLoadingOverlay(assignmentLabel(assignmentId, 'assignment'), () =>
           api.loadAssignment(assignmentId),
         );
+        if (!isLatest()) return;
         if (!response.success || !response.assignment) {
-          store.getState().setServerStatus('loadAssignment', 'failed');
-          setLoadError(`The assignment (${assignmentId}) failed to load.`);
-          return;
+          throw new Error(
+            typeof response.raw['message'] === 'string'
+              ? response.raw['message']
+              : `load_assignment rejected assignment ${assignmentId}`,
+          );
         }
         adoptAssignmentData(response.raw as LegacyAssignmentPayload);
         store.getState().setServerStatus('loadAssignment', 'ready');
       } catch (error) {
-        store.getState().setServerStatus('loadAssignment', 'failed');
-        setLoadError(`The assignment (${assignmentId}) failed to load.`);
+        if (isLatest()) {
+          store.getState().setServerStatus('loadAssignment', 'failed', String(error));
+          setLoadError(`The assignment (${assignmentId}) failed to load.`);
+        }
         throw error;
       } finally {
-        setLoading(false);
+        if (isLatest()) setLoading(false);
       }
     },
     [api, adoptAssignmentData, store, withLoadingOverlay, assignmentLabel],
@@ -330,6 +397,10 @@ export function App({ config, extras, registerActions }: AppProps) {
   useEffect(() => {
     if (bootedRef.current) return;
     bootedRef.current = true;
+    // A7 §1: the passcode is prompted BEFORE the first load so the very
+    // first payload already carries it (the store subscription above
+    // mirrors the answer into the wire context synchronously).
+    if (config.passcodeProtected) requestPasscode();
     if (assignment.assignmentData) {
       adoptAssignmentData(assignment.assignmentData);
     } else if (
@@ -356,7 +427,6 @@ export function App({ config, extras, registerActions }: AppProps) {
         await load(resolved);
       })().catch(() => undefined);
     }
-    if (config.passcodeProtected) requestPasscode();
     // Drain events queued while offline (legacy checkCaches, LIFO).
     if (api?.isEndpointConnected('logEvent')) {
       void api.flushEventQueue().catch(() => undefined);
@@ -435,8 +505,9 @@ export function App({ config, extras, registerActions }: AppProps) {
   const navStore = useMemo(() => {
     if (!config.group) return null;
     return createGroupNavStore(config.group, {
-      loadAssignment: (assignmentId) =>
-        void (dispatchRef.current ?? loadAssignment)(assignmentId).catch(() => undefined),
+      // The rejection propagates: the store reverts its selection when the
+      // load fails (the App has already surfaced the error).
+      loadAssignment: (assignmentId) => (dispatchRef.current ?? loadAssignment)(assignmentId),
       ...(getGroupDuration ? { getGroupDuration } : {}),
       logEvent: (eventType, category, label, message) =>
         logEvent(eventType, category, label, message, activeAssignmentUrlRef.current),
@@ -1154,7 +1225,6 @@ export function App({ config, extras, registerActions }: AppProps) {
               ...(forkUrl.trim() ? { url: forkUrl.trim() } : {}),
             })
             .then((response) => {
-              setForkBusy(false);
               if (response.success === true && typeof response['id'] === 'number') {
                 setForkOffer(null);
                 setForkUrl('');
@@ -1165,7 +1235,11 @@ export function App({ config, extras, registerActions }: AppProps) {
               } else {
                 setForkError(String(response['message'] ?? 'The fork request failed.'));
               }
-            });
+            })
+            .catch((error: unknown) => {
+              setForkError(`The fork request failed: ${String(error)}`);
+            })
+            .finally(() => setForkBusy(false));
         }}
         okayLabel={forkBusy ? 'Forking…' : 'Fork just this assignment'}
       >
@@ -1359,6 +1433,9 @@ export function App({ config, extras, registerActions }: AppProps) {
                 : undefined
             }
             onSaveSettings={(blob, fields) => {
+              // Optimistic live-apply; `before` restores it if the server
+              // says no (or never answers).
+              const before = active;
               setLoaded((prev) =>
                 prev
                   ? {
@@ -1372,7 +1449,30 @@ export function App({ config, extras, registerActions }: AppProps) {
                     }
                   : prev,
               );
-              if (api && active && api.isEndpointConnected('saveAssignment')) {
+              if (api && active && before && api.isEndpointConnected('saveAssignment')) {
+                const revert = (reason: string) => {
+                  setLoaded((prev) =>
+                    prev && prev.assignment.id === before.assignment.id
+                      ? {
+                          ...prev,
+                          assignment: {
+                            ...prev.assignment,
+                            settings: before.assignment.settings,
+                            name: before.assignment.name,
+                            url: before.assignment.url,
+                          },
+                        }
+                      : prev,
+                  );
+                  // Instructor-facing failure: footer badge + dev console,
+                  // never the student console.
+                  store.getState().setServerStatus('saveAssignment', 'failed', reason);
+                  store.getState().appendDevConsole({
+                    kind: 'stderr',
+                    text: `Saving the assignment settings failed: ${reason}`,
+                  });
+                };
+                store.getState().setServerStatus('saveAssignment', 'active');
                 void api
                   .saveAssignment({
                     assignment_id: active.assignment.id ?? '',
@@ -1388,10 +1488,16 @@ export function App({ config, extras, registerActions }: AppProps) {
                     ...(fields.reviewed !== undefined ? { reviewed: String(fields.reviewed) } : {}),
                   })
                   .then((response) => {
+                    if (response.success !== false) {
+                      store.getState().setServerStatus('saveAssignment', 'ready');
+                      return;
+                    }
+                    const message = String(response['message'] ?? 'The server rejected the save.');
+                    revert(message);
                     // Non-owner instructor save: the server rejects with
                     // forkable=true (helpers.py:55-60) - offer the fork
                     // (M7.9, LD-42; legacy startPossibleFork, server.js:657).
-                    if (response.success === false && response['forkable'] === true) {
+                    if (response['forkable'] === true) {
                       if (active.assignment.id != null) {
                         const rejectedId = active.assignment.id;
                         setForkRejectedIds((prev) => new Set(prev).add(rejectedId));
@@ -1399,7 +1505,8 @@ export function App({ config, extras, registerActions }: AppProps) {
                       setForkError('');
                       setForkOffer({ message: String(response['message'] ?? '') });
                     }
-                  });
+                  })
+                  .catch((error: unknown) => revert(String(error)));
               }
             }}
             assignmentHidden={active?.assignment.raw['hidden'] === true}
@@ -1414,6 +1521,10 @@ export function App({ config, extras, registerActions }: AppProps) {
               void sync?.saveFileNow('answer.py', studentCode);
             }}
             onGraded={(grade) => {
+              // A grade arriving after a switch belongs to the OLD problem:
+              // never credit it to whatever is loaded now.
+              const gradedId = active?.assignment.id ?? null;
+              if (gradedId !== activeAssignmentIdRef.current) return;
               void sync?.handleGraded(grade);
               // Display OR-chain (on_run.js:165) feeds the mark-submitted
               // text; the monotonic score feeds the instructor header.

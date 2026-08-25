@@ -64,6 +64,25 @@ def _studio_patch_pedal_traceback():
     fake_frame._studio_patched = True
 
 
+def _studio_safe_name(name, base):
+    """Validate a prefix-stripped staging name: relative, inside the cwd.
+
+    Raised errors surface as the job's PedalEnvironmentError (the runner
+    wraps staging) - a clear system error instead of writing '/etc/x' or
+    crashing on an empty key.
+    """
+    if not isinstance(base, str) or not base.strip():
+        raise ValueError('Cannot stage a file with an empty name: ' + repr(name))
+    cwd = os.getcwd()
+    path = os.path.normpath(os.path.join(cwd, base))
+    root = cwd.rstrip('/') + '/'
+    if path == cwd or not path.startswith(root):
+        raise ValueError(
+            'Cannot stage ' + repr(name) + ': the name escapes the working directory'
+        )
+    return os.path.relpath(path, cwd)
+
+
 def _studio_pedal_stage(files):
     if os.path.isdir(_INSTRUCTOR_PKG):
         shutil.rmtree(_INSTRUCTOR_PKG)
@@ -75,6 +94,7 @@ def _studio_pedal_stage(files):
         base = name[1:] if prefix else name
         if prefix in ('^', '$', '#'):
             continue  # never mounted for grading (A1: editor metadata/wire)
+        base = _studio_safe_name(name, base)
         parent = os.path.dirname(base)
         if parent:
             os.makedirs(parent, exist_ok=True)
@@ -313,6 +333,9 @@ def _studio_pedal_evaluate(evaluation, on_eval, options_json):
     _studio_patch_pedal_traceback()
     try:
         MAIN_REPORT.feedback.clear()
+        # Suppressed feedback is presented too (the resolver walks it) -
+        # leaving the last pass's entries would bleed into this one.
+        getattr(MAIN_REPORT, 'ignored_feedback', []).clear()
         from pedal.sandbox.commands import evaluate, get_sandbox
         student = get_sandbox(report=MAIN_REPORT)
         evaluate(evaluation, report=MAIN_REPORT)

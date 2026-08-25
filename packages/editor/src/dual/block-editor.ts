@@ -122,6 +122,8 @@ export class DualBlockEditor {
   private keyboardNav_ = false;
   private outOfDate_: string | null = null;
   private readOnlyDiv_: HTMLElement | null = null;
+  /** Live read-only state (setReadOnly may flip it after construction). */
+  private readOnly_: boolean;
   /** A shuffle requested while hidden - applied on the next visible load. */
   private pendingShuffle_ = false;
   private toolbox_: ToolboxSpec;
@@ -129,6 +131,7 @@ export class DualBlockEditor {
   constructor(host: BlockEditorHost) {
     this.host = host;
     this.toolbox_ = host.toolbox;
+    this.readOnly_ = host.readOnly;
     this.converter = new TextToBlocksConverter(host.converterConfiguration);
 
     host.blockContainer.style.cssFloat = 'left';
@@ -190,7 +193,7 @@ export class DualBlockEditor {
 
   /** Toolbox flyout width - used by the text editor's indent sidebar. */
   getToolbarWidth(): number {
-    if (this.host.readOnly) return 0;
+    if (this.readOnly_) return 0;
     const toolbox = this.workspace.getToolbox();
     return toolbox ? toolbox.getWidth() : 0;
   }
@@ -376,7 +379,6 @@ export class DualBlockEditor {
     } else {
       this.host.blockContainer.style.height = '0%';
       this.host.blockArea.style.height = '0%';
-      this.resizeReadOnlyDiv();
     }
   }
 
@@ -385,7 +387,6 @@ export class DualBlockEditor {
     this.host.blockEditor.style.width = this.host.blockArea.offsetWidth + 'px';
     this.host.blockEditor.style.height = this.host.blockArea.offsetHeight + 'px';
     Blockly.svgResize(this.workspace);
-    this.resizeReadOnlyDiv();
   }
 
   private resizeResponsively(): void {
@@ -408,29 +409,30 @@ export class DualBlockEditor {
     }
   }
 
-  /** Legacy read-only overlay (`.blockly-readonly-layer`). */
+  /**
+   * Legacy read-only overlay (`.blockly-readonly-layer`). Legacy appended
+   * it to the body at absolute page coordinates, which drifted on scroll
+   * and layout changes; here it lives inside the block area (the element
+   * that reserves the workspace's space) and simply fills it.
+   */
   setReadOnly(isReadOnly: boolean): void {
+    this.readOnly_ = isReadOnly;
     if (isReadOnly) {
       if (!this.readOnlyDiv_) {
-        this.readOnlyDiv_ = document.createElement('div');
-        this.readOnlyDiv_.className = 'blockly-readonly-layer';
-        document.body.appendChild(this.readOnlyDiv_);
+        const overlay = document.createElement('div');
+        overlay.className = 'blockly-readonly-layer';
+        overlay.style.left = '0';
+        overlay.style.top = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        this.host.blockArea.style.position = 'relative';
+        this.host.blockArea.appendChild(overlay);
+        this.readOnlyDiv_ = overlay;
       }
-      this.resizeReadOnlyDiv();
     } else if (this.readOnlyDiv_) {
       this.readOnlyDiv_.remove();
       this.readOnlyDiv_ = null;
     }
-  }
-
-  private resizeReadOnlyDiv(): void {
-    if (!this.readOnlyDiv_) return;
-    const rect = this.host.blockArea.getBoundingClientRect();
-    const style = this.readOnlyDiv_.style;
-    style.left = rect.left + window.scrollX + 'px';
-    style.top = rect.top + window.scrollY + 'px';
-    style.width = rect.width + 'px';
-    style.height = rect.height + 'px';
   }
 
   private changed(event: Blockly.Events.Abstract): void {

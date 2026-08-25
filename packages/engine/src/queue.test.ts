@@ -102,3 +102,35 @@ describe('engine mode detection (§6.6)', () => {
     );
   });
 });
+
+describe('JobQueue drop reporting', () => {
+  it('reports each on_change superseded by coalescing', async () => {
+    const dropped: string[] = [];
+    const queue = new JobQueue({
+      execute: async () => undefined,
+      schedule: () => () => undefined, // debounce never fires
+      onDropped: (j) => dropped.push(j.id),
+    });
+    queue.enqueue(job('c1', 'instructor.on_change'));
+    queue.enqueue(job('c2', 'instructor.on_change'));
+    queue.enqueue(job('c3', 'instructor.on_change'));
+    expect(dropped).toEqual(['c1', 'c2']);
+    expect(queue.pendingCount()).toBe(1);
+  });
+
+  it('clear() drops every waiting job and cancels the debounce', async () => {
+    const s = setup();
+    const dropped: string[] = [];
+    const queue = new JobQueue({
+      execute: async () => new Promise(() => undefined), // first job blocks forever
+      schedule: s.queue['schedule'],
+      onDropped: (j) => dropped.push(j.id),
+    });
+    queue.enqueue(job('running', 'student.run'));
+    queue.enqueue(job('waiting', 'student.run'));
+    queue.enqueue(job('change', 'instructor.on_change'));
+    queue.clear();
+    expect(dropped).toEqual(['waiting', 'change']);
+    expect(queue.pendingCount()).toBe(0);
+  });
+});

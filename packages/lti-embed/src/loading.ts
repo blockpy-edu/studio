@@ -9,11 +9,22 @@
 export const LOADING_NOTICE_TEXT =
   "Loading! Please wait. If this doesn't load, and you are using Safari, then please stop using Safari!";
 
+/** Minimal HTML attribute/text escaping for interpolated values. */
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 /** The notice markup: Safari warning + optional retry link to the legacy
- *  load_assignment URL (editor.html:20-23). */
+ *  load_assignment URL (editor.html:20-23). The URL is escaped - it comes
+ *  from the host page / query string. */
 export function loadingNoticeHtml(retryUrl?: string): string {
   const link = retryUrl
-    ? ` <a target="_blank" href="${retryUrl}">Click here to try again</a>.`
+    ? ` <a target="_blank" href="${escapeHtml(retryUrl)}">Click here to try again</a>.`
     : '';
   return `<span class='delete-on-load'>${LOADING_NOTICE_TEXT}${link}</span>`;
 }

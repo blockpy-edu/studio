@@ -26,6 +26,11 @@ export interface AutosaverOptions {
   readOnly?: () => boolean;
   /** Called when the server reports a version conflict on save. */
   onVersionChange?: (filename: string) => void;
+  /**
+   * A save request threw (network/transport failure). The file stays
+   * dirty; without this hook the failure is only logged to the console.
+   */
+  onSaveError?: (filename: string, error: unknown) => void;
   debounceMs?: number;
   /** Scheduler injection for tests. */
   schedule?: (fn: () => void, ms: number) => () => void;
@@ -67,7 +72,7 @@ export class Autosaver {
     this.pending.get(wireName)?.();
     const cancel = this.schedule(() => {
       this.pending.delete(wireName);
-      void this.save(wireName);
+      this.save(wireName).catch((error: unknown) => this.reportError(wireName, error));
     }, this.options.debounceMs ?? DEFAULT_DEBOUNCE_MS);
     this.pending.set(wireName, cancel);
   }
@@ -79,19 +84,42 @@ export class Autosaver {
     return this.save('answer.py');
   }
 
+  private reportError(wireName: string, error: unknown): void {
+    if (this.options.onSaveError) this.options.onSaveError(wireName, error);
+    else console.error(`[autosave] failed to save ${wireName}`, error);
+  }
+
   private async save(wireName: string): Promise<void> {
     if (this.options.readOnly?.() === true) return;
-    const contents = wireName.startsWith('#')
-      ? this.options.vfs.encodeBundle(wireName as never)
-      : this.options.vfs.read(wireName);
+    const vfs = this.options.vfs;
+    const isBundle = wireName.startsWith('#');
+    let contents: string | undefined;
+    if (isBundle) {
+      contents = vfs.encodeBundle(wireName as never);
+    } else {
+      contents = vfs.read(wireName);
+      // A DELETED individually-persisted file (`!on_change.py` /
+      // `!on_eval.py`, the only deletable magic names) is dirty with no
+      // contents. The server has no delete endpoint - the assignment
+      // column simply holds the text (Assignment.save_file) - and legacy
+      // pushed the emptied observable through the same saveFile watch, so
+      // persisting the deletion means saving an empty string.
+      if (contents === undefined && vfs.isDirty(wireName)) contents = '';
+    }
     if (contents === undefined) return;
     const response = await this.options.api.saveFile(wireName, contents);
     if (response['version_change'] === true) {
       this.options.onVersionChange?.(wireName);
       return;
     }
-    if (response['success'] !== false && !wireName.startsWith('#')) {
-      this.options.vfs.markClean(wireName);
+    if (response['success'] === false) return;
+    if (isBundle) {
+      // Every member (including deleted ones, dirty by name) rode along.
+      for (const legacyName of vfs.dirty()) {
+        if (vfs.bundleFor(legacyName) === wireName) vfs.markClean(legacyName);
+      }
+    } else {
+      vfs.markClean(wireName);
     }
   }
 }

@@ -234,6 +234,14 @@ describe('loading screen (§13, editor.html:20-23, 383)', () => {
     expect(withRetry).toContain('Click here to try again');
   });
 
+  it('HTML-escapes the retry URL (it comes from the host page)', () => {
+    const html = loadingNoticeHtml('/load?a=1&b=2"><script>alert(1)</script>');
+    expect(html).not.toContain('<script>');
+    expect(html).toContain(
+      'href="/load?a=1&amp;b=2&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;"',
+    );
+  });
+
   it('removes every .delete-on-load element', () => {
     document.body.innerHTML = `<span class="delete-on-load">a</span><div><p class="delete-on-load">b</p></div>`;
     removeLoadingScreen(document);

@@ -100,6 +100,10 @@ export function AssignmentHost(props: AssignmentHostProps) {
   const [editorVisible, setEditorVisible] = useState(true);
   const latest = useRef(props);
   latest.current = props;
+  // The rendered slots as of the last commit - restored when an editor
+  // load fails so a half-applied switch never lingers on screen.
+  const committed = useRef({ assignmentType, currentIds, editorVisible });
+  committed.current = { assignmentType, currentIds, editorVisible };
 
   const dispatch = useCallback(async (rawId: number) => {
     const { typeIndex, embed, loadEditorAssignment } = latest.current;
@@ -107,6 +111,7 @@ export function AssignmentHost(props: AssignmentHostProps) {
     replaceAssignmentIdInUrl(id, embed ?? false);
     const type = classifyAssignment(id, typeIndex);
     const isBlockPy = typeIndex.blockpy.includes(id);
+    const before = committed.current;
     // The six non-blockpy slots reset on EVERY dispatch
     // (editor.html:332-337) - the per-type remount semantics.
     setCurrentIds(
@@ -122,7 +127,17 @@ export function AssignmentHost(props: AssignmentHostProps) {
       return;
     }
     setEditorVisible(true); // editor.show()
-    await loadEditorAssignment(id);
+    try {
+      await loadEditorAssignment(id);
+    } catch (error) {
+      // The load failed (the editor surfaces its own error): put the
+      // previous surface back rather than leaving the slots half-switched
+      // with the editor shown over a stale assignment.
+      setAssignmentType(before.assignmentType);
+      setCurrentIds(before.currentIds);
+      setEditorVisible(before.editorVisible);
+      throw error;
+    }
     // whenDone (editor.html:325-329): the type/blockpy-id flip waits for
     // the editor's async load; unknown ids leave the type null.
     setAssignmentType(isBlockPy ? 'blockpy' : null);
@@ -133,9 +148,12 @@ export function AssignmentHost(props: AssignmentHostProps) {
     latest.current.onReady?.(dispatch);
     // §15.3: the global alias navigation and course content call.
     const target = window as unknown as Record<string, unknown>;
-    target['altAssignmentChangingFunction'] = dispatch;
+    // Legacy content calls the global without awaiting it - swallow the
+    // rejection there (the failure is already surfaced by the editor).
+    const alias = (assignmentId: number) => dispatch(assignmentId).catch(() => undefined);
+    target['altAssignmentChangingFunction'] = alias;
     return () => {
-      if (target['altAssignmentChangingFunction'] === dispatch) {
+      if (target['altAssignmentChangingFunction'] === alias) {
         delete target['altAssignmentChangingFunction'];
       }
     };

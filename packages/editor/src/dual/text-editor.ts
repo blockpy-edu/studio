@@ -26,6 +26,7 @@ import {
   RangeSetBuilder,
   StateEffect,
   StateField,
+  Transaction,
 } from '@codemirror/state';
 import { Decoration, EditorView, keymap, lineNumbers } from '@codemirror/view';
 import {
@@ -182,6 +183,7 @@ export class DualTextEditor {
   private readonly readOnly = new Compartment();
   private readonly autocomplete = new Compartment();
   private readonly theme = new Compartment();
+  private readonly historyCompartment = new Compartment();
   private mode_: keyof typeof DualTextEditor.VIEW_CONFIGURATIONS = 'split';
   /** Code stashed while hidden, applied on next show (legacy `outOfDate_`). */
   private outOfDate_: string | null = null;
@@ -194,7 +196,7 @@ export class DualTextEditor {
         doc: '',
         extensions: [
           lineNumbers(),
-          history(),
+          this.historyCompartment.of(history()),
           foldGutter(),
           bracketMatching(),
           indentUnit.of('    '),
@@ -261,8 +263,21 @@ export class DualTextEditor {
     if (code === this.getCode()) return;
     this.view.dispatch({
       changes: { from: 0, to: this.view.state.doc.length, insert: code },
-      annotations: quietly ? silentSet.of(true) : undefined,
+      // A programmatic whole-document replacement (sync loop, file switch,
+      // Reset, History "Use") must not become an undo step - otherwise
+      // Ctrl-Z would resurrect another file's text.
+      annotations: quietly ? [silentSet.of(true), Transaction.addToHistory.of(false)] : undefined,
     });
+  }
+
+  /**
+   * Drop the undo/redo stack (file switch, Reset, History "Use"): the
+   * history compartment is swapped out and back in, which recreates the
+   * history state field from scratch.
+   */
+  clearHistory(): void {
+    this.view.dispatch({ effects: this.historyCompartment.reconfigure([]) });
+    this.view.dispatch({ effects: this.historyCompartment.reconfigure(history()) });
   }
 
   isVisible(): boolean {

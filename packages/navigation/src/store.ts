@@ -172,11 +172,24 @@ export class GroupNavStore {
     return entries[entries.length - 1]?.id ?? this.snapshot.currentId;
   }
 
-  /** loadNewAssignment: the UI reflects the target before the load runs. */
+  /**
+   * loadNewAssignment: the UI reflects the target before the load runs.
+   * A rejected dispatch reverts the selection (unless a later navigation
+   * already moved it) so the selector never claims an assignment that
+   * failed to load.
+   */
   navigateTo(assignmentId: number): void {
+    const previousId = this.snapshot.currentId;
     this.setState({ currentId: assignmentId });
     if (this.options.loadAssignment) {
-      void this.options.loadAssignment(assignmentId);
+      let result: void | Promise<void>;
+      try {
+        result = this.options.loadAssignment(assignmentId);
+      } catch {
+        this.revertNavigation(assignmentId, previousId);
+        return;
+      }
+      void Promise.resolve(result).catch(() => this.revertNavigation(assignmentId, previousId));
       return;
     }
     const alt = (globalThis as Record<string, unknown>)['altAssignmentChangingFunction'];
@@ -218,6 +231,10 @@ export class GroupNavStore {
     const indices = this.snapshot.entries.map((entry) => entry.id);
     const index = indices.indexOf(this.snapshot.currentId);
     this.navigateTo(indices[index - 1] || this.firstId);
+  }
+
+  private revertNavigation(failedId: number, previousId: number): void {
+    if (this.snapshot.currentId === failedId) this.setState({ currentId: previousId });
   }
 
   /** Host-driven sync (the select stays honest when dispatch is external). */

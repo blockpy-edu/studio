@@ -7,7 +7,7 @@
  * from the validation port; the preview renders the real student
  * QuestionView and grades scratch answers through the LOCAL engine.
  */
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { QuestionView } from '../QuestionView';
 import { defaultAnswer } from '../documents';
 import { checkQuizQuestion } from '../grading';
@@ -24,7 +24,8 @@ export interface QuestionEditorProps {
   renderMarkdown: (text: string) => string;
   onChangeQuestion: (question: QuizQuestion) => void;
   onChangeCheck: (check: Record<string, unknown>) => void;
-  onRename: (newId: string) => void;
+  /** Returns false when the rename is rejected (empty or already in use). */
+  onRename: (newId: string) => boolean;
   onDelete: () => void;
   onMove: (delta: number) => void;
 }
@@ -43,8 +44,49 @@ const QUESTION_TEMPLATE_TYPES = [
 ] as const;
 
 const lines = (value: unknown): string =>
-  Array.isArray(value) ? (value as string[]).join('\n') : '';
+  typeof value === 'string' ? value : Array.isArray(value) ? (value as string[]).join('\n') : '';
 const unlines = (value: string): string[] => value.split('\n').filter((line) => line.length > 0);
+
+/**
+ * "One per line" textarea. The typed text is kept locally so Enter (an
+ * empty trailing line) survives; the committed value is the non-empty
+ * lines. The draft resyncs whenever the incoming array changes to
+ * something the draft does not already represent (e.g. an Advanced JSON
+ * edit of the same field).
+ */
+function LinesField({
+  label,
+  value,
+  onChange,
+  style,
+}: {
+  label: string;
+  value: unknown;
+  onChange: (lines: string[]) => void;
+  style?: CSSProperties;
+}) {
+  const joined = lines(value);
+  const [text, setText] = useState(joined);
+  const [previousJoined, setPreviousJoined] = useState(joined);
+  if (joined !== previousJoined) {
+    setPreviousJoined(joined);
+    if (joined !== unlines(text).join('\n')) setText(joined);
+  }
+  return (
+    <label style={{ display: 'block' }}>
+      {label}
+      <textarea
+        className="form-control quizzer-editor-lines"
+        style={{ width: '100%', ...style }}
+        value={text}
+        onChange={(event) => {
+          setText(event.target.value);
+          onChange(unlines(event.target.value));
+        }}
+      />
+    </label>
+  );
+}
 
 function JsonField({
   label,
@@ -55,8 +97,17 @@ function JsonField({
   value: unknown;
   onChange: (parsed: unknown) => void;
 }) {
-  const [text, setText] = useState(() => JSON.stringify(value ?? null, null, 2));
+  const serialized = JSON.stringify(value ?? null, null, 2);
+  const [text, setText] = useState(serialized);
+  const [previousSerialized, setPreviousSerialized] = useState(serialized);
   const [error, setError] = useState('');
+  const [focused, setFocused] = useState(false);
+  // Resync from props when the value changes underneath us (another widget
+  // edited the same field) - unless the user is mid-edit in this field.
+  if (serialized !== previousSerialized) {
+    setPreviousSerialized(serialized);
+    if (!focused && !error) setText(serialized);
+  }
   return (
     <label className="quizzer-editor-json-field" style={{ display: 'block' }}>
       {label}
@@ -64,6 +115,8 @@ function JsonField({
         className="form-control"
         style={{ width: '100%', minHeight: '80px', fontFamily: 'monospace' }}
         value={text}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         onChange={(event) => {
           setText(event.target.value);
           try {
@@ -85,6 +138,27 @@ export function QuestionEditor(props: QuestionEditorProps) {
   const [previewAnswer, setPreviewAnswer] = useState<StudentAnswer | null>(null);
   const [previewFeedback, setPreviewFeedback] = useState<QuizQuestionFeedback | null>(null);
   const [idDraft, setIdDraft] = useState(questionId);
+  const [idError, setIdError] = useState('');
+
+  const commitRename = () => {
+    const nextId = idDraft.trim();
+    if (nextId === questionId) {
+      setIdDraft(questionId);
+      setIdError('');
+      return;
+    }
+    if (!nextId) {
+      setIdDraft(questionId);
+      setIdError('Question id cannot be empty.');
+      return;
+    }
+    if (!props.onRename(nextId)) {
+      setIdDraft(questionId);
+      setIdError(`A question with id "${nextId}" already exists.`);
+      return;
+    }
+    setIdError('');
+  };
 
   const setQ = (patch: Partial<QuizQuestion>) => props.onChangeQuestion({ ...question, ...patch });
   const setC = (field: string, value: unknown) => {
@@ -148,15 +222,11 @@ export function QuestionEditor(props: QuestionEditorProps) {
         const correct = multi ? ((check['correct'] ?? []) as string[]) : check['correct'];
         return (
           <>
-            <label style={{ display: 'block' }}>
-              Options (one per line)
-              <textarea
-                className="form-control"
-                style={{ width: '100%' }}
-                value={lines(question.answers)}
-                onChange={(event) => setQ({ answers: unlines(event.target.value) })}
-              />
-            </label>
+            <LinesField
+              label="Options (one per line)"
+              value={question.answers}
+              onChange={(answers) => setQ({ answers })}
+            />
             <fieldset>
               <legend style={{ fontSize: '1em' }}>Correct answer{multi ? 's' : ''}</legend>
               {options.map((option, optionIndex) => (
@@ -213,24 +283,16 @@ export function QuestionEditor(props: QuestionEditorProps) {
         const correct = (check['correct'] ?? []) as Array<string | string[]>;
         return (
           <>
-            <label style={{ display: 'block' }}>
-              Statements (one per line)
-              <textarea
-                className="form-control"
-                style={{ width: '100%' }}
-                value={lines(question.statements)}
-                onChange={(event) => setQ({ statements: unlines(event.target.value) })}
-              />
-            </label>
-            <label style={{ display: 'block' }}>
-              Options (one per line)
-              <textarea
-                className="form-control"
-                style={{ width: '100%' }}
-                value={lines(question.answers)}
-                onChange={(event) => setQ({ answers: unlines(event.target.value) })}
-              />
-            </label>
+            <LinesField
+              label="Statements (one per line)"
+              value={question.statements}
+              onChange={(statements) => setQ({ statements })}
+            />
+            <LinesField
+              label="Options (one per line)"
+              value={question.answers}
+              onChange={(answers) => setQ({ answers })}
+            />
             <label>
               <input
                 type="checkbox"
@@ -292,17 +354,11 @@ export function QuestionEditor(props: QuestionEditorProps) {
             </p>
             {Object.keys(answers).map((blankId) => (
               <div key={blankId}>
-                <label style={{ display: 'block' }}>
-                  Options for [{blankId}] (one per line)
-                  <textarea
-                    className="form-control"
-                    style={{ width: '100%' }}
-                    value={lines(answers[blankId])}
-                    onChange={(event) =>
-                      setQ({ answers: { ...answers, [blankId]: unlines(event.target.value) } })
-                    }
-                  />
-                </label>
+                <LinesField
+                  label={`Options for [${blankId}] (one per line)`}
+                  value={answers[blankId]}
+                  onChange={(options) => setQ({ answers: { ...answers, [blankId]: options } })}
+                />
                 <label style={{ display: 'block' }}>
                   Correct for [{blankId}]{' '}
                   <select
@@ -373,32 +429,18 @@ export function QuestionEditor(props: QuestionEditorProps) {
               Regular expressions
             </label>
             {usesRegex ? (
-              <label style={{ display: 'block' }}>
-                Accepted patterns (one regex per line)
-                <textarea
-                  className="form-control"
-                  style={{ width: '100%', fontFamily: 'monospace' }}
-                  value={lines(check['correct_regex'])}
-                  onChange={(event) => setC('correct_regex', unlines(event.target.value))}
-                />
-              </label>
+              <LinesField
+                label="Accepted patterns (one regex per line)"
+                value={check['correct_regex']}
+                style={{ fontFamily: 'monospace' }}
+                onChange={(patterns) => setC('correct_regex', patterns)}
+              />
             ) : (
-              <label style={{ display: 'block' }}>
-                Accepted answers (one per line; single line = exact string)
-                <textarea
-                  className="form-control"
-                  style={{ width: '100%' }}
-                  value={
-                    typeof (check['correct'] ?? check['correct_exact']) === 'string'
-                      ? ((check['correct'] ?? check['correct_exact']) as string)
-                      : lines(check['correct'] ?? check['correct_exact'])
-                  }
-                  onChange={(event) => {
-                    const parts = unlines(event.target.value);
-                    setC('correct', parts.length === 1 ? parts[0] : parts);
-                  }}
-                />
-              </label>
+              <LinesField
+                label="Accepted answers (one per line; single line = exact string)"
+                value={check['correct'] ?? check['correct_exact']}
+                onChange={(parts) => setC('correct', parts.length === 1 ? parts[0] : parts)}
+              />
             )}
             <label style={{ display: 'block' }}>
               Feedback when wrong (wrong_any)
@@ -481,8 +523,10 @@ export function QuestionEditor(props: QuestionEditorProps) {
             style={{ width: '10em' }}
             value={idDraft}
             onChange={(event) => setIdDraft(event.target.value)}
-            onBlur={() => idDraft !== questionId && idDraft && props.onRename(idDraft)}
+            onBlur={commitRename}
+            aria-invalid={idError ? true : undefined}
           />
+          {idError && <small className="text-danger quizzer-editor-id-error ml-1">{idError}</small>}
         </h5>
         {issues.length > 0 && (
           <ul className="quizzer-editor-issues">

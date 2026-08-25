@@ -13,6 +13,12 @@ export interface JobQueueOptions {
   /** on_change debounce window (legacy feel; configurable). */
   debounceMs?: number;
   schedule?: (fn: () => void, ms: number) => () => void;
+  /**
+   * Called with every job the queue discards without executing: an
+   * on_change superseded by a newer one (coalescing), or anything pending
+   * when `clear()` runs. Lets the owner settle the job's promise.
+   */
+  onDropped?: (job: EngineJob) => void;
 }
 
 export class JobQueue {
@@ -34,7 +40,9 @@ export class JobQueue {
   enqueue(job: EngineJob): void {
     if (PHASE_PRIORITY[job.phase] === 'background') {
       // coalesce: newest on_change replaces any pending one
+      const superseded = this.pendingOnChange;
       this.pendingOnChange = job;
+      if (superseded) this.options.onDropped?.(superseded);
       this.cancelDebounce?.();
       this.cancelDebounce = this.schedule(() => {
         this.cancelDebounce = null;
@@ -44,6 +52,18 @@ export class JobQueue {
     }
     this.userJobs.push(job);
     void this.pump();
+  }
+
+  /** Drop every waiting job (reported through `onDropped`); the executing
+   * job is the owner's to settle. */
+  clear(): void {
+    this.cancelDebounce?.();
+    this.cancelDebounce = null;
+    const dropped = [...this.userJobs];
+    this.userJobs = [];
+    if (this.pendingOnChange) dropped.push(this.pendingOnChange);
+    this.pendingOnChange = null;
+    for (const job of dropped) this.options.onDropped?.(job);
   }
 
   /** Jobs waiting (excluding the one executing). */

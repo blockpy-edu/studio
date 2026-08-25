@@ -5,15 +5,30 @@ import { SubmissionSync, type SubmissionSyncOptions } from './submission-sync';
 interface Posted {
   url: string;
   body: URLSearchParams;
+  keepalive?: boolean;
 }
 
-function harness(overrides: Partial<SubmissionSyncOptions> = {}, urls?: Record<string, string>) {
+type FetchStub = (
+  url: string,
+  init: { body?: string | FormData; keepalive?: boolean },
+) => Promise<{ ok: boolean; status?: number; json(): Promise<unknown> }>;
+
+function harness(
+  overrides: Partial<SubmissionSyncOptions> = {},
+  urls?: Record<string, string>,
+  transportOverrides: { fetch?: (inner: FetchStub) => FetchStub; maxRetries?: number } = {},
+) {
   const posted: Posted[] = [];
   let respondWith: Record<string, unknown> = { success: true };
-  const fetchStub = async (url: string, init: { body?: string | FormData }) => {
-    posted.push({ url, body: new URLSearchParams(String(init.body)) });
+  const baseFetch: FetchStub = async (url, init) => {
+    posted.push({
+      url,
+      body: new URLSearchParams(String(init.body)),
+      ...(init.keepalive !== undefined ? { keepalive: init.keepalive } : {}),
+    });
     return { ok: true, json: async () => respondWith };
   };
+  const fetchStub = transportOverrides.fetch ? transportOverrides.fetch(baseFetch) : baseFetch;
   const context: ApiContext = {
     assignmentId: 101,
     assignmentGroupId: 11,
@@ -31,7 +46,13 @@ function harness(overrides: Partial<SubmissionSyncOptions> = {}, urls?: Record<s
       updateSubmission: '/api/update_submission',
     },
     context,
-    transport: new Transport({ fetch: fetchStub, storage: new MemoryStorage(), maxRetries: 0 }),
+    transport: new Transport({
+      fetch: fetchStub,
+      storage: new MemoryStorage(),
+      maxRetries: transportOverrides.maxRetries ?? 0,
+      // Real macrotask ordering, no real backoff waits.
+      schedule: (fn) => setTimeout(fn, 0),
+    }),
   });
   const setStatus = vi.fn();
   const markCorrect = vi.fn();
@@ -63,11 +84,38 @@ function harness(overrides: Partial<SubmissionSyncOptions> = {}, urls?: Record<s
   };
   return {
     sync,
+    api,
+    context,
     posted,
+    scheduled,
     setStatus,
     markCorrect,
     flushTimers,
     setResponse: (r: Record<string, unknown>) => (respondWith = r),
+  };
+}
+
+const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+/** A fetch wrapper that holds the FIRST request until `release()` runs. */
+function gateFirst(): {
+  wrap: (inner: FetchStub) => FetchStub;
+  release: () => void;
+  started: () => number;
+} {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let started = 0;
+  return {
+    wrap: (inner) => async (url, init) => {
+      started += 1;
+      if (started === 1) await gate;
+      return inner(url, init);
+    },
+    release: () => release(),
+    started: () => started,
   };
 }
 
@@ -114,6 +162,134 @@ describe('saveFile autosave (server.js:114-134, 637-655)', () => {
   });
 });
 
+describe('cross-assignment autosave (ids frozen at edit time)', () => {
+  it('a debounced save that fires after a switch still carries the OLD ids', async () => {
+    const { sync, context, posted, flushTimers } = harness();
+    sync.saveFileDebounced('answer.py', 'old problem code');
+    // The user navigates before the 1 s debounce fires.
+    context.assignmentId = 202;
+    context.submissionId = 6002;
+    context.assignmentVersion = 9;
+    context.submissionVersion = 1;
+    await flushTimers();
+    expect(posted).toHaveLength(1);
+    expect(posted[0]!.body.get('assignment_id')).toBe('101');
+    expect(posted[0]!.body.get('submission_id')).toBe('5001');
+    expect(posted[0]!.body.get('assignment_version')).toBe('3');
+    expect(posted[0]!.body.get('version')).toBe('7');
+    // A fresh edit uses the NEW ids.
+    sync.saveFileDebounced('answer.py', 'new problem code');
+    await flushTimers();
+    expect(posted[1]!.body.get('assignment_id')).toBe('202');
+    expect(posted[1]!.body.get('submission_id')).toBe('6002');
+  });
+
+  it('flushPending sends every waiting save immediately with its frozen ids', async () => {
+    const { sync, context, posted, scheduled } = harness();
+    sync.saveFileDebounced('answer.py', 'a');
+    sync.saveFileDebounced('!on_run.py', 'b');
+    context.assignmentId = 202;
+    await sync.flushPending();
+    await tick();
+    expect(scheduled).toHaveLength(0); // timers cancelled, not fired later
+    expect(sync.pendingFiles).toEqual([]);
+    expect(posted.map((p) => [p.body.get('filename'), p.body.get('assignment_id')])).toEqual([
+      ['answer.py', '101'],
+      ['!on_run.py', '101'],
+    ]);
+  });
+
+  it('flushPending({keepalive}) is the unload path: one keepalive POST per file', async () => {
+    const { sync, posted, scheduled } = harness();
+    sync.saveFileDebounced('answer.py', 'unsaved');
+    void sync.flushPending({ keepalive: true });
+    await tick();
+    expect(scheduled).toHaveLength(0);
+    expect(posted).toHaveLength(1);
+    expect(posted[0]!.keepalive).toBe(true);
+    expect(posted[0]!.body.get('code')).toBe('unsaved');
+  });
+});
+
+describe('save ordering (serialized per filename)', () => {
+  it('a newer save waits for the in-flight older one - never overtakes it', async () => {
+    const gate = gateFirst();
+    const { sync, posted } = harness({}, undefined, { fetch: gate.wrap });
+    const first = sync.saveFileNow('answer.py', 'v1');
+    await tick();
+    const second = sync.saveFileNow('answer.py', 'v2');
+    await tick();
+    expect(gate.started()).toBe(1); // v2 is queued behind v1, not racing it
+    gate.release();
+    await Promise.all([first, second]);
+    expect(posted.map((p) => p.body.get('code'))).toEqual(['v1', 'v2']);
+  });
+
+  it('a save superseded while queued is skipped (latest content wins)', async () => {
+    const gate = gateFirst();
+    const { sync, posted } = harness({}, undefined, { fetch: gate.wrap });
+    const first = sync.saveFileNow('answer.py', 'v1');
+    await tick();
+    const second = sync.saveFileNow('answer.py', 'v2');
+    const third = sync.saveFileNow('answer.py', 'v3');
+    gate.release();
+    await Promise.all([first, second, third]);
+    expect(posted.map((p) => p.body.get('code'))).toEqual(['v1', 'v3']);
+  });
+
+  it('different files save concurrently', async () => {
+    const gate = gateFirst();
+    const { sync } = harness({}, undefined, { fetch: gate.wrap });
+    const first = sync.saveFileNow('answer.py', 'v1');
+    await tick();
+    const other = sync.saveFileNow('!on_run.py', 'grader');
+    await tick();
+    expect(gate.started()).toBe(2);
+    gate.release();
+    await Promise.all([first, other]);
+  });
+});
+
+describe('retry badge lifecycle (bounded retry)', () => {
+  it('shows RETRYING while the transport retries, then READY', async () => {
+    let failures = 1;
+    const { sync, setStatus } = harness({}, undefined, {
+      maxRetries: 3,
+      fetch: (inner) => async (url, init) => {
+        if (failures-- > 0) throw new Error('offline');
+        return inner(url, init);
+      },
+    });
+    await sync.saveFileNow('answer.py', 'code');
+    expect(setStatus.mock.calls.map((call) => call[1])).toEqual(['active', 'retrying', 'ready']);
+  });
+
+  it('shows FAILED once retries are exhausted (no eternal "active")', async () => {
+    const { sync, setStatus } = harness({}, undefined, {
+      maxRetries: 1,
+      fetch: () => async () => {
+        throw new Error('offline');
+      },
+    });
+    await sync.saveFileNow('answer.py', 'code');
+    expect(setStatus.mock.calls.map((call) => call[1])).toEqual(['active', 'retrying', 'failed']);
+  });
+
+  it('a 4xx fails immediately without retrying', async () => {
+    const attempts = vi.fn();
+    const { sync, setStatus } = harness({}, undefined, {
+      maxRetries: 5,
+      fetch: () => async () => {
+        attempts();
+        return { ok: false, status: 403, json: async () => ({}) };
+      },
+    });
+    await sync.saveFileNow('answer.py', 'code');
+    expect(attempts).toHaveBeenCalledTimes(1);
+    expect(setStatus.mock.calls.map((call) => call[1])).toEqual(['active', 'failed']);
+  });
+});
+
 describe('version_change banner (LD-11, spec §7.4)', () => {
   it('fires onVersionChange when saveFile reports a stale version', async () => {
     const onVersionChange = vi.fn();
@@ -137,6 +313,27 @@ describe('version_change banner (LD-11, spec §7.4)', () => {
     expect(onVersionChange).not.toHaveBeenCalled();
     // A later, unrelated change still surfaces.
     await sync.saveFileNow('answer.py', 'v2');
+    expect(onVersionChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('a FAILED instructor-file save bumps nothing - the next version_change is real', async () => {
+    const onVersionChange = vi.fn();
+    const { sync, setResponse } = harness({ onVersionChange });
+    setResponse({ success: false, message: 'rejected' });
+    await sync.saveFileNow('!on_run.py', 'give_partial(0.5)');
+    setResponse({ success: true, version_change: true });
+    await sync.saveFileNow('answer.py', 'v1');
+    expect(onVersionChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('a read-only instructor-file save bumps nothing either', async () => {
+    const onVersionChange = vi.fn();
+    let readOnly = true;
+    const { sync, setResponse } = harness({ onVersionChange, readOnly: () => readOnly });
+    await sync.saveFileNow('!on_run.py', 'x'); // never left the client
+    readOnly = false;
+    setResponse({ success: true, version_change: true });
+    await sync.saveFileNow('answer.py', 'v1');
     expect(onVersionChange).toHaveBeenCalledTimes(1);
   });
 });
@@ -216,6 +413,26 @@ describe('§14.3 grading sequence (on_run.js:164-175, server.js:663-693)', () =>
     await sync.handleGraded({ success: true, score: 1, hideCorrectness: false });
     // Legacy quirk (server.js:687-689): the callback ignores response.success.
     expect(markCorrect).toHaveBeenCalledWith(101);
+  });
+
+  it('marks the assignment that was GRADED, even if the user switched mid-POST', async () => {
+    let releaseImage!: (value: string) => void;
+    const { sync, context, markCorrect, posted } = harness({
+      getImage: () =>
+        new Promise<string>((resolve) => {
+          releaseImage = resolve;
+        }),
+    });
+    const graded = sync.handleGraded({ success: true, score: 1, hideCorrectness: false });
+    await tick();
+    context.assignmentId = 202; // navigation happened while the image captured
+    context.submissionId = 6002;
+    releaseImage('');
+    await graded;
+    expect(markCorrect).toHaveBeenCalledWith(101);
+    expect(markCorrect).not.toHaveBeenCalledWith(202);
+    expect(posted[0]!.body.get('assignment_id')).toBe('101');
+    expect(posted[0]!.body.get('submission_id')).toBe('5001');
   });
 
   it('hide/incorrect block markCorrect', async () => {

@@ -185,6 +185,23 @@ export function QuestionView(props: QuestionViewProps) {
     return question.retainOrder ? [...options] : seededShuffle([...options], props.shuffleSeed);
   }, [question, props.shuffleSeed]);
 
+  // Markdown-rendered option/statement HTML, memoized per question so the
+  // markdown pass does not rerun on every keystroke elsewhere in the quiz.
+  const optionHtml = useMemo(
+    () =>
+      question.type === 'multiple_choice_question'
+        ? ((question.answers ?? []) as string[]).map((option) => renderMarkdown(option))
+        : [],
+    [question, renderMarkdown],
+  );
+  const statementHtml = useMemo(
+    () =>
+      question.type === 'matching_question'
+        ? (question.statements ?? []).map((statement) => renderMarkdown(statement))
+        : [],
+    [question, renderMarkdown],
+  );
+
   const setKeyed = (key: string, value: string) => {
     const current = { ...((answer ?? {}) as KeyedTextAnswer) };
     current[key] = value;
@@ -237,7 +254,7 @@ export function QuestionView(props: QuestionViewProps) {
                     disabled={readOnly}
                     onChange={() => props.onChange(option)}
                   />
-                  <span dangerouslySetInnerHTML={{ __html: renderMarkdown(option) }} />
+                  <span dangerouslySetInnerHTML={{ __html: optionHtml[optionIndex] ?? '' }} />
                 </label>
               </div>
             ))}
@@ -282,11 +299,11 @@ export function QuestionView(props: QuestionViewProps) {
         const chosen = (answer ?? []) as MatchingAnswer;
         return (
           <div className="container">
-            {(question.statements ?? []).map((statement, statementIndex) => (
+            {(question.statements ?? []).map((_statement, statementIndex) => (
               <div className="row justify-content-between mb-3" key={statementIndex}>
                 <div
                   className="col"
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(statement) }}
+                  dangerouslySetInnerHTML={{ __html: statementHtml[statementIndex] ?? '' }}
                 />
                 <div className="col">
                   <select

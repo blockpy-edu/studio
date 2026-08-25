@@ -16,7 +16,7 @@ export interface DualEditorViewProps extends Omit<
 > {
   /** Current code; pushed into the editor quietly when it differs. */
   code?: string;
-  /** Fired on every code change (user edit in either half, or programmatic). */
+  /** Fired on user edits in either half (programmatic/prop sets are quiet). */
   onCodeChange?: (code: string) => void;
   mode?: DualEditorMode;
   readOnly?: boolean;
@@ -48,7 +48,8 @@ export function DualEditorView(props: DualEditorViewProps) {
       indentSidebar: initial.indentSidebar,
     });
     editor.current = instance;
-    if (initial.code) instance.setCode(initial.code);
+    // Quiet: the initial code is not a user edit (no autosave/dirty).
+    if (initial.code) instance.setCode(initial.code, false, false);
     instance.addChangeListener((event) => {
       latestProps.current.onCodeChange?.(event.value);
     });
@@ -63,7 +64,8 @@ export function DualEditorView(props: DualEditorViewProps) {
 
   useEffect(() => {
     if (editor.current && props.code !== undefined && props.code !== editor.current.getCode()) {
-      editor.current.setCode(props.code);
+      // External set: do not echo it back through onCodeChange.
+      editor.current.setCode(props.code, false, false);
     }
   }, [props.code]);
 

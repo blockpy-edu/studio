@@ -220,3 +220,33 @@ describe('quiz.preprocess (§6.5)', () => {
     expect(result.value).toBeUndefined();
   });
 });
+
+describe('staging and preprocess hardening', () => {
+  it('rejects file names that escape the mount instead of writing them', async () => {
+    await expect(
+      runner.execute(job({ code: 'pass', files: { '../escape.txt': 'x' } })),
+    ).rejects.toThrow(/escapes the working directory/);
+    await expect(runner.execute(job({ code: 'pass', files: { '/etc/x': 'x' } }))).rejects.toThrow(
+      /escapes the working directory/,
+    );
+    await expect(runner.execute(job({ code: 'pass', files: { '': 'x' } }))).rejects.toThrow(
+      /empty name/,
+    );
+    // A healthy run still works afterwards (nothing half-staged).
+    const ok = await runner.execute(
+      job({ code: 'print(open("a/b.txt").read())', files: { 'a/b.txt': 'nested' } }),
+    );
+    expect(ok.stdout).toBe('nested\n');
+  });
+
+  it('reports a non-serializable quiz.preprocess result as a SystemError, not a student error', async () => {
+    const result = await runner.execute(
+      job({ phase: 'quiz.preprocess', code: 'result = {"f": lambda: 1}' }),
+    );
+    expect(result.success).toBe(false);
+    expect(result.error?.type).toBe('SystemError');
+    expect(result.error?.message).toContain('not JSON-serializable');
+    const fine = await runner.execute(job({ phase: 'quiz.preprocess', code: 'result = [1, 2]' }));
+    expect(fine.value).toBe('[1, 2]');
+  });
+});

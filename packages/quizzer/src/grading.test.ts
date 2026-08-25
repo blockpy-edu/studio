@@ -135,6 +135,24 @@ describe('checkQuizQuestion (process_quiz port, quizzes.py:108-228)', () => {
   });
 });
 
+describe('feedback lookups ignore prototype keys', () => {
+  it('student-typed `constructor` / `__proto__` fall through to wrong_any', () => {
+    const question = { type: 'short_answer_question', body: 'x', points: 1 } as const;
+    const check = { correct: 'right', wrong_any: 'Nope', feedback: { other: 'hm' } };
+    expect(checkQuizQuestion(question, check, 'constructor')?.message).toBe('Nope');
+    expect(checkQuizQuestion(question, check, '__proto__')?.message).toBe('Nope');
+    const mcq: QuizQuestion = {
+      type: 'multiple_choice_question',
+      body: 'x',
+      points: 1,
+      answers: ['a', 'constructor'],
+    };
+    expect(checkQuizQuestion(mcq, { correct: 'a', feedback: {} }, 'constructor')?.message).toBe(
+      'Incorrect',
+    );
+  });
+});
+
 describe('processQuiz totals (quizzes.py:58-99)', () => {
   const INSTRUCTIONS: QuizInstructions = {
     questions: {
@@ -262,7 +280,7 @@ describe('validateQuiz (bakery quiz_check port)', () => {
         },
       },
     );
-    expect(issues.some((issue) => issue.message.includes('Invalid regex'))).toBe(true);
+    expect(issues.some((issue) => issue.message.includes('Could not compile regex'))).toBe(true);
     expect(issues.some((issue) => issue.message.includes('not in the list of answers'))).toBe(true);
   });
 

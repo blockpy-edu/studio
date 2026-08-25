@@ -1,9 +1,9 @@
-/**
- * Transport conformance: auth placement (A2 §1.1), queue semantics (A2 §2)
+﻿/**
+ * Transport conformance: auth placement (A2 Â§1.1), queue semantics (A2 Â§2)
  * with the D2-B fixes (ledger LD-2a/2b/2c).
  */
 import { describe, expect, it, vi } from 'vitest';
-import { encodeForm, Transport, type FetchLike } from './transport';
+import { encodeForm, Transport, TransportError, type FetchLike } from './transport';
 
 const okFetch =
   (responses: Array<Record<string, unknown>> = []): FetchLike =>
@@ -12,7 +12,7 @@ const okFetch =
     json: async () => responses.shift() ?? { success: true, ip: '127.0.0.1' },
   });
 
-describe('auth placement (A2 §1.1)', () => {
+describe('auth placement (A2 Â§1.1)', () => {
   it('sends the access token as a Bearer header, never in the body', async () => {
     let captured: { headers: Record<string, string>; body?: string | FormData } | undefined;
     const fetch: FetchLike = async (_url, init) => {
@@ -31,7 +31,7 @@ describe('auth placement (A2 §1.1)', () => {
   });
 });
 
-describe('retry (A2 §2)', () => {
+describe('retry (A2 Â§2)', () => {
   it('retries transport failures with linear backoff and resolves', async () => {
     const delays: number[] = [];
     let failures = 2;
@@ -51,6 +51,62 @@ describe('retry (A2 §2)', () => {
     expect(delays).toEqual([0, 2000, 4000]); // legacy FAIL_DELAY ladder
   });
 
+  it('does NOT retry 4xx client errors (except 408/429)', async () => {
+    for (const status of [400, 401, 403, 404]) {
+      const fetch = vi.fn(async () => ({ ok: false, status, json: async () => ({}) }));
+      const t = new Transport({ fetch, schedule: (fn) => fn() });
+      await expect(t.postRetry('/x', {})).rejects.toBeInstanceOf(TransportError);
+      expect(fetch).toHaveBeenCalledTimes(1);
+    }
+    for (const status of [408, 429, 500, 503]) {
+      let calls = 0;
+      const fetch: FetchLike = async () => {
+        calls += 1;
+        return calls === 1
+          ? { ok: false, status, json: async () => ({}) }
+          : { ok: true, json: async () => ({ success: true }) };
+      };
+      const t = new Transport({ fetch, schedule: (fn) => fn() });
+      expect((await t.postRetry('/x', {})).success).toBe(true);
+      expect(calls).toBe(2);
+    }
+  });
+
+  it('is bounded by default: rejects after the retry ceiling and reports each retry', async () => {
+    const fetch = vi.fn(async () => {
+      throw new Error('offline');
+    });
+    const retries: number[] = [];
+    const t = new Transport({ fetch, schedule: (fn) => fn() });
+    await expect(
+      t.postRetry('/x', {}, { onRetry: (attempt) => retries.push(attempt) }),
+    ).rejects.toThrow();
+    expect(fetch).toHaveBeenCalledTimes(6); // 1 + DEFAULT_MAX_RETRIES
+    expect(retries).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it('an aborted signal stops the loop', async () => {
+    const controller = new AbortController();
+    const fetch = vi.fn(async () => {
+      controller.abort();
+      throw new Error('offline');
+    });
+    const t = new Transport({ fetch, schedule: (fn) => fn() });
+    await expect(t.postRetry('/x', {}, { signal: controller.signal })).rejects.toThrow();
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keepalive rides through to fetch on the single-shot post', async () => {
+    let captured: { keepalive?: boolean } | undefined;
+    const fetch: FetchLike = async (_url, init) => {
+      captured = init;
+      return { ok: true, json: async () => ({ success: true }) };
+    };
+    const t = new Transport({ fetch });
+    await t.post('/x', {}, { keepalive: true });
+    expect(captured!.keepalive).toBe(true);
+  });
+
   it('does NOT retry logical failures (success: false)', async () => {
     const fetch = vi.fn(okFetch([{ success: false }]));
     const t = new Transport({ fetch, schedule: (fn) => fn() });
@@ -60,7 +116,7 @@ describe('retry (A2 §2)', () => {
   });
 });
 
-describe('offline queue (A2 §2 + LD-2b)', () => {
+describe('offline queue (A2 Â§2 + LD-2b)', () => {
   const make = () => new Transport({ fetch: okFetch(), schedule: (fn) => fn() });
 
   it('dedupes exact payloads and trims oldest past 200', () => {
@@ -101,6 +157,28 @@ describe('offline queue (A2 §2 + LD-2b)', () => {
     online = false;
     expect(await t.flushQueue('/log')).toBe(0);
     expect(t.queuedPayloads()).toEqual([{ n: 4 }]); // intact while offline
+  });
+
+  it('keeps entries enqueued DURING a flush (no stale write-back)', async () => {
+    let injected = false;
+    const fetch: FetchLike = async () => {
+      if (!injected) {
+        injected = true;
+        t.enqueue({ n: 'late' }); // arrives while the first POST is in flight
+      }
+      return { ok: true, json: async () => ({ success: true }) };
+    };
+    const t = new Transport({ fetch, schedule: (fn) => fn() });
+    t.enqueue({ n: 1 });
+    expect(await t.flushQueue('/log')).toBe(2);
+    expect(t.queuedPayloads()).toEqual([]);
+  });
+
+  it('a logically rejected entry halts the flush but stays queued', async () => {
+    const t = new Transport({ fetch: okFetch([{ success: false }]), schedule: (fn) => fn() });
+    t.enqueue({ n: 1 });
+    expect(await t.flushQueue('/log')).toBe(0);
+    expect(t.queuedPayloads()).toEqual([{ n: 1 }]);
   });
 });
 

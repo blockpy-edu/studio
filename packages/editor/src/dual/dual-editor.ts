@@ -214,19 +214,43 @@ export class DualEditor {
   }
 
   private handleBlocksChanged(newCode: string): void {
+    // A block edit supersedes any pending text→blocks regeneration, which
+    // would otherwise clobber the workspace with stale text.
+    this.cancelPendingBlockSync();
     this.textEditor.setCode(newCode, true);
     this.setCode(newCode, true);
   }
 
+  private cancelPendingBlockSync(): void {
+    if (this.textChangeTimer_ !== null) {
+      clearTimeout(this.textChangeTimer_);
+      this.textChangeTimer_ = null;
+    }
+  }
+
   // -- public API (legacy names) ----------------------------------------------
 
-  setCode(code: string, quietly = false): void {
+  /**
+   * @param quietly legacy: only record the code, do not push it into the
+   *   editors (the sync loop's cross-editor pushes).
+   * @param notify fire the `changed` listeners (legacy always did). Pass
+   *   false for external/programmatic sets (file switch, Reset, prop sync)
+   *   that must not be mistaken for a user edit.
+   */
+  setCode(code: string, quietly = false, notify = true): void {
     this.code_ = code;
     if (!quietly) {
+      // An external set wins over a debounced text→blocks regeneration.
+      this.cancelPendingBlockSync();
       this.textEditor.setCode(code, true);
       this.blockEditor.setCode(code, true);
     }
-    this.fireChangeListener({ name: 'changed', value: code });
+    if (notify) this.fireChangeListener({ name: 'changed', value: code });
+  }
+
+  /** Drop the text editor's undo stack (file switch, Reset, History use). */
+  clearHistory(): void {
+    this.textEditor.clearHistory();
   }
 
   getCode(): string {

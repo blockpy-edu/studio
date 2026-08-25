@@ -14,6 +14,7 @@
  *  - elif chains nest through `orelse`,
  *  - decorated definitions take the first decorator's line number.
  */
+import { numberLiteralValue } from './number-literal';
 import type { SyntaxNode, Tree } from '@lezer/common';
 import { LineIndex, isTolerableYieldError, parseSource } from './parse';
 import type * as ir from '../ir/types';
@@ -1325,19 +1326,7 @@ class CstConverter {
 
   private number(node: SyntaxNode, loc: { lineno: number; col_offset: number }): ir.Num {
     const source = this.text(node);
-    let numeric = source.replace(/_/g, '');
-    if (/[jJ]$/.test(numeric)) {
-      numeric = numeric.slice(0, -1); // imaginary part; source keeps the `j`
-    }
-    let n: number;
-    if (/^0[oO]/.test(numeric)) {
-      n = parseInt(numeric.slice(2), 8);
-    } else if (/^0[bB]/.test(numeric)) {
-      n = parseInt(numeric.slice(2), 2);
-    } else {
-      n = Number(numeric);
-    }
-    return { _astname: 'Num', n, source, ...loc };
+    return { _astname: 'Num', n: numberLiteralValue(source), source, ...loc };
   }
 
   private string(node: SyntaxNode, loc: { lineno: number; col_offset: number }): ir.Str | ir.Bytes {

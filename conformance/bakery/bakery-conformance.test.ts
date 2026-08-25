@@ -174,7 +174,7 @@ describe.skipIf(!gate)('bakery curriculum conformance', () => {
     });
     // The report is the deliverable; a summary also lands in the log.
     console.log(
-      `\nbakery conformance: ${report.problems.length} problem(s) — see conformance/bakery/bakery-report.md`,
+      `\nbakery conformance: ${report.problems.length} problem(s) — see conformance/bakery/${REPORT_BASENAME}.md`,
     );
   });
 

@@ -110,3 +110,72 @@ describe('stale-version banner hook (spec §7.4)', () => {
     expect(s.vfs.isDirty('answer.py')).toBe(true);
   });
 });
+
+describe('save failures, bundle cleanliness, and deletions', () => {
+  it('routes a failed save to onSaveError and keeps the file dirty', async () => {
+    const vfs = new Vfs();
+    const errors: Array<{ filename: string; error: unknown }> = [];
+    const timers: Array<() => void> = [];
+    new Autosaver({
+      vfs,
+      api: {
+        async saveFile() {
+          throw new Error('network down');
+        },
+      },
+      onSaveError: (filename, error) => errors.push({ filename, error }),
+      schedule: (fn) => {
+        timers.push(fn);
+        return () => undefined;
+      },
+    });
+    vfs.write('answer.py', 'x');
+    for (const fire of timers.splice(0)) fire();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(errors).toHaveLength(1);
+    expect(errors[0]!.filename).toBe('answer.py');
+    expect((errors[0]!.error as Error).message).toBe('network down');
+    expect(vfs.isDirty('answer.py')).toBe(true);
+  });
+
+  it('marks every bundle member clean after the bundle saves', async () => {
+    const s = setup();
+    s.vfs.write('?data.csv', 'a,b');
+    s.vfs.write('&readme.md', 'hi');
+    s.vfs.write('answer.py', 'unrelated'); // a different wire file stays dirty
+    expect(s.vfs.isDirty('?data.csv')).toBe(true);
+    await s.fireTimers();
+    expect(s.vfs.isDirty('?data.csv')).toBe(false);
+    expect(s.vfs.isDirty('&readme.md')).toBe(false);
+    expect(s.vfs.isDirty('answer.py')).toBe(false);
+  });
+
+  it('persists the deletion of an individually-saved file as an empty save', async () => {
+    const s = setup();
+    s.vfs.write('!on_change.py', 'print(1)');
+    await s.fireTimers();
+    expect(s.vfs.delete('!on_change.py')).toBe(true);
+    await s.fireTimers();
+    expect(s.saved).toEqual([
+      { filename: '!on_change.py', code: 'print(1)' },
+      { filename: '!on_change.py', code: '' },
+    ]);
+    expect(s.vfs.isDirty('!on_change.py')).toBe(false);
+  });
+
+  it('a deleted bundle member is persisted through the bundle and marked clean', async () => {
+    const s = setup();
+    s.vfs.write('?data.csv', 'a,b');
+    await s.fireTimers();
+    s.vfs.delete('?data.csv');
+    await s.fireTimers();
+    expect(JSON.parse(s.saved.at(-1)!.code)).toEqual({});
+    expect(s.vfs.isDirty('?data.csv')).toBe(false);
+  });
+
+  it('saveAnswerNow is a no-op when answer.py was never loaded', async () => {
+    const s = setup();
+    await s.autosaver.saveAnswerNow();
+    expect(s.saved).toEqual([]);
+  });
+});

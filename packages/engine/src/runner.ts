@@ -11,7 +11,7 @@
 // eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference path="./raw.d.ts" />
 import RUNTIME_PY from './runtime.py?raw';
-import { PedalEnvironment, type PedalPyodideLike } from './pedal';
+import { DEFAULT_PEDAL_PACKAGES, PedalEnvironment, type PedalPyodideLike } from './pedal';
 import type { EngineJob, EngineResult, TraceStep } from './protocol';
 
 /** The slice of the Pyodide API the runner uses (keeps tests/fakes easy). */
@@ -106,6 +106,8 @@ const toJsDeep = (proxy: PyProxy): RuntimePayload => {
 export class JobRunner {
   private runtime: RuntimeHandle;
   private pedalEnv: PedalEnvironment | null = null;
+  /** Wheel specs already installed into this interpreter (ensurePedal). */
+  private pedalPackages = new Set<string>();
   private realRequestsReady = false;
 
   private constructor(
@@ -160,13 +162,22 @@ export class JobRunner {
     this.realRequestsReady = true;
   }
 
-  /** Lazy Pedal environment - wheels install on the first grading job. */
+  /**
+   * Lazy Pedal environment - wheels install on the first grading job. The
+   * install is keyed on the package list: a later job asking for wheels
+   * this interpreter has not seen yet (a different assignment's
+   * `pedal.packages`) installs the missing ones instead of silently
+   * grading with the first job's set.
+   */
   private async ensurePedal(packages?: string[]): Promise<PedalEnvironment> {
-    if (this.pedalEnv === null) {
+    const wanted = packages ?? DEFAULT_PEDAL_PACKAGES;
+    const missing = wanted.filter((spec) => !this.pedalPackages.has(spec));
+    if (this.pedalEnv === null || missing.length > 0) {
       this.pedalEnv = await PedalEnvironment.install(
         this.pyodide as unknown as PedalPyodideLike,
-        packages,
+        this.pedalEnv === null ? wanted : missing,
       );
+      for (const spec of wanted) this.pedalPackages.add(spec);
     }
     return this.pedalEnv;
   }

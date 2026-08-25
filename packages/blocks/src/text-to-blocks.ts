@@ -110,14 +110,18 @@ export class TextToBlocksConverter {
       } catch (e) {
         error = e as Error;
         const lineno = e instanceof AstParseError ? e.lineno : undefined;
-        if (lineno && lineno < previousLine) {
+        if (lineno && lineno <= previousLine) {
+          // Each chop removes the tail from the error line down; prepend it
+          // so the raw block keeps source order (legacy appended, which
+          // scrambled multi-error files), and the raw block starts at the
+          // earliest chopped line.
           previousLine = lineno - 1;
-          badChunks = badChunks.concat(this.source.slice(previousLine));
-          startLine += previousLine;
+          badChunks = this.source.slice(previousLine).concat(badChunks);
+          startLine = previousLine + 1;
           this.source = this.source.slice(0, previousLine);
           pythonSource = this.source.join('\n');
         } else {
-          xml.appendChild(rawBlock(originalSource, startLine));
+          xml.appendChild(rawBlock(originalSource, 1));
           return { xml: xmlToString(xml), error, rawXml: xml };
         }
       }

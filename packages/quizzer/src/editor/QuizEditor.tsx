@@ -11,7 +11,7 @@
  * FORM/jsoneditor analog). All three editors share ONE canonical state:
  * the raw instruction/check strings; unknown fields survive every mode.
  */
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { renderReadingMarkdown } from '@blockpy/reader';
 import { parseQuizInstructions } from '../documents';
 import { processQuiz, type QuizChecksDocument } from '../grading';
@@ -105,10 +105,14 @@ export function QuizEditor(props: QuizEditorProps) {
     question: QuizQuestion | null,
     check?: Record<string, unknown> | null,
     renameTo?: string,
-  ) => {
+  ): boolean => {
     const nextQuestions = { ...(instructions.questions ?? {}) };
     const nextChecks = { ...(checks.questions ?? {}) };
     if (renameTo !== undefined) {
+      // Reject collisions: renaming onto an existing id would clobber that
+      // question and its check. Empty ids are rejected too.
+      if (!renameTo || (renameTo !== questionId && renameTo in nextQuestions)) return false;
+      if (renameTo === questionId) return true;
       // Preserve entry order while renaming (pools follow along).
       const renamedQuestions: typeof nextQuestions = {};
       for (const [key, value] of Object.entries(nextQuestions)) {
@@ -125,7 +129,7 @@ export function QuizEditor(props: QuizEditorProps) {
         { ...instructions, questions: renamedQuestions, pools },
         { ...checks, questions: nextChecks },
       );
-      return;
+      return true;
     }
     if (question === null) {
       delete nextQuestions[questionId];
@@ -138,7 +142,7 @@ export function QuizEditor(props: QuizEditorProps) {
         { ...instructions, questions: nextQuestions, pools },
         { ...checks, questions: nextChecks },
       );
-      return;
+      return true;
     }
     nextQuestions[questionId] = question;
     if (check !== undefined && check !== null) nextChecks[questionId] = check;
@@ -146,6 +150,7 @@ export function QuizEditor(props: QuizEditorProps) {
       { ...instructions, questions: nextQuestions },
       { ...checks, questions: nextChecks },
     );
+    return true;
   };
 
   const moveQuestion = (questionId: string, delta: number) => {
@@ -466,7 +471,7 @@ function TryItPanel(props: {
 }) {
   const [gradeMode, setGradeMode] = useState<'local' | 'remote'>('local');
   const [summary, setSummary] = useState('');
-  const scratchAnswers = { current: '' };
+  const scratchAnswers = useRef('');
 
   const loadDraft = useCallback(
     async () => ({

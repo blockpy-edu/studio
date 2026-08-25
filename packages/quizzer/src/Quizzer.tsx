@@ -232,18 +232,31 @@ export function Quizzer(props: QuizzerProps) {
     });
   }, []);
 
+  // Lost-update guard: every edit bumps the generation; a save only clears
+  // dirty if no edit landed after the document it posted was built.
+  const editGenerationRef = useRef(0);
+  const latestSaveRef = useRef<Promise<unknown>>(Promise.resolve());
+
   const saveSubmission = useCallback(() => {
     const current = loadedRef.current;
     const { saveAnswer } = propsRef.current;
     if (!current || !saveAnswer) return;
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
     setIsDirty(true);
-    void saveAnswer(
+    const generation = editGenerationRef.current;
+    const save = saveAnswer(
       current.assignment.id,
       current.submission?.id ?? null,
       JSON.stringify(buildDocument(), null, 2),
     )
-      .then(() => setIsDirty(false))
+      .then(() => {
+        if (editGenerationRef.current === generation) setIsDirty(false);
+      })
       .catch(() => undefined); // stays dirty - submit remains blocked
+    latestSaveRef.current = save;
   }, [buildDocument]);
 
   // -- load (quizzer.ts:112-141 + quiz.ts:190-236) --------------------------------
@@ -252,6 +265,7 @@ export function Quizzer(props: QuizzerProps) {
     let cancelled = false;
     setLoaded(null);
     setErrorMessage('');
+    setReadingId(null);
     setAsStudent(!(propsRef.current.isInstructor?.() ?? false));
     void propsRef.current
       .loadAssignment(props.assignmentId)
@@ -287,14 +301,18 @@ export function Quizzer(props: QuizzerProps) {
         setVisible(selectVisibleQuestions(instructions, initialSeed, count));
         // Reading preamble id: numeric direct, url slug via lookup.
         const rawReadingId = instructions.settings?.readingId ?? null;
+        const lookupReadingId = propsRef.current.lookupReadingId;
         if (typeof rawReadingId === 'string') {
-          propsRef.current
-            .lookupReadingId?.(rawReadingId)
-            .then((id) => !cancelled && setReadingId(id))
-            .catch(() => {
-              setReadingId(null);
-              console.error(`Failed to look up reading ID for ${rawReadingId}`);
-            });
+          if (!lookupReadingId) {
+            setReadingId(null);
+          } else {
+            lookupReadingId(rawReadingId)
+              .then((id) => !cancelled && setReadingId(id))
+              .catch(() => {
+                if (!cancelled) setReadingId(null);
+                console.error(`Failed to look up reading ID for ${rawReadingId}`);
+              });
+          }
         } else {
           setReadingId(rawReadingId);
         }
@@ -344,6 +362,7 @@ export function Quizzer(props: QuizzerProps) {
     (questionId: QuestionId, type: string, value: StudentAnswer) => {
       setAnswers((previous) => ({ ...previous, [questionId]: value }));
       if (!stateRef.current.attempting) return;
+      editGenerationRef.current += 1;
       setIsDirty(true);
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       if (TEXT_TYPES.has(type)) {
@@ -378,14 +397,20 @@ export function Quizzer(props: QuizzerProps) {
     const current = loadedRef.current;
     const { submitQuiz, markCorrect } = propsRef.current;
     if (!current || !submitQuiz) return;
-    submitQuiz(current.assignment.id, current.submission?.id ?? null)
+    // Flush any rate-limited save, then wait for the LATEST save to land so
+    // the server grades the document the student actually sees.
+    if (saveTimerRef.current) saveSubmission();
+    latestSaveRef.current
+      .then(() => submitQuiz(current.assignment.id, current.submission?.id ?? null))
       .then((response) => {
         if (response.feedbacks) {
           setFeedback((previous) => ({ ...previous, ...response.feedbacks }));
         }
         if (!response.success) {
+          // Keep the attempt open so the student can retry the submit.
           console.error(response);
           setErrorMessage(response.message ?? 'Failed to submit the quiz.');
+          return;
         }
         // The server already rewrote the stored document with
         // attempting: false (regrade_if_quiz); the client just mirrors it.
@@ -401,7 +426,7 @@ export function Quizzer(props: QuizzerProps) {
             String(error),
         );
       });
-  }, []);
+  }, [saveSubmission]);
 
   // -- derived ---------------------------------------------------------------------
 

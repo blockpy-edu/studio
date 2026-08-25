@@ -7,7 +7,7 @@
  * Execution is abstracted behind `RunController` so the chrome stays
  * engine-agnostic; the app supplies an `@blockpy/engine` adapter.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { format, parse, type Role, type Space, type Vfs } from '@blockpy/vfs';
 import { categoryPresentation } from './categories';
 import { DualEditorView } from '../components/DualEditorView';
@@ -49,6 +49,12 @@ import {
  * `?toolbox.blockpy` as JSON; parse failure falls back to `empty` exactly
  * like legacy `reloadToolbox`.
  */
+/**
+ * Basenames may not start with a namespace prefix character - the VFS
+ * throws on them (legacy-names.ts); the rename prompt validates first.
+ */
+const NAMESPACE_PREFIX_CHARS = /^[!^?&$*#]/;
+
 export function resolveToolboxSetting(setting: string | undefined, vfs?: Vfs): ToolboxSpec {
   if (!setting) return 'normal';
   if (setting === 'custom') {
@@ -580,6 +586,11 @@ export function CodingEditor(props: CodingEditorProps) {
     },
     [vfs, store],
   );
+  // The undo stack is per file: Ctrl-Z must never resurrect another file's
+  // text. Runs after DualEditorView's code effect (child effects first).
+  useEffect(() => {
+    editorRef.current?.clearHistory();
+  }, [activeFile]);
 
   // -- file management (M3.7 / LD-21) ---------------------------------------
   // Legacy context: Delete existed (python.js:117-123); Rename was DEAD
@@ -605,9 +616,27 @@ export function CodingEditor(props: CodingEditorProps) {
     (legacyName: string) => {
       if (!vfs) return;
       const { space, basename } = parse(legacyName);
-      const next = window.prompt(`Rename ${legacyName} to:`, basename);
-      if (!next || next === basename) return;
-      if (vfs.rename(legacyName, next)) {
+      const answer = window.prompt(`Rename ${legacyName} to:`, basename);
+      if (answer === null) return;
+      const next = answer.trim();
+      if (next === '' || next === basename) return;
+      // Namespace prefixes are chosen via Move, not typed into the name
+      // (the VFS rejects them - prefix-free basenames only).
+      if (NAMESPACE_PREFIX_CHARS.test(next)) {
+        window.alert(
+          `"${next}" is not a valid file name: names cannot start with ` +
+            'one of ! ^ ? & $ * # (use Move to change the namespace).',
+        );
+        return;
+      }
+      let renamed = false;
+      try {
+        renamed = vfs.rename(legacyName, next);
+      } catch (error) {
+        window.alert(`Could not rename the file: ${String(error)}`);
+        return;
+      }
+      if (renamed) {
         onLogEvent?.('X-File.Rename', '', '', next, legacyName);
         if (legacyName === activeFile) handleSelectFile(format(space, next));
       } else {
@@ -656,9 +685,13 @@ export function CodingEditor(props: CodingEditorProps) {
     (newCode: string, viaUpload = false) => {
       setCode(newCode);
       if (vfs && (!fileReadOnly || (viaUpload && uploadAllowed))) {
-        vfs.write(activeFile, newCode);
-        // Autosave hook (legacy file subscriptions, server.js:114-134).
-        onFileEdit?.(activeFile, newCode);
+        // Unchanged contents (echoes of a programmatic set) are not edits:
+        // no VFS write, no autosave.
+        if (vfs.read(activeFile) !== newCode) {
+          vfs.write(activeFile, newCode);
+          // Autosave hook (legacy file subscriptions, server.js:114-134).
+          onFileEdit?.(activeFile, newCode);
+        }
       }
       if (activeFile === 'answer.py') {
         // Any answer edit stales the last run's feedback (feedback.js:110).
@@ -688,8 +721,9 @@ export function CodingEditor(props: CodingEditorProps) {
         }
         onLogEvent?.('X-File.Upload', '', '', contents, activeFile);
         handleCodeChange(contents, true);
-        // only_uploads: the editor is read-only, so push the upload in.
-        editorRef.current?.setCode(contents);
+        // only_uploads: the editor is read-only, so push the upload in
+        // (quietly - handleCodeChange above already did the bookkeeping).
+        editorRef.current?.setCode(contents, false, false);
       };
       reader.readAsText(file);
     },
@@ -703,18 +737,30 @@ export function CodingEditor(props: CodingEditorProps) {
   }, [vfs, activeFile, code, onLogEvent, props.assignmentName]);
 
   // Live toolbox reload on settings change (legacy `reloadToolbox`).
-  const baseToolboxSpec = props.toolboxSetting
-    ? resolveToolboxSetting(props.toolboxSetting, vfs)
-    : (props.toolbox ?? 'normal');
-  // hide_import_statements: students lose the Imports category (the
-  // preset is expanded so the filter applies uniformly).
-  const toolboxSpec: ToolboxSpec =
-    isStudent && (props.hideImportStatements ?? false)
+  // Memoized on its inputs: the spec's identity drives `remakeToolbox`
+  // below, so recomputing it per render would rebuild the toolbox on
+  // every keystroke. The custom JSON source is read each render (a cheap
+  // VFS lookup) so instructor edits to ?toolbox.blockpy still reload.
+  const toolboxSetting = props.toolboxSetting;
+  const toolboxProp = props.toolbox;
+  const hideImports = isStudent && (props.hideImportStatements ?? false);
+  const customToolboxSource =
+    toolboxSetting === 'custom' ? (vfs?.read('?toolbox.blockpy') ?? null) : null;
+  const toolboxSpec: ToolboxSpec = useMemo(() => {
+    const baseToolboxSpec = toolboxSetting
+      ? resolveToolboxSetting(toolboxSetting, vfs)
+      : (toolboxProp ?? 'normal');
+    // hide_import_statements: students lose the Imports category (the
+    // preset is expanded so the filter applies uniformly).
+    return hideImports
       ? (typeof baseToolboxSpec === 'string'
           ? (TOOLBOXES[baseToolboxSpec] ?? TOOLBOXES['normal'] ?? [])
           : baseToolboxSpec
         ).filter((entry) => typeof entry === 'string' || entry.name !== 'Imports')
       : baseToolboxSpec;
+    // customToolboxSource is the memo key for the custom JSON's contents.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toolboxSetting, toolboxProp, hideImports, vfs, customToolboxSource]);
   const lastToolbox = useRef(toolboxSpec);
   useEffect(() => {
     if (lastToolbox.current !== toolboxSpec && editorRef.current) {
@@ -766,8 +812,20 @@ export function CodingEditor(props: CodingEditorProps) {
     [store],
   );
 
+  // Run generation (LD: late outcomes): a run's continuation must not land
+  // on the next assignment (keyed remount) - bumped on unmount, checked
+  // after every await.
+  const runGeneration = useRef(0);
+  useEffect(
+    () => () => {
+      runGeneration.current += 1;
+    },
+    [],
+  );
+
   const handleRun = useCallback(async () => {
     const controller = runController;
+    const generation = runGeneration.current;
     const { setRunState, appendConsole, clearConsole, setFeedback } = store.getState();
     clearConsole();
     // A fresh run clears the previous internal-grading-error state - the bug
@@ -843,6 +901,9 @@ export function CodingEditor(props: CodingEditorProps) {
             : {}),
         },
       );
+      // The editor was unmounted (assignment switch) mid-run: the outcome
+      // belongs to a chrome that no longer exists.
+      if (runGeneration.current !== generation) return;
       const succeeded = outcome.error === null;
       setRunState(succeeded ? 'idle' : 'error');
       store.getState().setServerStatus('onExecution', succeeded ? 'ready' : 'failed', '');
@@ -935,13 +996,17 @@ export function CodingEditor(props: CodingEditorProps) {
         after.setEvalState(onlyInteractive && isStudent ? 'input' : 'button');
       }
     } catch (error) {
+      if (runGeneration.current !== generation) return;
       setRunState('error');
       store.getState().setServerStatus('onExecution', 'failed', String(error));
       appendConsole({ kind: 'stderr', text: String(error) });
     } finally {
       // A hard stop (interrupt/timeout) can leave the input line orphaned -
-      // the run it belonged to is gone either way (§6.5).
-      store.getState().cancelConsoleInput();
+      // the run it belonged to is gone either way (§6.5). A stale run must
+      // not cancel the NEXT assignment's input line, though.
+      if (runGeneration.current === generation) {
+        store.getState().cancelConsoleInput();
+      }
     }
   }, [
     code,
@@ -998,6 +1063,7 @@ export function CodingEditor(props: CodingEditorProps) {
       // virtual `evaluations` file, then compiles.
       onLogEvent?.('X-File.Add', '', '', expression, 'evaluations');
       onLogEvent?.('Compile', '', '', expression, 'evaluations');
+      const generation = runGeneration.current;
       void controller
         .evaluate(
           expression,
@@ -1018,6 +1084,7 @@ export function CodingEditor(props: CodingEditorProps) {
           },
         )
         .then((outcome) => {
+          if (runGeneration.current !== generation) return;
           store.getState().setServerStatus('onExecution', 'ready', '');
           if (outcome.error !== null) {
             appendConsole({ kind: 'stderr', text: outcome.error });
@@ -1057,6 +1124,16 @@ export function CodingEditor(props: CodingEditorProps) {
           }
           if (outcome.grade) {
             onGraded?.(outcome.grade);
+          }
+        })
+        .catch((error: unknown) => {
+          // Mirrors handleRun: the footer status resets and the error shows
+          // in the console; the Evaluate line stays armed for a retry.
+          if (runGeneration.current !== generation) return;
+          store.getState().setServerStatus('onExecution', 'failed', String(error));
+          appendConsole({ kind: 'stderr', text: String(error) });
+          if (store.getState().evalState !== 'hidden') {
+            store.getState().setEvalState('input');
           }
         });
     },
@@ -1104,6 +1181,8 @@ export function CodingEditor(props: CodingEditorProps) {
     if (!selected) return;
     store.getState().setHistoryMode(false);
     setCode(selected.message);
+    editorRef.current?.setCode(selected.message, false, false);
+    editorRef.current?.clearHistory();
     if (vfs) {
       vfs.write(activeFile, selected.message);
     }
@@ -1124,7 +1203,8 @@ export function CodingEditor(props: CodingEditorProps) {
     }
     if (isAnswerFile) {
       setCode(starting);
-      editorRef.current?.setCode(starting);
+      editorRef.current?.setCode(starting, false, false);
+      editorRef.current?.clearHistory();
       // is_parsons: Reset re-jumbles the blocks (v1 toolbar.js:55-57).
       if (isParsons) editorRef.current?.blockEditor.shuffle();
     }

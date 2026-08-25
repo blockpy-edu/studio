@@ -57,7 +57,27 @@ class StudioRuntime:
 
     # -- filesystem staging (spec 7.5) --------------------------------------
 
+    @staticmethod
+    def staged_path(name):
+        """Resolve a staged file name under MOUNT, refusing escapes.
+
+        Names come from the VFS (student-created file tabs, uploads): an
+        empty name or one that normalizes outside the mount ('/etc/x',
+        '../x') is a system error, never something to write blindly.
+        """
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError('Cannot stage a file with an empty name')
+        path = os.path.normpath(os.path.join(MOUNT, name))
+        if path == MOUNT or not path.startswith(MOUNT + '/'):
+            raise ValueError(
+                'Cannot stage ' + repr(name) + ': the name escapes the working directory'
+            )
+        return path
+
     def stage_files(self, files):
+        # Validate every name BEFORE touching the disk so a bad name never
+        # leaves a half-staged mount behind.
+        paths = {name: self.staged_path(name) for name in files}
         os.makedirs(MOUNT, exist_ok=True)
         for root, dirs, names in os.walk(MOUNT, topdown=False):
             for name in names:
@@ -66,7 +86,7 @@ class StudioRuntime:
                 os.rmdir(os.path.join(root, d))
         self.staged = dict(files)
         for name, contents in files.items():
-            path = os.path.join(MOUNT, name)
+            path = paths[name]
             parent = os.path.dirname(path)
             if parent:
                 os.makedirs(parent, exist_ok=True)
@@ -274,7 +294,13 @@ class StudioRuntime:
                 # prompt is NOT echoed to stdout - the console's input line
                 # displays (and then freezes with) it, legacy-style.
                 from pyodide.ffi import run_sync
-                return str(run_sync(on_input(str(prompt))))
+                try:
+                    value = run_sync(on_input(str(prompt)))
+                except Exception:  # noqa: BLE001 - the client answered EOF
+                    value = None
+                if value is None or not isinstance(value, str):
+                    raise EOFError('No input available')
+                return value
             print(prompt, end='')
             raise EOFError('No scripted input available')
 
@@ -324,8 +350,6 @@ class StudioRuntime:
                         sys.settrace(None)
                 if mode == 'eval':
                     value = repr(result)
-                elif extract_result and 'result' in module.__dict__:
-                    value = json.dumps(module.__dict__['result'])
         except BaseException as exc:  # noqa: BLE001 - full error report needed
             error = self.format_error(exc, filename, prefix_lines)
         finally:
@@ -337,6 +361,22 @@ class StudioRuntime:
                 sys.modules['__main__'] = old_main
             self.restore_modules()
 
+        if error is None and extract_result and 'result' in module.__dict__:
+            # quiz.preprocess: the harness serializes `result`, so a
+            # non-serializable value is OUR failure to report as a system
+            # error - not a TypeError pinned on the student's code.
+            try:
+                value = json.dumps(module.__dict__['result'])
+            except (TypeError, ValueError) as exc:
+                error = {
+                    'type': 'SystemError',
+                    'message': 'The preprocess `result` is not JSON-serializable: ' + str(exc),
+                    'line': None,
+                    'student_line': None,
+                    'traceback': (
+                        'SystemError: result is not JSON-serializable: ' + str(exc) + chr(10)
+                    ),
+                }
         self.last_globals = module.__dict__
         return {
             'error': error,

@@ -10,6 +10,7 @@ import {
   parse,
   persistencePlan,
   SPACE_BUNDLE,
+  SPACE_PREFIX,
   type BundleName,
   type PersistencePlan,
   type Space,
@@ -125,21 +126,12 @@ export class Vfs {
 
   /**
    * Rename within the same space (LD-21; additive - legacy rename was dead
-   * code). Refuses magic names and clobbering an existing target.
+   * code). Refuses magic names and clobbering an existing target; throws
+   * for a basename that is empty or starts with a namespace prefix.
    */
   rename(legacyName: string, newBasename: string): boolean {
-    if (!this.canRenameName(legacyName)) return false;
-    const { space, basename } = parse(legacyName);
-    const contents = this.spaces.get(space)?.get(basename);
-    if (contents === undefined) return false;
-    const target = format(space, newBasename);
-    if (magicName(target) !== undefined) return false;
-    if (this.spaces.get(space)?.has(newBasename)) return false;
-    this.write(target, contents);
-    this.spaces.get(space)!.delete(basename);
-    this.dirtyNames.add(legacyName);
-    this.emit({ type: 'delete', legacyName });
-    return true;
+    const { space } = parse(legacyName);
+    return this.moveEntry(legacyName, space, newBasename);
   }
 
   /**
@@ -147,14 +139,35 @@ export class Vfs {
    * legacy chose the namespace only at creation). Same guards as rename.
    */
   changeSpace(legacyName: string, targetSpace: Space): boolean {
-    if (!this.canRenameName(legacyName)) return false;
     const { space, basename } = parse(legacyName);
     if (space === targetSpace) return false;
+    return this.moveEntry(legacyName, targetSpace, basename);
+  }
+
+  /**
+   * Shared rename/move: validates the target basename (a leading prefix
+   * character would re-parse into ANOTHER space - `!x` renamed to `?y`
+   * must not silently land in hidden), refuses magic sources/targets and
+   * clobbering in the TARGET space, then writes + deletes with events.
+   */
+  private moveEntry(legacyName: string, targetSpace: Space, targetBasename: string): boolean {
+    if (targetBasename.trim() === '') {
+      throw new Error('File name cannot be empty');
+    }
+    const { space: implied, basename: stripped } = parse(targetBasename);
+    if (implied !== 'student' || stripped !== targetBasename) {
+      throw new Error(
+        `File name "${targetBasename}" cannot start with a namespace prefix character ` +
+          `(${Object.values(SPACE_PREFIX).filter(Boolean).join(' ')})`,
+      );
+    }
+    if (!this.canRenameName(legacyName)) return false;
+    const { space, basename } = parse(legacyName);
     const contents = this.spaces.get(space)?.get(basename);
     if (contents === undefined) return false;
-    const target = format(targetSpace, basename);
+    const target = format(targetSpace, targetBasename);
     if (magicName(target) !== undefined) return false;
-    if (this.spaces.get(targetSpace)?.has(basename)) return false;
+    if (this.spaces.get(targetSpace)?.has(targetBasename)) return false;
     this.write(target, contents);
     this.spaces.get(space)!.delete(basename);
     this.dirtyNames.add(legacyName);

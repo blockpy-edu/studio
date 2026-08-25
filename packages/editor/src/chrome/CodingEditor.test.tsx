@@ -183,6 +183,63 @@ describe('CodingEditor chrome', () => {
     });
   });
 
+  it('mounting and prop syncs do not count as edits (no autosave, no dirty)', async () => {
+    const { Vfs } = await import('@blockpy/vfs');
+    const vfs = new Vfs();
+    vfs.write('answer.py', 'a = 0');
+    const onFileEdit = vi.fn();
+    const onCodeChange = vi.fn();
+    useEditorChromeStore.getState().setDirtySubmission(false);
+    render(<CodingEditor vfs={vfs} onFileEdit={onFileEdit} onCodeChange={onCodeChange} />);
+    expect(onFileEdit).not.toHaveBeenCalled();
+    expect(onCodeChange).not.toHaveBeenCalled();
+    expect(useEditorChromeStore.getState().dirtySubmission).toBe(false);
+  });
+
+  it('switching files is not an edit and cannot be undone into the other file', async () => {
+    const { Vfs } = await import('@blockpy/vfs');
+    const { undo } = await import('@codemirror/commands');
+    const vfs = new Vfs();
+    vfs.write('answer.py', 'a = 0');
+    vfs.write('!on_run.py', 'grader = True');
+    const onFileEdit = vi.fn();
+    let editor: import('../dual/dual-editor').DualEditor | null = null;
+    const { container } = render(
+      <CodingEditor
+        vfs={vfs}
+        instructor
+        role="instructor"
+        onFileEdit={onFileEdit}
+        onEditorReady={(instance) => {
+          editor = instance;
+        }}
+      />,
+    );
+    expect(editor).not.toBeNull();
+    // A real user edit in answer.py.
+    act(() => {
+      editor!.textEditor.view.dispatch({ changes: { from: 0, to: 5, insert: 'a = 1' } });
+    });
+    expect(vfs.read('answer.py')).toBe('a = 1');
+    expect(onFileEdit).toHaveBeenCalledTimes(1);
+    // Switch to the grader tab.
+    const tabs = Array.from(container.querySelectorAll<HTMLAnchorElement>('.nav-link'));
+    const onRunTab = tabs.find((tab) => tab.textContent?.includes('On Run'));
+    expect(onRunTab).toBeDefined();
+    act(() => {
+      fireEvent.click(onRunTab!);
+    });
+    expect(editor!.textEditor.getCode()).toBe('grader = True');
+    // The switch itself was not an edit...
+    expect(onFileEdit).toHaveBeenCalledTimes(1);
+    // ...and Ctrl-Z cannot bring answer.py's text into !on_run.py.
+    act(() => {
+      undo(editor!.textEditor.view);
+    });
+    expect(editor!.textEditor.getCode()).toBe('grader = True');
+    expect(vfs.read('!on_run.py')).toBe('grader = True');
+  });
+
   it('exposes the editor for block-PNG capture; getPng fails soft in jsdom', async () => {
     let captured: import('../dual/dual-editor').DualEditor | null = null;
     render(<CodingEditor startingCode="a = 0" onEditorReady={(editor) => (captured = editor)} />);

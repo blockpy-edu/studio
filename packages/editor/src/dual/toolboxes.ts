@@ -441,6 +441,15 @@ function setHideGettersSetters(value: boolean): void {
  * - `hideGettersSetters` toggles `Blockly.Variables._HIDE_GETTERS_SETTERS`
  *   (reset to false at the start of every conversion, exactly as legacy did).
  */
+/** Escape a value for a double-quoted XML attribute (custom toolbox JSON). */
+function escapeXmlAttribute(value: string): string {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 export function toolboxPythonToBlocks(
   toolboxPython: ToolboxEntry[],
   converter: TextToBlocksConverter,
@@ -452,9 +461,9 @@ export function toolboxPythonToBlocks(
         return category;
       }
       const colour = (COLOR as Record<string, number>)[category.colour];
-      let header = `<category name="${category.name}" colour="${colour}"`;
+      let header = `<category name="${escapeXmlAttribute(category.name)}" colour="${colour}"`;
       if (category.custom) {
-        header += ` custom="${category.custom}">`;
+        header += ` custom="${escapeXmlAttribute(category.custom)}">`;
       } else {
         header += '>';
       }

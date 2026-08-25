@@ -1,8 +1,13 @@
 // @vitest-environment jsdom
-import { expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { afterEach, expect, it, vi } from 'vitest';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { App, buildDownloadUrl } from './App';
 import type { BootConfig } from './boot-config';
+import type { StudioActions } from './studio-handle';
+
+// No vitest globals, so RTL does not auto-clean: unmount between tests so
+// `screen` never sees a previous test's shell.
+afterEach(cleanup);
 
 const minimalConfig: BootConfig = {
   urls: {},
@@ -221,4 +226,105 @@ it('buildDownloadUrl joins with & when the base already has a query string (LD-3
   expect(buildDownloadUrl('/api/download_file?token=x', 7, 'a.txt')).toBe(
     '/api/download_file?token=x&placement=assignment&directory=7&filename=a.txt',
   );
+  expect(buildDownloadUrl('/api/download_file', 7, 'my data&more #1.csv')).toBe(
+    '/api/download_file?placement=assignment&directory=7&filename=my%20data%26more%20%231.csv',
+  );
+});
+
+it('the prompted passcode reaches the wire (A7 §1)', async () => {
+  const prompt = vi.spyOn(window, 'prompt').mockReturnValue('open-sesame');
+  const fetchStub = vi.fn(async () => ({
+    ok: true,
+    json: async () => ({ success: true, ...RAW_PAYLOAD }),
+  })) as unknown as typeof fetch;
+  try {
+    render(
+      <App
+        config={{
+          ...minimalConfig,
+          urls: { loadAssignment: '/api/load_assignment' },
+          assignment: { ...minimalConfig.assignment, currentAssignmentId: 101 },
+          passcodeProtected: true,
+        }}
+        extras={{ fetch: fetchStub }}
+      />,
+    );
+    await waitFor(() => {
+      expect(screen.getAllByText(/Server Problem/).length).toBeGreaterThan(0);
+    });
+    const [, init] = (fetchStub as unknown as ReturnType<typeof vi.fn>).mock.calls[0]! as [
+      string,
+      { body: string },
+    ];
+    expect(new URLSearchParams(init.body).get('passcode')).toBe('open-sesame');
+  } finally {
+    prompt.mockRestore();
+  }
+});
+
+it('overlapping loads adopt only the LATEST response (stale-response guard)', async () => {
+  let releaseFirst!: () => void;
+  const firstGate = new Promise<void>((resolve) => {
+    releaseFirst = resolve;
+  });
+  const fetchStub = vi.fn(async (_url: string, init: { body: string }) => {
+    const id = new URLSearchParams(init.body).get('assignment_id');
+    if (id === '101') await firstGate;
+    const name = id === '101' ? 'Server Problem' : 'Second Problem';
+    return {
+      ok: true,
+      json: async () => ({
+        success: true,
+        assignment: { ...RAW_PAYLOAD.assignment, id: Number(id), name },
+        submission: RAW_PAYLOAD.submission,
+      }),
+    };
+  }) as unknown as typeof fetch;
+  let actions: StudioActions | null = null;
+  const view = render(
+    <App
+      config={{ ...minimalConfig, urls: { loadAssignment: '/api/load_assignment' } }}
+      extras={{ fetch: fetchStub }}
+      registerActions={(next) => {
+        actions = next;
+      }}
+    />,
+  );
+  await waitFor(() => expect(actions).not.toBeNull());
+  const slow = actions!.loadAssignment(101); // stalls on the wire
+  await actions!.loadAssignment(102); // answers first
+  await waitFor(() => {
+    expect(screen.getAllByText(/Second Problem/).length).toBeGreaterThan(0);
+  });
+  releaseFirst();
+  await slow;
+  // The stale 101 response never replaced the newer 102 adoption.
+  expect(screen.queryByText(/Server Problem/)).toBeNull();
+  expect(screen.getAllByText(/Second Problem/).length).toBeGreaterThan(0);
+  await waitFor(() => {
+    expect(view.container.querySelector('.blockpy-loading-overlay')).toBeNull();
+  });
+});
+
+it('a rejected load clears the overlay and shows the error (no stuck spinner)', async () => {
+  const fetchStub = vi.fn(async () => ({
+    ok: false,
+    status: 403,
+    json: async () => ({}),
+  })) as unknown as typeof fetch;
+  const view = render(
+    <App
+      config={{
+        ...minimalConfig,
+        urls: { loadAssignment: '/api/load_assignment' },
+        assignment: { ...minimalConfig.assignment, currentAssignmentId: 101 },
+      }}
+      extras={{ fetch: fetchStub }}
+    />,
+  );
+  await waitFor(() => {
+    expect(screen.getByText(/failed to load/)).toBeDefined();
+  });
+  expect(view.container.querySelector('.blockpy-loading-overlay')).toBeNull();
+  expect(fetchStub).toHaveBeenCalledTimes(1); // 403 is not retried
 });

@@ -125,6 +125,14 @@ const documentHeight = (): number =>
     document.documentElement.offsetHeight,
   );
 
+/** Exam gate (reader.ts:251-256): the page-level group selector is hidden
+ *  for unstarted students until the timer starts. */
+const setSelectorVisible = (visible: boolean): void => {
+  document
+    .querySelectorAll<HTMLElement>('.assignment-selector-div')
+    .forEach((el) => (el.style.display = visible ? '' : 'none'));
+};
+
 export function Reader(props: ReaderProps) {
   const [loaded, setLoaded] = useState<LoadedReading | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
@@ -193,6 +201,9 @@ export function Reader(props: ReaderProps) {
         );
         // Legacy schedules the next ping in the log callback; ours is
         // fire-and-forget so the (delay-dominated) schedule happens now.
+        // Clear any pending ping first: duplicate lti responses must not
+        // fan out into parallel ping loops.
+        if (logTimerRef.current) clearTimeout(logTimerRef.current);
         logTimerRef.current = setTimeout(logReadingStart, delay);
         oldPositionRef.current = position;
       }
@@ -287,6 +298,7 @@ export function Reader(props: ReaderProps) {
         setLoaded(reading);
         setDateStarted(result.submission?.dateStarted ?? null);
         logCountRef.current = 1;
+        if (logTimerRef.current) clearTimeout(logTimerRef.current);
         logTimerRef.current = setTimeout(logReadingStart, 1000);
         if (result.submission) {
           markRead(reading);
@@ -304,9 +316,7 @@ export function Reader(props: ReaderProps) {
           result.submission &&
           !result.submission.dateStarted
         ) {
-          document
-            .querySelectorAll<HTMLElement>('.assignment-selector-div')
-            .forEach((el) => (el.style.display = 'none'));
+          setSelectorVisible(false);
         }
       })
       .catch((error) => {
@@ -315,6 +325,9 @@ export function Reader(props: ReaderProps) {
     return () => {
       cancelled = true;
       if (logTimerRef.current) clearTimeout(logTimerRef.current);
+      // Undo the exam gate when the reading unmounts or changes; the next
+      // load re-hides it if its own gate applies.
+      setSelectorVisible(true);
     };
   }, [props.assignmentId, logReadingStart, markRead]);
 
@@ -409,9 +422,7 @@ export function Reader(props: ReaderProps) {
             studentTimeLimit: current.submission?.timeLimit ?? null,
             dateStarted: started,
           });
-          document
-            .querySelectorAll<HTMLElement>('.assignment-selector-div')
-            .forEach((el) => (el.style.display = ''));
+          setSelectorVisible(true);
         } else {
           alert('The exam could not be started. Please try reloading the page and starting again.');
           console.error('Failed to start timer', response);

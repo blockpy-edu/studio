@@ -5,8 +5,10 @@
  * - per-request POST, `application/x-www-form-urlencoded` (never JSON)
  * - auth: `Authorization: Bearer <accessToken>` header ONLY - the access
  *   token is never a body parameter (A2 §1.1)
- * - transport failures retry with unbounded linear backoff (+2000 ms/try,
- *   legacy FAIL_DELAY); logical failures (`success: false`) do NOT retry
+ * - transport failures retry with linear backoff (+2000 ms/try, legacy
+ *   FAIL_DELAY) up to a bounded ceiling (legacy was unbounded - a retry
+ *   storm); 4xx responses other than 408/429 are NOT retried; logical
+ *   failures (`success: false`) do NOT retry
  * - offline queue: max 200 entries, oldest trimmed, exact-duplicate payloads
  *   not enqueued twice, flushed LIFO on boot - all legacy semantics - but
  *   dequeue removes ONE entry (legacy's `splice(index)` wiped the tail,
@@ -23,8 +25,54 @@ export interface LegacyResponse {
 export type FetchLike = (
   url: string,
   // GET has no body - it exists solely for /assignments/by_url (M4.7).
-  init: { method: 'POST' | 'GET'; headers: Record<string, string>; body?: string | FormData },
-) => Promise<{ ok: boolean; json(): Promise<unknown>; text?(): Promise<string> }>;
+  init: {
+    method: 'POST' | 'GET';
+    headers: Record<string, string>;
+    body?: string | FormData;
+    /** Survive page unload (autosave flush on pagehide/beforeunload). */
+    keepalive?: boolean;
+  },
+) => Promise<{
+  ok: boolean;
+  status?: number;
+  json(): Promise<unknown>;
+  text?(): Promise<string>;
+}>;
+
+/**
+ * A transport-level failure (non-OK status or a thrown fetch). `retryable`
+ * is false for client errors (4xx except 408/429): the request itself is
+ * wrong and resending it verbatim can never succeed.
+ */
+export class TransportError extends Error {
+  constructor(
+    message: string,
+    readonly status: number | undefined,
+    readonly retryable: boolean,
+  ) {
+    super(message);
+    this.name = 'TransportError';
+  }
+}
+
+export function isRetryableStatus(status: number | undefined): boolean {
+  if (status === undefined) return true;
+  if (status === 408 || status === 429) return true;
+  return status < 400 || status >= 500;
+}
+
+export interface PostOptions {
+  keepalive?: boolean;
+}
+
+export interface RetryOptions extends PostOptions {
+  /** Initial delay before the first attempt (legacy `delay` argument). */
+  delayMs?: number;
+  /** Abort the retry loop (a superseded save, an unmounted surface). */
+  signal?: AbortSignal;
+  /** Fired before each backoff wait - drives the footer RETRYING badge. */
+  onRetry?: (attempt: number, error: unknown) => void;
+}
 
 /** Minimal key-value storage (localStorage-compatible subset). */
 export interface StorageLike {
@@ -43,6 +91,8 @@ export class MemoryStorage implements StorageLike {
 }
 
 const FAIL_DELAY_MS = 2000; // legacy server.js:44
+/** Bounded retry ceiling (legacy: unbounded). 5 retries = 30 s of backoff. */
+const DEFAULT_MAX_RETRIES = 5;
 const QUEUE_LIMIT = 200; // legacy server.js:38-41
 const QUEUE_KEY = 'BLOCKPY_logEvent_value'; // legacy storage.js:38-41
 
@@ -54,7 +104,7 @@ export interface TransportOptions {
   onIpChange?: (oldIp: string, newIp: string) => void;
   /** Scheduler injection for tests; defaults to setTimeout. */
   schedule?: (fn: () => void, ms: number) => void;
-  /** Retry ceiling for tests; legacy is unbounded. */
+  /** Retry ceiling; defaults to DEFAULT_MAX_RETRIES (legacy was unbounded). */
   maxRetries?: number;
 }
 
@@ -88,13 +138,29 @@ export class Transport {
   }
 
   /** One POST, no retry. Returns the parsed legacy envelope. */
-  async post(url: string, payload: WirePayload): Promise<LegacyResponse> {
-    const response = await this.options.fetch(url, {
-      method: 'POST',
-      headers: this.headers(),
-      body: encodeForm(payload),
-    });
-    if (!response.ok) throw new Error(`POST ${url} failed at transport level`);
+  async post(
+    url: string,
+    payload: WirePayload,
+    options: PostOptions = {},
+  ): Promise<LegacyResponse> {
+    let response;
+    try {
+      response = await this.options.fetch(url, {
+        method: 'POST',
+        headers: this.headers(),
+        body: encodeForm(payload),
+        ...(options.keepalive ? { keepalive: true } : {}),
+      });
+    } catch (error) {
+      throw new TransportError(`POST ${url} failed: ${String(error)}`, undefined, true);
+    }
+    if (!response.ok) {
+      throw new TransportError(
+        `POST ${url} failed at transport level (${response.status ?? 'no status'})`,
+        response.status,
+        isRetryableStatus(response.status),
+      );
+    }
     const parsed = (await response.json()) as LegacyResponse;
     if (typeof parsed.ip === 'string') this.checkIp(parsed.ip);
     return parsed;
@@ -127,23 +193,37 @@ export class Transport {
   }
 
   /**
-   * POST with the legacy retry loop: transport failures reschedule with
-   * linear backoff; logical failures resolve immediately (never retried).
+   * POST with the legacy retry loop: retryable transport failures
+   * reschedule with linear backoff up to `maxRetries`; non-retryable
+   * failures (4xx) reject immediately and logical failures resolve
+   * immediately (never retried).
    */
-  postRetry(url: string, payload: WirePayload, delayMs = 0): Promise<LegacyResponse> {
+  postRetry(
+    url: string,
+    payload: WirePayload,
+    options: RetryOptions | number = {},
+  ): Promise<LegacyResponse> {
+    const opts: RetryOptions = typeof options === 'number' ? { delayMs: options } : options;
+    const maxRetries = this.options.maxRetries ?? DEFAULT_MAX_RETRIES;
     return new Promise((resolve, reject) => {
       const attempt = (currentDelay: number, tries: number) => {
         this.schedule(() => {
-          this.post(url, payload).then(resolve, () => {
-            if (this.options.maxRetries !== undefined && tries >= this.options.maxRetries) {
-              reject(new Error(`POST ${url} exhausted retries`));
+          if (opts.signal?.aborted) {
+            reject(new TransportError(`POST ${url} aborted`, undefined, false));
+            return;
+          }
+          this.post(url, payload, opts).then(resolve, (error: unknown) => {
+            const retryable = error instanceof TransportError ? error.retryable : true;
+            if (!retryable || tries >= maxRetries || opts.signal?.aborted) {
+              reject(error instanceof Error ? error : new Error(`POST ${url} exhausted retries`));
               return;
             }
+            opts.onRetry?.(tries + 1, error);
             attempt(currentDelay + FAIL_DELAY_MS, tries + 1);
           });
         }, currentDelay);
       };
-      attempt(delayMs, 0);
+      attempt(opts.delayMs ?? 0, 0);
     });
   }
 
@@ -240,21 +320,37 @@ export class Transport {
     return this.readQueue().map((e) => JSON.parse(e) as WirePayload);
   }
 
+  /** Remove one exact entry from the CURRENT stored queue (re-read first). */
+  private removeEntry(entry: string): void {
+    const queue = this.readQueue();
+    const index = queue.lastIndexOf(entry);
+    if (index === -1) return;
+    queue.splice(index, 1);
+    this.writeQueue(queue);
+  }
+
   /**
    * Boot-time flush: LIFO, newest-first (legacy `checkCaches` uses `.pop()`),
-   * one at a time, continuing only after each success.
+   * one at a time, continuing only after each success. The queue is
+   * re-read after every POST so entries enqueued during the await are
+   * never clobbered by a stale snapshot; entries the server rejected
+   * (`success: false`) are skipped rather than retried forever.
    */
   async flushQueue(url: string): Promise<number> {
     let flushed = 0;
+    const attempted = new Set<string>();
     for (;;) {
-      const queue = this.readQueue();
-      const entry = queue.pop();
+      const entry = this.readQueue()
+        .slice()
+        .reverse()
+        .find((candidate) => !attempted.has(candidate));
       if (entry === undefined) break;
+      attempted.add(entry);
       const payload = JSON.parse(entry) as WirePayload;
       try {
         const response = await this.post(url, payload);
         if (response.success === false) break;
-        this.writeQueue(queue);
+        this.removeEntry(entry);
         flushed += 1;
       } catch {
         break; // still offline; keep the queue intact

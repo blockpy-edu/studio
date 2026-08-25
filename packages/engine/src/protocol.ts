@@ -160,12 +160,23 @@ export interface EngineResult {
 export type ClientToWorker =
   | { kind: 'init'; indexURL?: string }
   | { kind: 'run'; job: EngineJob }
-  | { kind: 'input-response'; jobId: string; value: string }
+  /**
+   * Answers an 'input-request'. `eof: true` means no line is coming (no
+   * input UI, the prompt was dismissed, or the callback failed): the
+   * suspended `input()` raises EOFError instead of returning `value`.
+   */
+  | { kind: 'input-response'; jobId: string; value: string; eof?: boolean }
   | { kind: 'interrupt'; jobId: string }
   | { kind: 'restart-kernel' };
 
 export type WorkerToClient =
   | { kind: 'ready'; mode: EngineMode }
+  /**
+   * The Pyodide load behind 'init' / 'restart-kernel' failed (offline CDN,
+   * wrong indexURL). The worker stays alive and keeps answering messages -
+   * every run resolves as an EngineError until a restart succeeds.
+   */
+  | { kind: 'init-error'; error: string }
   | { kind: 'stdout'; jobId: string; chunk: string }
   | { kind: 'stderr'; jobId: string; chunk: string }
   | { kind: 'input-request'; jobId: string; prompt: string }

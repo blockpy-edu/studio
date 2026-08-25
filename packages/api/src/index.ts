@@ -5,13 +5,26 @@
  */
 export { createServerData } from './context';
 export type { ApiContext, LegacyUrlMap, WirePayload, WireValue } from './context';
-export { encodeForm, MemoryStorage, Transport } from './transport';
-export type { FetchLike, LegacyResponse, StorageLike, TransportOptions } from './transport';
+export {
+  encodeForm,
+  isRetryableStatus,
+  MemoryStorage,
+  Transport,
+  TransportError,
+} from './transport';
+export type {
+  FetchLike,
+  LegacyResponse,
+  PostOptions,
+  RetryOptions,
+  StorageLike,
+  TransportOptions,
+} from './transport';
 export { EVENT_REGISTRY, clientMayEmit, eventDefinition } from './events';
 export type { EventDefinition, EventDeprecation, EventStatus } from './events';
 export { decodeAssignment, decodeSubmission, encodeAssignment, mergeSettings } from './decoder';
 export type { DecodedAssignment, DecodedSubmission, RawRecord } from './decoder';
 export { ApiClient } from './client';
-export type { ApiClientOptions } from './client';
+export type { ApiClientOptions, SaveOptions } from './client';
 
 export const PACKAGE_NAME = '@blockpy/api';

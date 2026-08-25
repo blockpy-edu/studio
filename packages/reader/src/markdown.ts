@@ -96,28 +96,44 @@ function renderFence(source: string, info: string): string {
 const rewriteLink = (link: string, env: ReaderRenderEnv): string =>
   link.startsWith('http') ? link : env.downloadUrl(link);
 
-export function renderReadingMarkdown(source: string, env: ReaderRenderEnv): string {
-  const marked = new Marked({
-    gfm: true,
-    // markdown-it default: single newlines do NOT become <br> (unlike the
-    // instructions pane's forced breaks:true, A6 §3).
-    breaks: false,
-    async: false,
-    renderer: {
-      code({ text, lang }) {
-        return renderFence(text, lang ?? '');
-      },
-      link({ href, title, tokens }) {
-        const target = rewriteLink(href, env);
-        const titleAttr = title ? ` title="${escapeAttr(title)}"` : '';
-        return `<a href="${escapeAttr(target)}"${titleAttr}>${this.parser.parseInline(tokens)}</a>`;
-      },
-      image({ href, title, text }) {
-        const target = rewriteLink(href, env);
-        const titleAttr = title ? ` title="${escapeAttr(title)}"` : '';
-        return `<img src="${escapeAttr(target)}" alt="${escapeAttr(text)}"${titleAttr}>`;
-      },
+// One module-level Marked instance (constructing one per call was the hot
+// path); parsing is synchronous, so the env of the in-flight call can be
+// handed to the link/image renderers through a module variable.
+let currentEnv: ReaderRenderEnv | null = null;
+const requireEnv = (): ReaderRenderEnv => {
+  if (!currentEnv) throw new Error('renderReadingMarkdown: no render env in flight');
+  return currentEnv;
+};
+
+const readingMarked = new Marked({
+  gfm: true,
+  // markdown-it default: single newlines do NOT become <br> (unlike the
+  // instructions pane's forced breaks:true, A6 §3).
+  breaks: false,
+  async: false,
+  renderer: {
+    code({ text, lang }) {
+      return renderFence(text, lang ?? '');
     },
-  });
-  return marked.parse(source ?? '', { async: false }) as string;
+    link({ href, title, tokens }) {
+      const target = rewriteLink(href, requireEnv());
+      const titleAttr = title ? ` title="${escapeAttr(title)}"` : '';
+      return `<a href="${escapeAttr(target)}"${titleAttr}>${this.parser.parseInline(tokens)}</a>`;
+    },
+    image({ href, title, text }) {
+      const target = rewriteLink(href, requireEnv());
+      const titleAttr = title ? ` title="${escapeAttr(title)}"` : '';
+      return `<img src="${escapeAttr(target)}" alt="${escapeAttr(text)}"${titleAttr}>`;
+    },
+  },
+});
+
+export function renderReadingMarkdown(source: string, env: ReaderRenderEnv): string {
+  const previousEnv = currentEnv;
+  currentEnv = env;
+  try {
+    return readingMarked.parse(source ?? '', { async: false }) as string;
+  } finally {
+    currentEnv = previousEnv;
+  }
 }

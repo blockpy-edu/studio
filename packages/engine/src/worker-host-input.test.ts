@@ -243,3 +243,145 @@ describe('WorkerHost interactive input round trip', () => {
     expect(after).toMatchObject({ result: { success: true, stdout: 'fresh' } });
   });
 });
+
+describe('WorkerHost boot failures and non-fatal errors', () => {
+  it('a failed Pyodide load posts init-error and keeps the message chain alive', async () => {
+    const posts: WorkerToClient[] = [];
+    let fail = true;
+    const host = new WorkerHost({
+      post: (message) => posts.push(message),
+      loadRunner: async () => {
+        if (fail) throw new Error('Failed to fetch pyodide-lock.json');
+        return {
+          execute: async (running: EngineJob) => ({
+            jobId: running.id,
+            success: true,
+            stdout: 'ok',
+            stderr: '',
+            artifacts: {},
+            durationMs: 0,
+          }),
+        } as unknown as JobRunner;
+      },
+      mode: 'compat',
+    });
+    await host.handle({ kind: 'init' });
+    expect(posts).toEqual([{ kind: 'init-error', error: 'Failed to fetch pyodide-lock.json' }]);
+    // Later messages still flow: the run resolves (as an EngineError) instead
+    // of being skipped by a rejected chain.
+    await host.handle({ kind: 'run', job: job({ id: 'dead', interactiveInput: false }) });
+    expect(posts.at(-1)).toMatchObject({
+      kind: 'result',
+      result: { jobId: 'dead', success: false, error: { type: 'EngineError' } },
+    });
+    // A later restart that succeeds boots normally.
+    fail = false;
+    await host.handle({ kind: 'restart-kernel' });
+    expect(posts.at(-1)).toEqual({ kind: 'ready', mode: 'compat' });
+    await host.handle({ kind: 'run', job: job({ id: 'alive', interactiveInput: false }) });
+    expect(posts.at(-1)).toMatchObject({ result: { jobId: 'alive', success: true } });
+  });
+
+  it('a NON-fatal execute error keeps the runner (no reload) when the canary passes', async () => {
+    const posts: WorkerToClient[] = [];
+    let loadCount = 0;
+    const host = new WorkerHost({
+      post: (message) => posts.push(message),
+      loadRunner: async () => {
+        loadCount += 1;
+        return {
+          execute: async () => {
+            throw new Error('OSError: cannot stage file');
+          },
+          healthCheck: () => true,
+        } as unknown as JobRunner;
+      },
+      mode: 'compat',
+    });
+    await host.handle({ kind: 'init' });
+    await host.handle({ kind: 'run', job: job({ id: 'j', interactiveInput: false }) });
+    expect(posts.find((m) => m.kind === 'result')).toMatchObject({
+      result: { error: { type: 'EngineError', message: 'OSError: cannot stage file' } },
+    });
+    expect(loadCount).toBe(1);
+    expect(posts.filter((m) => m.kind === 'runner-reloaded')).toHaveLength(0);
+  });
+
+  it('a non-fatal error still reloads when the canary reports a poisoned interpreter', async () => {
+    let loadCount = 0;
+    const host = new WorkerHost({
+      post: () => undefined,
+      loadRunner: async () => {
+        loadCount += 1;
+        return {
+          execute: async () => {
+            throw new Error('proxy already destroyed');
+          },
+          healthCheck: () => false,
+        } as unknown as JobRunner;
+      },
+      mode: 'compat',
+    });
+    await host.handle({ kind: 'init' });
+    await host.handle({ kind: 'run', job: job({ id: 'j', interactiveInput: false }) });
+    expect(loadCount).toBe(2);
+  });
+
+  it('an EOF input-response rejects the suspended input promise', async () => {
+    const posts: WorkerToClient[] = [];
+    let seen: unknown = null;
+    const host = new WorkerHost({
+      post: (message) => posts.push(message),
+      loadRunner: async () =>
+        ({
+          execute: async (running: EngineJob, streams: StreamCallbacks) => {
+            try {
+              await streams.onInput!('?');
+            } catch (error) {
+              seen = error;
+            }
+            return {
+              jobId: running.id,
+              success: true,
+              stdout: '',
+              stderr: '',
+              artifacts: {},
+              durationMs: 0,
+            };
+          },
+        }) as unknown as JobRunner,
+      mode: 'compat',
+    });
+    await host.handle({ kind: 'init' });
+    const running = host.handle({ kind: 'run', job: job() });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await host.handle({ kind: 'input-response', jobId: 'j1', value: '', eof: true });
+    await running;
+    expect(seen).toBeInstanceOf(Error);
+    expect(posts.at(-1)).toMatchObject({ kind: 'result', result: { jobId: 'j1' } });
+  });
+
+  it('restart-kernel forgets interrupts aimed at jobs the old interpreter never saw', async () => {
+    const posts: WorkerToClient[] = [];
+    const host = new WorkerHost({
+      post: (message) => posts.push(message),
+      loadRunner: async () =>
+        ({
+          execute: async (running: EngineJob) => ({
+            jobId: running.id,
+            success: true,
+            stdout: '',
+            stderr: '',
+            artifacts: {},
+            durationMs: 0,
+          }),
+        }) as unknown as JobRunner,
+      mode: 'compat',
+    });
+    await host.handle({ kind: 'init' });
+    await host.handle({ kind: 'interrupt', jobId: 'later' });
+    await host.handle({ kind: 'restart-kernel' });
+    await host.handle({ kind: 'run', job: job({ id: 'later', interactiveInput: false }) });
+    expect(posts.at(-1)).toMatchObject({ result: { jobId: 'later', success: true } });
+  });
+});

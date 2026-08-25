@@ -64,6 +64,34 @@ describe('DualTextEditor', () => {
     editor.dispose();
   });
 
+  it('quiet sets are not undo steps; clearHistory drops the stack', async () => {
+    // Dynamic: a static @codemirror/commands import in a test file races
+    // vite-node's inlined module graph into a second @codemirror/state copy.
+    const { undo } = await import('@codemirror/commands');
+    const host = makeHost();
+    const editor = new DualTextEditor(host, false);
+    editor.setMode('text');
+    editor.setCode('first = 1', true);
+    // A user edit (loud dispatch) IS undoable.
+    editor.view.dispatch({ changes: { from: 0, to: 9, insert: 'typed = 2' } });
+    expect(undo(editor.view)).toBe(true);
+    expect(editor.getCode()).toBe('first = 1');
+    // A programmatic replacement (file switch) is not an undo step...
+    editor.setCode('other = 3', true);
+    expect(undo(editor.view)).toBe(false);
+    expect(editor.getCode()).toBe('other = 3');
+    // ...and clearHistory forgets the earlier edits entirely.
+    editor.view.dispatch({ changes: { from: 0, to: 9, insert: 'typed = 4' } });
+    editor.clearHistory();
+    expect(undo(editor.view)).toBe(false);
+    expect(editor.getCode()).toBe('typed = 4');
+    // History still works after the reset.
+    editor.view.dispatch({ changes: { from: 0, to: 9, insert: 'typed = 5' } });
+    expect(undo(editor.view)).toBe(true);
+    expect(editor.getCode()).toBe('typed = 4');
+    editor.dispose();
+  });
+
   it('mode table controls container visibility and width', () => {
     const host = makeHost();
     const editor = new DualTextEditor(host, false);
