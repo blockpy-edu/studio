@@ -9,14 +9,17 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { JobRunner } from './runner';
 import type { EngineJob } from './protocol';
 
+import PEDAL_ENV_PY from './pedal-env.py?raw';
+
 let runner: JobRunner;
+let pyodide: { runPython(code: string): unknown };
 
 beforeAll(async () => {
   // Vitest's module transform breaks pyodide's import.meta.url-relative
   // asset lookup; point indexURL at the real package directory.
   const require = createRequire(import.meta.url);
   const indexURL = dirname(require.resolve('pyodide'));
-  const pyodide = await loadPyodide({ indexURL });
+  pyodide = (await loadPyodide({ indexURL })) as never;
   runner = JobRunner.create(pyodide as never);
 }, 60_000);
 
@@ -248,5 +251,133 @@ describe('staging and preprocess hardening', () => {
     expect(result.error?.message).toContain('not JSON-serializable');
     const fine = await runner.execute(job({ phase: 'quiz.preprocess', code: 'result = [1, 2]' }));
     expect(fine.value).toBe('[1, 2]');
+  });
+});
+
+describe('console evaluation keeps the working directory (§6.4)', () => {
+  it('does NOT re-stage files for eval phases (fake runtime)', async () => {
+    const calls: string[] = [];
+    const proxy = (value: unknown) => ({
+      toJs: () => value,
+      destroy: () => undefined,
+    });
+    const fakeRuntime = {
+      stage_files: () => calls.push('stage_files'),
+      collect_artifacts: () => {
+        calls.push('collect_artifacts');
+        return proxy({});
+      },
+      run: () => {
+        calls.push('run');
+        return proxy({ error: null, value: null, stdout: '', stderr: '', trace: null });
+      },
+      evaluate: () => {
+        calls.push('evaluate');
+        return proxy({ error: null, value: '1', stdout: '', stderr: '', trace: null });
+      },
+      clear_namespace: () => undefined,
+      stack_canary: () => 0,
+    };
+    const fakePyodide = {
+      runPython: (code: string) => {
+        if (code.startsWith('_studio_runtime.stage_files')) fakeRuntime.stage_files();
+        return undefined;
+      },
+      globals: { get: () => fakeRuntime },
+    };
+    const fake = JobRunner.create(fakePyodide as never);
+    await fake.execute(job({ phase: 'student.run', code: 'x = 1', files: { 'a.txt': 'a' } }));
+    expect(calls).toEqual(['stage_files', 'run', 'collect_artifacts']);
+    calls.length = 0;
+    await fake.execute(job({ phase: 'student.eval', code: 'x' }));
+    expect(calls).toEqual(['evaluate', 'collect_artifacts']);
+    calls.length = 0;
+    await fake.execute(job({ phase: 'instructor.on_eval', code: 'x' }));
+    expect(calls).toEqual(['evaluate', 'collect_artifacts']);
+  });
+
+  it('can open a file the previous run wrote', async () => {
+    await runner.execute(job({ code: 'open("out.txt", "w").write("kept")' }));
+    const result = await runner.execute(
+      job({ phase: 'student.eval', code: 'open("out.txt").read()' }),
+    );
+    expect(result.success).toBe(true);
+    expect(result.value).toBe("'kept'");
+  });
+});
+
+describe('requests mock does not shadow a real requests package', () => {
+  it('restores the pre-job sys.modules["requests"] after a mocked run', async () => {
+    // Simulate an installed real `requests` (site-packages __file__, so the
+    // module restore adopts it into the baseline exactly like micropip's).
+    pyodide.runPython(
+      [
+        'import sys, types',
+        "_real = types.ModuleType('requests')",
+        "_real.__file__ = '/lib/python3.13/site-packages/requests/__init__.py'",
+        "_real.marker = 'real'",
+        "sys.modules['requests'] = _real",
+        '_studio_runtime.baseline_modules.add("requests")',
+      ].join('\n'),
+    );
+    try {
+      const mocked = await runner.execute(
+        job({ code: 'import requests\nprint(getattr(requests, "marker", "mock"))' }),
+      );
+      expect(mocked.stdout).toBe('mock\n');
+      const real = await runner.execute(
+        job({
+          allowRealRequests: true,
+          code: 'import requests\nprint(getattr(requests, "marker", "mock"))',
+        }),
+      );
+      expect(real.stdout).toBe('real\n');
+    } finally {
+      pyodide.runPython(
+        "import sys\nsys.modules.pop('requests', None)\n_studio_runtime.baseline_modules.discard('requests')",
+      );
+    }
+    // Without a real package, the mock is evicted after the job.
+    await runner.execute(job({ code: 'import requests' }));
+    expect(pyodide.runPython("import sys\n'requests' in sys.modules")).toBe(false);
+  });
+});
+
+describe('pedal-env staging (plain-Python logic, no pedal import)', () => {
+  it('copies every staged .py into _instructor, prefixed or not', async () => {
+    pyodide.runPython(PEDAL_ENV_PY);
+    const listing = pyodide.runPython(
+      [
+        'import os, json, tempfile',
+        '_d = tempfile.mkdtemp()',
+        '_cwd = os.getcwd()',
+        'os.chdir(_d)',
+        'try:',
+        '    _studio_pedal_stage({',
+        "        'helpers.py': 'X = 1',",
+        "        '!legacy.py': 'Y = 2',",
+        "        'sub/deep.py': 'Z = 3',",
+        "        'data.txt': 'not python',",
+        "        '^starting.py': 'never',",
+        '    })',
+        '    _found = sorted(',
+        "        os.path.relpath(os.path.join(r, f), _d).replace(os.sep, '/')",
+        '        for r, _, fs in os.walk(_d) for f in fs',
+        '    )',
+        'finally:',
+        '    os.chdir(_cwd)',
+        'json.dumps(_found)',
+      ].join('\n'),
+    ) as string;
+    expect(JSON.parse(listing)).toEqual([
+      '_instructor/__init__.py',
+      '_instructor/helpers.py',
+      '_instructor/legacy.py',
+      '_instructor/sub/deep.py',
+      'data.txt',
+      'helpers.py',
+      'legacy.py',
+      'sub/deep.py',
+    ]);
   });
 });

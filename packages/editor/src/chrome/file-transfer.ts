@@ -9,8 +9,13 @@
 
 interface IpynbCell {
   cell_type?: string;
-  source?: string[];
+  /** nbformat allows a single string OR a list of lines. */
+  source?: string | string[];
 }
+
+/** nbformat `source` normalized to the list-of-lines shape. */
+const cellLines = (cell: IpynbCell): string[] =>
+  typeof cell.source === 'string' ? [cell.source] : (cell.source ?? []);
 
 /**
  * convertIpynbToPython (python.js:161-181), quirk-for-quirk: code cells
@@ -22,12 +27,13 @@ export function convertIpynbToPython(code: string): string {
   const ipynb = JSON.parse(code) as { cells?: IpynbCell[] };
   const isUsable = (cell: IpynbCell): boolean => {
     if (cell.cell_type === 'code') {
-      return (cell.source?.length ?? 0) > 0 && !cell.source![0]!.startsWith('%');
+      const lines = cellLines(cell);
+      return lines.length > 0 && !lines[0]!.startsWith('%');
     }
     return cell.cell_type === 'markdown' || cell.cell_type === 'raw';
   };
   const makePython = (cell: IpynbCell): string => {
-    const source = (cell.source ?? []).join('\n');
+    const source = cellLines(cell).join('\n');
     return cell.cell_type === 'code' ? source : "'''" + source + "'''";
   };
   return (ipynb.cells ?? []).filter(isUsable).map(makePython).join('\n');

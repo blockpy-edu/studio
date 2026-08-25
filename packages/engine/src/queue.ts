@@ -19,6 +19,12 @@ export interface JobQueueOptions {
    * when `clear()` runs. Lets the owner settle the job's promise.
    */
   onDropped?: (job: EngineJob) => void;
+  /**
+   * Called when `execute` rejects for a job. The queue keeps pumping the
+   * remaining jobs either way; without this, the failure is reported
+   * through `onDropped` (so the owner can still settle the job's promise).
+   */
+  onError?: (job: EngineJob, error: unknown) => void;
 }
 
 export class JobQueue {
@@ -78,7 +84,14 @@ export class JobQueue {
       for (;;) {
         const job = this.next();
         if (!job) break;
-        await this.options.execute(job);
+        try {
+          await this.options.execute(job);
+        } catch (error) {
+          // A rejected execute must not become an unhandled rejection
+          // that ends the pump with every waiting job stuck behind it.
+          if (this.options.onError) this.options.onError(job, error);
+          else this.options.onDropped?.(job);
+        }
       }
     } finally {
       this.running = false;

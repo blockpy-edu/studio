@@ -161,7 +161,19 @@ export class Transport {
         isRetryableStatus(response.status),
       );
     }
-    const parsed = (await response.json()) as LegacyResponse;
+    let parsed: LegacyResponse;
+    try {
+      parsed = (await response.json()) as LegacyResponse;
+    } catch (error) {
+      // A 200 with a non-JSON body is the server's HTML login page (an
+      // expired LTI session) or a proxy error page: resending the same
+      // request can never fix it, so it must NOT burn the retry ladder.
+      throw new TransportError(
+        `POST ${url} returned a non-JSON body: ${String(error)}`,
+        response.status,
+        false,
+      );
+    }
     if (typeof parsed.ip === 'string') this.checkIp(parsed.ip);
     return parsed;
   }
@@ -349,7 +361,12 @@ export class Transport {
       const payload = JSON.parse(entry) as WirePayload;
       try {
         const response = await this.post(url, payload);
-        if (response.success === false) break;
+        if (response.success === false) {
+          // The server rejected THIS entry: drop it and move on, or it
+          // would shadow every older entry on every flush forever.
+          this.removeEntry(entry);
+          continue;
+        }
         this.removeEntry(entry);
         flushed += 1;
       } catch {

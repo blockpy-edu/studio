@@ -172,8 +172,9 @@ describe('installCookieFallback (§13, editor.html:27-99)', () => {
       expect((win as unknown as Record<string, unknown>)['ltiLoadedCorrectly']).toBe(false);
       expect(errorSpy).toHaveBeenCalledWith(COOKIE_ERROR_MESSAGE);
       expect(posted).toHaveLength(2);
-      // message_id shared; key/value carry the GENERATED ids (legacy posted
-      // literal "<state_id>" placeholders - fixed per §13, ledger LD-14).
+      // Distinct message_ids per post (so responses can be told apart);
+      // key/value carry the GENERATED ids (legacy posted literal
+      // "<state_id>" placeholders - fixed per §13, ledger LD-14).
       expect(posted[0]!.message).toEqual({
         subject: 'lti.put_data',
         message_id: 'uuid-1',
@@ -182,10 +183,11 @@ describe('installCookieFallback (§13, editor.html:27-99)', () => {
       });
       expect(posted[1]!.message).toEqual({
         subject: 'lti.put_data',
-        message_id: 'uuid-1',
-        key: 'nonce_uuid-3',
-        value: 'uuid-3',
+        message_id: 'uuid-3',
+        key: 'nonce_uuid-4',
+        value: 'uuid-4',
       });
+      expect(posted[0]!.message['message_id']).not.toBe(posted[1]!.message['message_id']);
       expect(posted[0]!.origin).toBe('*');
     } finally {
       errorSpy.mockRestore();
@@ -214,9 +216,10 @@ describe('installCookieFallback (§13, editor.html:27-99)', () => {
       fire('not-an-object', 'https://platform.example');
       fire({ subject: 'other' }, 'https://platform.example');
       fire({ subject: 'lti.put_data.response', message_id: 'wrong' }, 'https://platform.example');
-      // Correct subject + id, but origin can never equal '*': rejected.
+      // Correct subject + either id, but origin can never equal '*': rejected.
       fire({ subject: 'lti.put_data.response', message_id: 'uuid-1' }, 'https://platform.example');
-      expect(logSpy).not.toHaveBeenCalledWith('Success! State and nonce values were stored.');
+      fire({ subject: 'lti.put_data.response', message_id: 'uuid-3' }, 'https://platform.example');
+      expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining('Success!'));
     } finally {
       errorSpy.mockRestore();
       logSpy.mockRestore();

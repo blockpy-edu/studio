@@ -178,4 +178,132 @@ describe('save failures, bundle cleanliness, and deletions', () => {
     await s.autosaver.saveAnswerNow();
     expect(s.saved).toEqual([]);
   });
+
+  it('surfaces a success:false response through onSaveError and keeps the file dirty', async () => {
+    const vfs = new Vfs();
+    const errors: Array<{ filename: string; error: unknown }> = [];
+    const timers: Array<() => void> = [];
+    new Autosaver({
+      vfs,
+      api: {
+        async saveFile() {
+          return { success: false, message: 'assignment locked' };
+        },
+      },
+      onSaveError: (filename, error) => errors.push({ filename, error }),
+      schedule: (fn) => {
+        timers.push(fn);
+        return () => undefined;
+      },
+    });
+    vfs.write('answer.py', 'x');
+    for (const fire of timers.splice(0)) fire();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(errors).toHaveLength(1);
+    expect(errors[0]!.filename).toBe('answer.py');
+    expect((errors[0]!.error as Error).message).toBe('assignment locked');
+    expect(vfs.isDirty('answer.py')).toBe(true);
+  });
+});
+
+describe('ordering and teardown', () => {
+  /** A saver whose saveFile resolves only when the test releases it. */
+  function manualSetup() {
+    const vfs = new Vfs();
+    const saved: Saved[] = [];
+    const releases: Array<() => void> = [];
+    const timers: Array<{ fn: () => void; cancelled: boolean }> = [];
+    const autosaver = new Autosaver({
+      vfs,
+      api: {
+        saveFile(filename, code) {
+          saved.push({ filename, code });
+          return new Promise((resolve) => {
+            releases.push(() => resolve({ success: true }));
+          });
+        },
+      },
+      schedule: (fn) => {
+        const timer = { fn, cancelled: false };
+        timers.push(timer);
+        return () => {
+          timer.cancelled = true;
+        };
+      },
+    });
+    const fireTimers = () => {
+      for (const timer of timers.splice(0)) if (!timer.cancelled) timer.fn();
+    };
+    const settle = async () => {
+      for (let i = 0; i < 5; i += 1) await Promise.resolve();
+    };
+    return { vfs, saved, releases, timers, autosaver, fireTimers, settle };
+  }
+
+  it('serializes saves per wire file: a second edit waits for the in-flight POST', async () => {
+    const s = manualSetup();
+    s.vfs.write('answer.py', 'v1');
+    s.fireTimers();
+    await s.settle();
+    expect(s.saved.map((entry) => entry.code)).toEqual(['v1']);
+    // Edit again while v1 is still in flight.
+    s.vfs.write('answer.py', 'v2');
+    s.fireTimers();
+    await s.settle();
+    expect(s.saved.map((entry) => entry.code)).toEqual(['v1']); // queued, not sent
+    expect(s.vfs.isDirty('answer.py')).toBe(true);
+    // v1 lands: v2 was written after it was read, so the file stays dirty.
+    s.releases.shift()!();
+    await s.settle();
+    expect(s.vfs.isDirty('answer.py')).toBe(true);
+    expect(s.saved.map((entry) => entry.code)).toEqual(['v1', 'v2']);
+    // v2 lands: nothing newer, so the file is clean.
+    s.releases.shift()!();
+    await s.settle();
+    expect(s.vfs.isDirty('answer.py')).toBe(false);
+  });
+
+  it('does not mark clean when an edit lands during the POST (saveAnswerNow path)', async () => {
+    const s = manualSetup();
+    s.vfs.write('answer.py', 'v1');
+    const saving = s.autosaver.saveAnswerNow();
+    await s.settle();
+    s.vfs.write('answer.py', 'v2'); // newer content while v1 is in flight
+    s.releases.shift()!();
+    await saving;
+    expect(s.vfs.isDirty('answer.py')).toBe(true);
+    // The debounced v2 save is queued behind v1 and cleans up after itself.
+    s.fireTimers();
+    await s.settle();
+    s.releases.shift()!();
+    await s.settle();
+    expect(s.saved.map((entry) => entry.code)).toEqual(['v1', 'v2']);
+    expect(s.vfs.isDirty('answer.py')).toBe(false);
+  });
+
+  it('flush() and dispose() persist edits still inside the debounce window', async () => {
+    const s = setup();
+    s.vfs.write('answer.py', 'last words');
+    s.vfs.write('?data.csv', 'a,b');
+    s.autosaver.dispose(); // timers never fire
+    await s.fireTimers();
+    expect(s.saved.map((entry) => entry.filename).sort()).toEqual([
+      '#extra_instructor_files.blockpy',
+      'answer.py',
+    ]);
+    expect(s.vfs.isDirty('answer.py')).toBe(false);
+    expect(s.vfs.isDirty('?data.csv')).toBe(false);
+    // After dispose, further edits are no longer observed.
+    s.vfs.write('answer.py', 'ignored');
+    await s.fireTimers();
+    expect(s.saved).toHaveLength(2);
+  });
+
+  it('flush() resolves once the flushed saves settle', async () => {
+    const s = setup();
+    s.vfs.write('answer.py', 'flush me');
+    await s.autosaver.flush();
+    expect(s.saved).toEqual([{ filename: 'answer.py', code: 'flush me' }]);
+    expect(s.vfs.isDirty('answer.py')).toBe(false);
+  });
 });

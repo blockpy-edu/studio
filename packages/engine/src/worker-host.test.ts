@@ -10,7 +10,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { EngineClient } from './client';
 import { createLoopbackPort } from './loopback';
 import { JobRunner } from './runner';
-import type { EngineJob } from './protocol';
+import { WorkerHost } from './worker-host';
+import type { EngineJob, WorkerToClient } from './protocol';
 
 let client: EngineClient;
 
@@ -129,5 +130,35 @@ describe('interactive input without JSPI (node)', () => {
     expect(result.success).toBe(false);
     expect(result.error?.type).toBe('EOFError');
     expect(result.stdout).toBe('What?');
+  });
+});
+
+describe('non-fatal execute escapes (fake runner)', () => {
+  it('puts only the last traceback line in message and the full text in traceback', async () => {
+    const pythonError =
+      'Traceback (most recent call last):\n' +
+      '  File "/lib/python313.zip/_pyodide/_base.py", line 597, in eval_code\n' +
+      '    .run(globals, locals)\n' +
+      'ValueError: Cannot stage a file with an empty name\n';
+    const posted: WorkerToClient[] = [];
+    const host = new WorkerHost({
+      mode: 'compat',
+      post: (m) => posted.push(m),
+      loadRunner: async () =>
+        ({
+          execute: async () => {
+            throw new Error(pythonError);
+          },
+          healthCheck: () => true,
+        }) as never,
+    });
+    await host.handle({ kind: 'init' });
+    await host.handle({ kind: 'run', job: job({ id: 'esc', code: 'pass' }) });
+    const result = posted.find((m) => m.kind === 'result');
+    expect(result?.kind).toBe('result');
+    if (result?.kind !== 'result') return;
+    expect(result.result.error?.type).toBe('EngineError');
+    expect(result.result.error?.message).toBe('ValueError: Cannot stage a file with an empty name');
+    expect(result.result.error?.traceback).toBe(pythonError + '\n');
   });
 });

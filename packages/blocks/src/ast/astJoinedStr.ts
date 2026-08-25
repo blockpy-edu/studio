@@ -301,6 +301,28 @@ defineBlock('ast_JoinedStr_create_with_item_FVF', {
   },
 });
 
+/**
+ * Replace `needle` with `replacement` wherever it is not already preceded by
+ * an odd run of backslashes (literal chunks keep their source escapes raw).
+ */
+function escapeUnescaped(text: string, needle: string, replacement: string): string {
+  let out = '';
+  let i = 0;
+  while (i < text.length) {
+    if (text[i] === '\\') {
+      out += text.slice(i, i + 2);
+      i += 2;
+    } else if (text.startsWith(needle, i)) {
+      out += replacement;
+      i += needle.length;
+    } else {
+      out += text[i];
+      i += 1;
+    }
+  }
+  return out;
+}
+
 generator.forBlock['ast_JoinedStr'] = function (block) {
   // Create a dict with any number of elements of any type.
   const typed = block as JoinedStrBlock;
@@ -319,7 +341,11 @@ generator.forBlock['ast_JoinedStr'] = function (block) {
       continue;
     }
     if (child.type === 'ast_JoinedStrStr') {
-      const value = child.getFieldValue('TEXT') || generator.blank;
+      // Literal chunks hold `{`/`}` unescaped (to-ast unescapes `{{`/`}}`),
+      // so re-escape them on the way out.
+      const value = (child.getFieldValue('TEXT') || generator.blank)
+        .replace(/\{/g, '{{')
+        .replace(/\}/g, '}}');
       elements[i] = value;
       indices.push(i);
       strings.push(value);
@@ -331,24 +357,27 @@ generator.forBlock['ast_JoinedStr'] = function (block) {
       let formatSpec = child.getFieldValue('FORMAT_SPEC');
       formatSpec = formatSpec ? `:${formatSpec}` : '';
       const conversion = child.getFieldValue('CONVERSION');
-      elements[i] = `{${value}${formatSpec}${conversion === '-1' ? '' : `!${conversion}`}}`;
+      // Python syntax is `{value!conversion:format_spec}`.
+      elements[i] = `{${value}${conversion === '-1' ? '' : `!${conversion}`}${formatSpec}}`;
     }
   }
 
   let code;
   if (strings.some((s) => s.includes('\n'))) {
     indices.forEach((i) => {
-      elements[i] = elements[i]!.replace(/'''/g, "\\'\\'\\'");
+      elements[i] = escapeUnescaped(elements[i]!, "'''", "\\'\\'\\'");
     });
     code = "f'''" + elements.join('') + "'''";
   } else {
+    // Pick a quote that is ABSENT from the literal content; when both are
+    // present, escape the (not already escaped) double quotes.
     let quote = '"';
-    if (strings.some((s) => s.includes("'"))) {
-      if (!strings.some((s) => s.includes('"'))) {
+    if (strings.some((s) => s.includes('"'))) {
+      if (!strings.some((s) => s.includes("'"))) {
         quote = "'";
       } else {
         indices.forEach((i) => {
-          elements[i] = elements[i]!.replace(/"/g, '\\"');
+          elements[i] = escapeUnescaped(elements[i]!, '"', '\\"');
         });
       }
     }

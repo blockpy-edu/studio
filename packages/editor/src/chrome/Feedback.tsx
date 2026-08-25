@@ -65,6 +65,15 @@ export function Feedback({ size = 'col-md-6', ...props }: FeedbackProps) {
   const [hasRated, setHasRated] = useState(false);
   const [thankYou, setThankYou] = useState(false);
   const store = useEditorChromeStore;
+  // The 1 s thank-you timer: cleared on unmount (no setState after unmount)
+  // and guarded so a double-click cannot queue two share prompts.
+  const thankYouTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (thankYouTimerRef.current) clearTimeout(thankYouTimerRef.current);
+    },
+    [],
+  );
 
   const renderedMessage = useMemo(
     () => renderFeedbackMessage(feedback.message),
@@ -87,6 +96,7 @@ export function Feedback({ size = 'col-md-6', ...props }: FeedbackProps) {
   };
 
   const rate = (rating: 'thumbs-up' | 'thumbs-down') => {
+    if (thankYouTimerRef.current) return; // a rating is already pending
     props.onRate?.(rating);
     setHasRated(true);
     setThankYou(true);
@@ -94,7 +104,8 @@ export function Feedback({ size = 'col-md-6', ...props }: FeedbackProps) {
     // thank-you. Legacy opened the "having trouble?" prompted share dialog
     // for ANY rating (blockpy.js:801-813, dead suggestShare param) -
     // thanking someone for a thumbs-up with a trouble dialog was noise.
-    setTimeout(() => {
+    thankYouTimerRef.current = setTimeout(() => {
+      thankYouTimerRef.current = null;
       setThankYou(false);
       if (rating === 'thumbs-down') {
         store.getState().requestPromptedShare();

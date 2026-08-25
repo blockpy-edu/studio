@@ -120,10 +120,19 @@ BlockMirrorTextToBlocks.BLOCKS.push({
     //"extensions": ["text_quotes"]
 });*/
 
+/**
+ * Quote a string value as a single-line Python literal. Blockly's `quote_`
+ * escapes backslashes and turns newlines into backslash-newline (a line
+ * continuation, which would leak surrounding indentation into the value);
+ * rewrite every one of those into a proper `\n` escape.
+ */
+export function quoteSingleLine(text: string): string {
+  return generator.quote_(text).replace(/\\\n/g, '\\n');
+}
+
 generator.forBlock['ast_Str'] = function (block) {
   // Text value
-  let code = generator.quote_(block.getFieldValue('TEXT'));
-  code = code.replace('\n', 'n');
+  const code = quoteSingleLine(block.getFieldValue('TEXT'));
   return [code, generator.ORDER_ATOMIC];
 };
 
@@ -150,13 +159,15 @@ generator.forBlock['ast_Image'] = function (block) {
 
 const multiline_quote = function (string: string): string {
   // Can't use goog.string.quote since % must also be escaped.
-  string = string.replace(/'''/g, "\\'\\'\\'");
+  string = string.replace(/\\/g, '\\\\').replace(/'''/g, "\\'\\'\\'");
   return "'''" + string + "'''";
 };
 
 generator.forBlock['ast_StrMultiline'] = function (block) {
-  // Text value
-  const code = multiline_quote(block.getFieldValue('TEXT'));
+  // Text value. Emitted as an ordinary single-line literal with `\n`
+  // escapes: a triple-quoted literal spanning lines would have Blockly's
+  // statement indentation prepended to every line on each round trip.
+  const code = quoteSingleLine(block.getFieldValue('TEXT'));
   return [code, generator.ORDER_ATOMIC];
 };
 
@@ -270,9 +281,9 @@ registerConverter(
     } else if (text.indexOf('\n') === -1) {
       return createBlock('ast_Str', node.lineno, { TEXT: text });
     } else {
-      const dedented = dedent(text, this.levelIndex - 1, false);
-      // console.log("DD", dedented);
-      return createBlock('ast_StrMultiline', node.lineno, { TEXT: dedented });
+      // No dedent: the value is emitted as a single-line literal, so the
+      // text must stay exactly what the program says.
+      return createBlock('ast_StrMultiline', node.lineno, { TEXT: text });
     }
   },
 );

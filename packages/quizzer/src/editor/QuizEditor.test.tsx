@@ -104,4 +104,45 @@ describe('QuizEditor (visual authoring, 2026-07-11 requirement)', () => {
     // The graded feedback rendered in the embedded student surface.
     expect(view.container.querySelector('.quizzer-feedback.bg-success')).not.toBeNull();
   });
+
+  it('Try It grades a POOLED draft against the pool selection it rendered', async () => {
+    // Three pooled T/F questions, one shown. The embedded Quizzer selects
+    // with seed 0 (no submission id) → question `c`; only `c` is keyed
+    // correct=true, so answering the rendered question "True" grades 100%
+    // only if local grading uses the same seed (it used to grade with a
+    // different visible set and report 0%).
+    const pooled = JSON.stringify({
+      questions: {
+        a: { type: 'true_false_question', body: 'Question A', points: 1 },
+        b: { type: 'true_false_question', body: 'Question B', points: 1 },
+        c: { type: 'true_false_question', body: 'Question C', points: 1 },
+      },
+      settings: { attemptLimit: -1, feedbackType: 'IMMEDIATE', poolRandomness: 'SEED' },
+      pools: [{ name: 'P', amount: 1, questions: ['a', 'b', 'c'] }],
+    });
+    const checks = JSON.stringify({
+      questions: { a: { correct: false }, b: { correct: false }, c: { correct: true } },
+    });
+    const { view } = renderEditor(pooled, checks);
+    fireEvent.click(screen.getByRole('button', { name: 'Try It' }));
+    await waitFor(() =>
+      expect(screen.getAllByRole('button', { name: 'Start Quiz' }).length).toBe(2),
+    );
+    fireEvent.click(screen.getAllByRole('button', { name: 'Start Quiz' })[0]!);
+    await waitFor(() => expect(screen.getByLabelText('True')).toBeDefined());
+    // Exactly one pooled question rendered, and it is the seed-0 pick.
+    expect(view.container.querySelectorAll('.quizzer-question-card')).toHaveLength(1);
+    expect(screen.getByText('Question C')).toBeDefined();
+    fireEvent.click(screen.getByLabelText('True'));
+    await waitFor(() => {
+      const submit = screen.getAllByRole('button', { name: 'Submit answer' })[0]!;
+      expect((submit as HTMLButtonElement).disabled).toBe(false);
+    });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Submit answer' })[0]!);
+    await waitFor(() => {
+      expect(view.container.querySelector('.quizzer-tryit-summary')?.textContent).toContain(
+        'Local grade: score 100.0% of 1 points; correct=true',
+      );
+    });
+  });
 });

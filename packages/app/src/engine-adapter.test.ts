@@ -11,22 +11,38 @@ interface FakeJob {
   id: string;
   phase: string;
   pedal?: { onRun: string };
+  limits?: { wallMs: number };
 }
 
 const runCalls: FakeJob[] = [];
 let cannedResults: unknown[] = [];
+const interruptCalls: string[] = [];
+const disposeCalls: number[] = [];
+// When set, a job of this phase parks until `releaseHeld()` runs.
+let holdPhase: string | null = null;
+let releaseHeld: () => void = () => undefined;
 
 vi.mock('@blockpy/engine', () => ({
   EngineClient: class {
-    run(job: FakeJob): Promise<unknown> {
+    async run(job: FakeJob): Promise<unknown> {
       runCalls.push(job);
-      return Promise.resolve(cannedResults.shift());
+      if (holdPhase === job.phase) {
+        await new Promise<void>((resolve) => {
+          releaseHeld = resolve;
+        });
+      }
+      return cannedResults.shift();
     }
-    interrupt(): void {}
+    interrupt(jobId: string): void {
+      interruptCalls.push(jobId);
+    }
+    dispose(): void {
+      disposeCalls.push(1);
+    }
   },
 }));
 
-import { createEngineRunController } from './engine-adapter';
+import { createEngineRunController, workerPort } from './engine-adapter';
 
 const RUNTIME_ERROR_RESULT = {
   success: false,
@@ -63,6 +79,9 @@ function handlers(): RunHandlers {
 beforeEach(() => {
   runCalls.length = 0;
   cannedResults = [];
+  interruptCalls.length = 0;
+  disposeCalls.length = 0;
+  holdPhase = null;
 });
 
 describe('engine adapter grading resilience (M3.2)', () => {
@@ -127,5 +146,79 @@ describe('workerEntryUrl (BootConfig paths.assets)', () => {
     expect(workerEntryUrl('https://example.edu/blockpy/assets').href).toBe(
       'https://example.edu/blockpy/assets/worker.entry.js',
     );
+  });
+});
+
+describe('job ids, Stop during grading, per-controller pedal state', () => {
+  it('grade jobs use the counter (no Date.now collisions) and Stop interrupts them', async () => {
+    cannedResults = [CLEAN_RESULT, PEDAL_RESULT];
+    holdPhase = 'instructor.on_run';
+    const controller = createEngineRunController();
+    const running = controller.run('x = 1', handlers(), { onRun: 'from pedal import *' });
+    // Let the student run settle and the grading job start (and park).
+    await vi.waitFor(() => expect(runCalls).toHaveLength(2));
+    expect(runCalls[1]!.id).toBe('harness-grade-2');
+    controller.stop!();
+    expect(interruptCalls).toEqual(['harness-grade-2']);
+    releaseHeld();
+    await running;
+  });
+
+  it('Stop interrupts an in-flight evaluate', async () => {
+    cannedResults = [{ success: true, value: '1' }];
+    holdPhase = 'student.eval';
+    const controller = createEngineRunController();
+    const evaluating = controller.evaluate!('1', handlers());
+    await vi.waitFor(() => expect(runCalls).toHaveLength(1));
+    controller.stop!();
+    expect(interruptCalls).toEqual([runCalls[0]!.id]);
+    releaseHeld();
+    await evaluating;
+  });
+
+  it('pedalReady is per controller: a fresh controller gets the install-length wall clock', async () => {
+    cannedResults = [CLEAN_RESULT, PEDAL_RESULT];
+    const first = createEngineRunController();
+    await first.run('x = 1', handlers(), { onRun: 'from pedal import *' });
+    expect(runCalls[1]!.limits?.wallMs).toBe(180_000);
+    cannedResults = [CLEAN_RESULT, PEDAL_RESULT];
+    await first.run('x = 1', handlers(), { onRun: 'from pedal import *' });
+    expect(runCalls[3]!.limits?.wallMs).toBe(15_000); // wheels installed here
+
+    cannedResults = [CLEAN_RESULT, PEDAL_RESULT];
+    const second = createEngineRunController(); // its own worker: no wheels yet
+    await second.run('x = 1', handlers(), { onRun: 'from pedal import *' });
+    expect(runCalls[5]!.limits?.wallMs).toBe(180_000);
+  });
+
+  it('dispose() releases the engine client', async () => {
+    cannedResults = [CLEAN_RESULT];
+    const controller = createEngineRunController();
+    await controller.run('x = 1', handlers(), { onRun: '' });
+    controller.dispose!();
+    expect(disposeCalls).toHaveLength(1);
+    controller.dispose!(); // no client: nothing to dispose
+    expect(disposeCalls).toHaveLength(1);
+  });
+});
+
+describe('workerPort', () => {
+  it('turns a worker script load failure into an init-error message', () => {
+    const fake = {
+      postMessage: () => {},
+      terminate: () => {},
+      onmessage: null as ((event: { data: unknown }) => void) | null,
+      onerror: null as ((event: unknown) => void) | null,
+    };
+    const port = workerPort(fake as unknown as Worker);
+    const received: unknown[] = [];
+    port.onMessage((message) => received.push(message));
+    fake.onerror!({ message: 'Failed to fetch worker.entry.js' });
+    expect(received).toEqual([
+      {
+        kind: 'init-error',
+        error: 'Engine worker failed to load: Failed to fetch worker.entry.js',
+      },
+    ]);
   });
 });

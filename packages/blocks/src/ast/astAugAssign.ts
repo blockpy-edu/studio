@@ -137,9 +137,9 @@ registerConverter(
     if (simpleTarget) {
       fields['VAR'] = (target as ir.Name).id;
     } else {
-      // Legacy quirk preserved: converts `value` (not `target`) into the
-      // TARGET input, exactly as `ast_AugAssign.js` did.
-      values['TARGET'] = this.convert(value, node) as Element;
+      // (Legacy `ast_AugAssign.js` converted `value` here by mistake, turning
+      // `self.count += 1` into `1 += 1`.)
+      values['TARGET'] = this.convert(target, node) as Element;
     }
 
     const preposition = op;

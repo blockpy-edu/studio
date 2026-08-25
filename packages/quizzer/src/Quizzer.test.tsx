@@ -127,6 +127,26 @@ describe('Quizzer (quizzer.ts port, §11.3)', () => {
     });
   });
 
+  it('flushes a rate-limited text save on unmount (edits within 400 ms are not lost)', async () => {
+    const { view, saveAnswer } = renderQuizzer();
+    await start();
+    await waitFor(() => {
+      expect(view.container.querySelector('#question-fimb-3-noun')).not.toBeNull();
+    });
+    await waitFor(() => expect(saveAnswer).toHaveBeenCalled());
+    saveAnswer.mockClear();
+    fireEvent.change(view.container.querySelector('#question-fimb-3-noun')!, {
+      target: { value: 'cat' },
+    });
+    // Text answers debounce 400 ms; navigating away immediately used to
+    // clear the timer without saving.
+    expect(saveAnswer).not.toHaveBeenCalled();
+    view.unmount();
+    expect(saveAnswer).toHaveBeenCalledTimes(1);
+    const doc = JSON.parse(saveAnswer.mock.calls[0]![2] as string) as QuizSubmission;
+    expect(doc.studentAnswers?.['fimb1']).toEqual({ noun: 'cat', place: '' });
+  });
+
   it('submit applies server feedbacks, ends the attempt, and marks correct', async () => {
     const submitQuiz = vi.fn(async () => ({
       success: true,

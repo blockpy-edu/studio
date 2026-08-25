@@ -23,11 +23,25 @@ import type {
 } from '@blockpy/editor';
 
 /** Adapt a browser Worker to the engine's port abstraction. */
-function workerPort(worker: Worker): EnginePort {
+export function workerPort(worker: Worker): EnginePort {
   return {
     postMessage: (message) => worker.postMessage(message),
     onMessage: (callback) => {
       worker.onmessage = (event) => callback(event.data);
+      // A worker whose script fails to load (404, syntax error, CSP) never
+      // posts `ready`; without this the client's awaitReady hangs and every
+      // run sits on "Starting Python…" forever. Surface it as the protocol's
+      // init-error so the boot promise settles with the failure.
+      worker.onerror = (event) => {
+        const detail =
+          typeof event === 'object' && event !== null && 'message' in event
+            ? String((event as { message?: unknown }).message ?? '')
+            : String(event);
+        callback({
+          kind: 'init-error',
+          error: `Engine worker failed to load${detail ? `: ${detail}` : ''}`,
+        });
+      };
     },
     terminate: () => worker.terminate(),
   };
@@ -75,11 +89,22 @@ export function workerEntryUrl(assetsBase: string): URL {
   return new URL(`${base}worker.entry.js`, globalThis.location?.href ?? 'http://localhost/');
 }
 
+/**
+ * Per-controller job/wheel state. Pedal wheels live in ONE worker, so
+ * `pedalReady` belongs to the controller that owns that worker - never to
+ * the module.
+ */
+interface AdapterState {
+  pedalReady: boolean;
+  jobCounter: number;
+  /** The job Stop interrupts - set before EVERY engine.run (run/grade/eval). */
+  activeJobId: string | null;
+}
+
 export function createEngineRunController(options: EngineAdapterOptions = {}): RunController {
   let client: EngineClient | null = null;
   let booted = false;
-  let jobCounter = 0;
-  let activeJobId: string | null = null;
+  const state: AdapterState = { pedalReady: false, jobCounter: 0, activeJobId: null };
 
   function ensureClient(): EngineClient {
     if (client === null) {
@@ -99,7 +124,7 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
         // Pedal wheels - the next grading job must get the install-length
         // wall clock and the LD-37 one-time-setup indicator again.
         onRunnerReload: () => {
-          pedalReady = false;
+          state.pedalReady = false;
         },
       });
     }
@@ -119,8 +144,8 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
         // console.
         handlers.system?.('Loading Python engine…');
       }
-      const jobId = `harness-run-${++jobCounter}`;
-      activeJobId = jobId;
+      const jobId = `harness-run-${++state.jobCounter}`;
+      state.activeJobId = jobId;
       // Interactive input() (spec §6.5): values the user types during the
       // run - collected so the grading pass replays the SAME stdin the
       // student run consumed (legacy execution.input()).
@@ -133,7 +158,7 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
       // import bakery/curriculum-sneks, which the grading pass installs
       // only AFTER this run - so the run itself installs them first. That
       // one-time download needs the install-length wall clock.
-      const warmPedal = gradingEnabled && !pedalReady;
+      const warmPedal = gradingEnabled && !state.pedalReady;
       if (warmPedal) {
         options.onBootStateChange?.(
           true,
@@ -204,7 +229,7 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
             : runOptions;
           // The first grading job downloads the Pedal wheels - the second
           // one-time wait the indicator must cover (LD-37).
-          const firstGrade = !pedalReady;
+          const firstGrade = !state.pedalReady;
           if (firstGrade) {
             options.onBootStateChange?.(
               true,
@@ -213,7 +238,7 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
           }
           let graded: RunOutcome;
           try {
-            graded = await gradeWithPedal(engine, code, onRun, handlers, gradeOptions);
+            graded = await gradeWithPedal(engine, state, code, onRun, handlers, gradeOptions);
           } finally {
             if (firstGrade) options.onBootStateChange?.(false);
           }
@@ -256,7 +281,7 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
           },
         };
       } finally {
-        activeJobId = null;
+        state.activeJobId = null;
         // A fatal boot failure (worker death) throws before the success
         // path flips `booted` - never leave the indicator stuck (LD-37).
         if (isBootRun && !booted) options.onBootStateChange?.(false);
@@ -273,65 +298,84 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
       evalOptions?: EvalOptions,
     ): Promise<EvalOutcome> {
       const engine = ensureClient();
-      const result = await engine.run(
-        {
-          id: `harness-eval-${++jobCounter}`,
-          phase: 'student.eval',
-          files: {},
-          code: expression,
-          limits: { wallMs: options.wallMs ?? 5000 },
-        },
-        {
-          onStdout: (chunk) => handlers.stdout(chunk),
-          onStderr: (chunk) => handlers.stderr(chunk),
-        },
-      );
-      if (!result.success) {
-        return {
-          value: null,
-          error: result.error?.message ?? result.error?.traceback ?? 'Evaluation failed.',
-        };
-      }
-      const outcome: EvalOutcome = { value: result.value ?? null, error: null };
-      // on_eval grading (engine.js:146-156): only when an on_eval script
-      // exists and feedback is enabled. Legacy chained it after the student
-      // evaluation; Pedal's `evaluate` re-runs the expression inside the
-      // grading sandbox retained from the last on_run pass.
-      const onEval = evalOptions?.onEval;
-      if (onEval && onEval.trim() !== '' && !evalOptions?.disableFeedback && pedalReady) {
-        const graded = await engine.run(
+      const evalJobId = `harness-eval-${++state.jobCounter}`;
+      state.activeJobId = evalJobId;
+      try {
+        const result = await engine.run(
           {
-            id: `harness-oneval-${++jobCounter}`,
-            phase: 'instructor.on_eval',
-            files: evalOptions?.graderFiles ?? {},
+            id: evalJobId,
+            phase: 'student.eval',
+            files: {},
             code: expression,
-            pedal: { onRun: onEval, evaluation: expression },
-            limits: { wallMs: 15_000 },
+            limits: { wallMs: options.wallMs ?? 5000 },
           },
           {
-            onStdout: (chunk) => handlers.system?.(chunk),
-            onStderr: (chunk) => handlers.system?.(chunk),
+            onStdout: (chunk) => handlers.stdout(chunk),
+            onStderr: (chunk) => handlers.stderr(chunk),
           },
         );
-        if (graded.success && graded.feedback) {
-          const shaped = shapePedalFeedback(graded.feedback, handlers);
-          outcome.feedback = shaped.feedback;
-          outcome.grade = shaped.grade;
-          outcome.instructions = shaped.instructions;
+        if (!result.success) {
+          return {
+            value: null,
+            error: result.error?.message ?? result.error?.traceback ?? 'Evaluation failed.',
+          };
         }
+        const outcome: EvalOutcome = { value: result.value ?? null, error: null };
+        // on_eval grading (engine.js:146-156): only when an on_eval script
+        // exists and feedback is enabled. Legacy chained it after the student
+        // evaluation; Pedal's `evaluate` re-runs the expression inside the
+        // grading sandbox retained from the last on_run pass.
+        const onEval = evalOptions?.onEval;
+        if (onEval && onEval.trim() !== '' && !evalOptions?.disableFeedback && state.pedalReady) {
+          const onEvalJobId = `harness-oneval-${++state.jobCounter}`;
+          state.activeJobId = onEvalJobId;
+          const graded = await engine.run(
+            {
+              id: onEvalJobId,
+              phase: 'instructor.on_eval',
+              files: evalOptions?.graderFiles ?? {},
+              code: expression,
+              pedal: { onRun: onEval, evaluation: expression },
+              limits: { wallMs: 15_000 },
+            },
+            {
+              onStdout: (chunk) => handlers.system?.(chunk),
+              onStderr: (chunk) => handlers.system?.(chunk),
+            },
+          );
+          if (graded.success && graded.feedback) {
+            const shaped = shapePedalFeedback(graded.feedback, handlers);
+            outcome.feedback = shaped.feedback;
+            outcome.grade = shaped.grade;
+            outcome.instructions = shaped.instructions;
+          }
+        }
+        return outcome;
+      } finally {
+        state.activeJobId = null;
       }
-      return outcome;
     },
 
     stop(): void {
-      if (client !== null && activeJobId !== null) {
-        client.interrupt(activeJobId);
+      if (client !== null && state.activeJobId !== null) {
+        client.interrupt(state.activeJobId);
       }
+    },
+
+    /**
+     * Unmount: terminate the worker and settle every pending job. A later
+     * run() boots a fresh client (no Pedal wheels yet, so the one-time
+     * setup waits show again).
+     */
+    dispose(): void {
+      client?.dispose();
+      client = null;
+      booted = false;
+      state.pedalReady = false;
+      state.activeJobId = null;
     },
   };
 }
-
-let pedalReady = false;
 
 /**
  * Map a resolved PedalFeedback onto the pane shapes, porting legacy
@@ -398,17 +442,23 @@ function shapePedalFeedback(
 /** Run the instructor grading pass and map Pedal feedback onto the pane. */
 async function gradeWithPedal(
   engine: EngineClient,
+  state: AdapterState,
   studentCode: string,
   onRunScript: string,
   handlers: RunHandlers,
   runOptions?: RunOptions,
 ): Promise<RunOutcome> {
-  if (!pedalReady) {
+  if (!state.pedalReady) {
     handlers.system?.('Loading feedback engine…');
   }
+  // Counter-based id (Date.now() collides within a millisecond) and the
+  // active job so Stop can interrupt a grading pass (the wheel install can
+  // take minutes on first use).
+  const gradeJobId = `harness-grade-${++state.jobCounter}`;
+  state.activeJobId = gradeJobId;
   const result = await engine.run(
     {
-      id: `harness-grade-${Date.now()}`,
+      id: gradeJobId,
       phase: 'instructor.on_run',
       // The instructor view of the VFS (grader helper imports, A1 §3).
       files: runOptions?.graderFiles ?? {},
@@ -429,7 +479,7 @@ async function gradeWithPedal(
       limits: {
         wallMs: runOptions?.disableTimeout
           ? Number.POSITIVE_INFINITY
-          : pedalReady
+          : state.pedalReady
             ? 15_000
             : 180_000,
       },
@@ -455,7 +505,7 @@ async function gradeWithPedal(
       },
     };
   }
-  pedalReady = true;
+  state.pedalReady = true;
   const shaped = shapePedalFeedback(result.feedback, handlers);
   return {
     error: null,

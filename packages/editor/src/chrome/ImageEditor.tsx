@@ -50,6 +50,18 @@ const PALETTE = [
   '#8b4513',
 ];
 
+/**
+ * A W/H field value → grid dimension, or null while the field is empty or
+ * not a number (the user is mid-edit; resizing to 1 there would truncate
+ * the sprite on every cleared field).
+ */
+export function parseDimension(raw: string): number | null {
+  if (raw.trim() === '') return null;
+  const value = Number(raw);
+  if (!Number.isFinite(value)) return null;
+  return Math.max(1, Math.min(MAX_PIXEL_DIMENSION, Math.floor(value)));
+}
+
 export function isImageDataUrl(value: string): boolean {
   return value.startsWith('data:image/');
 }
@@ -210,17 +222,13 @@ export function ImageEditor({ value, readOnly, onChange, onRawView }: ImageEdito
               min={1}
               max={MAX_PIXEL_DIMENSION}
               value={width}
-              onChange={(event) =>
+              onChange={(event) => {
+                const next = parseDimension(event.target.value);
+                if (next === null) return; // mid-edit (empty/NaN): leave the grid alone
                 setGrid((current) =>
-                  current
-                    ? resizeGrid(
-                        current,
-                        Math.max(1, Math.min(MAX_PIXEL_DIMENSION, Number(event.target.value) || 1)),
-                        gridHeight(current),
-                      )
-                    : current,
-                )
-              }
+                  current ? resizeGrid(current, next, gridHeight(current)) : current,
+                );
+              }}
             />
           </label>
           <label>
@@ -231,17 +239,13 @@ export function ImageEditor({ value, readOnly, onChange, onRawView }: ImageEdito
               min={1}
               max={MAX_PIXEL_DIMENSION}
               value={height}
-              onChange={(event) =>
+              onChange={(event) => {
+                const next = parseDimension(event.target.value);
+                if (next === null) return; // mid-edit (empty/NaN): leave the grid alone
                 setGrid((current) =>
-                  current
-                    ? resizeGrid(
-                        current,
-                        gridWidth(current),
-                        Math.max(1, Math.min(MAX_PIXEL_DIMENSION, Number(event.target.value) || 1)),
-                      )
-                    : current,
-                )
-              }
+                  current ? resizeGrid(current, gridWidth(current), next) : current,
+                );
+              }}
             />
           </label>
           <button

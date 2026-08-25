@@ -332,6 +332,12 @@ class StudioRuntime:
         # table, never the network - unless the allow_real_requests setting
         # is on (M3.5), in which case the REAL requests package (installed
         # host-side with pyodide-http patching) stays importable.
+        # The real package, once installed, is adopted into baseline_modules
+        # (restore_modules), so the mock written over sys.modules['requests']
+        # would otherwise SURVIVE the job and shadow it for later
+        # allow_real_requests runs - remember and put back whatever was there.
+        had_requests = 'requests' in sys.modules
+        old_requests = sys.modules.get('requests')
         if not allow_real_requests:
             self.install_requests_mock()
         error = None
@@ -359,6 +365,11 @@ class StudioRuntime:
             builtins.input = old_input
             if old_main is not None:
                 sys.modules['__main__'] = old_main
+            if not allow_real_requests:
+                if had_requests:
+                    sys.modules['requests'] = old_requests
+                else:
+                    sys.modules.pop('requests', None)
             self.restore_modules()
 
         if error is None and extract_result and 'result' in module.__dict__:

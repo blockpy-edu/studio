@@ -481,7 +481,9 @@ defineBlock('ast_Call', {
 generator.forBlock['ast_Call'] = function (block) {
   const typed = block as CallBlock;
   // TODO: Handle import
-  if (typed.module_) {
+  // Skip the auto-import when an explicit import block already imported the
+  // module (otherwise `import turtle` is duplicated on every round trip).
+  if (typed.module_ && !generator.imported_['import_' + typed.module_]) {
     // `definitions_` is protected on CodeGenerator; legacy wrote it directly.
     (generator as unknown as { definitions_: Record<string, string | undefined> }).definitions_[
       'import_' + typed.module_

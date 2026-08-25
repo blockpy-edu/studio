@@ -91,4 +91,44 @@ describe('SettingsEditor', () => {
       custom_key: 1,
     });
   });
+
+  it('hiding raw JSON folds it into the form; later form edits are what Save persists', () => {
+    const onSave = vi.fn();
+    const { container, getByText } = render(<SettingsEditor blob={BLOB} onSave={onSave} />);
+    fireEvent.click(getByText('Edit raw JSON'));
+    const textarea = container.querySelector<HTMLTextAreaElement>('.blockpy-settings-raw')!;
+    fireEvent.change(textarea, {
+      target: { value: '{"toolbox": "minimal", "custom_key": 1, "time_limit": "50min"}' },
+    });
+    fireEvent.click(getByText('Hide raw JSON'));
+    expect(container.querySelector('.blockpy-settings-raw')).toBeNull();
+    // The raw edit is now visible in the form...
+    const toolbox = container.querySelector<HTMLSelectElement>('#blockpy-settings-toolbox')!;
+    expect(toolbox.value).toBe('minimal');
+    // ...and a form edit made AFTER hiding is not discarded on Save (the
+    // stale raw text used to override the whole form).
+    fireEvent.click(container.querySelector('#blockpy-settings-disable_timeout')!);
+    fireEvent.click(getByText('Save changes'));
+    expect(JSON.parse(onSave.mock.calls[0]![0] as string)).toEqual({
+      toolbox: 'minimal',
+      custom_key: 1,
+      time_limit: '50min',
+      hide_files: false,
+      disable_timeout: true,
+    });
+  });
+
+  it('hiding invalid raw JSON discards it and clears the error', () => {
+    const onSave = vi.fn();
+    const { container, getByText } = render(<SettingsEditor blob={BLOB} onSave={onSave} />);
+    fireEvent.click(getByText('Edit raw JSON'));
+    const textarea = container.querySelector<HTMLTextAreaElement>('.blockpy-settings-raw')!;
+    fireEvent.change(textarea, { target: { value: '{not json' } });
+    fireEvent.click(getByText('Save changes'));
+    expect(onSave).not.toHaveBeenCalled();
+    fireEvent.click(getByText('Hide raw JSON'));
+    expect(container.querySelector('.text-danger')).toBeNull();
+    fireEvent.click(getByText('Save changes'));
+    expect(JSON.parse(onSave.mock.calls[0]![0] as string)).toEqual(JSON.parse(BLOB));
+  });
 });

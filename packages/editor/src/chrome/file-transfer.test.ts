@@ -28,6 +28,17 @@ describe('convertIpynbToPython (python.js:161-181)', () => {
     expect(convertIpynbToPython(doc)).toBe('y = 2');
   });
 
+  it('accepts nbformat string sources alongside list-of-lines sources', () => {
+    const doc = ipynb([
+      { cell_type: 'markdown', source: '# Title\nIntro' },
+      { cell_type: 'code', source: 'x = 1\nprint(x)' },
+      { cell_type: 'code', source: '%magic' },
+      { cell_type: 'code', source: '' },
+      { cell_type: 'code', source: ['y = 2'] },
+    ]);
+    expect(convertIpynbToPython(doc)).toBe("'''# Title\nIntro'''\nx = 1\nprint(x)\n\ny = 2");
+  });
+
   it('throws on unparseable JSON (caller falls back to raw text)', () => {
     expect(() => convertIpynbToPython('not json')).toThrow();
   });

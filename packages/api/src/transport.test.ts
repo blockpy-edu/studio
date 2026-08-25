@@ -174,11 +174,57 @@ describe('offline queue (A2 Â§2 + LD-2b)', () => {
     expect(t.queuedPayloads()).toEqual([]);
   });
 
-  it('a logically rejected entry halts the flush but stays queued', async () => {
-    const t = new Transport({ fetch: okFetch([{ success: false }]), schedule: (fn) => fn() });
+  it('a logically rejected entry is dropped and the flush continues to older entries', async () => {
+    const posted: string[] = [];
+    const fetch: FetchLike = async (_url, init) => {
+      const n = new URLSearchParams(String(init.body)).get('n')!;
+      posted.push(n);
+      // The NEWEST entry (flushed first) is the one the server rejects.
+      return { ok: true, json: async () => ({ success: n !== '3' }) };
+    };
+    const t = new Transport({ fetch, schedule: (fn) => fn() });
     t.enqueue({ n: 1 });
-    expect(await t.flushQueue('/log')).toBe(0);
-    expect(t.queuedPayloads()).toEqual([{ n: 1 }]);
+    t.enqueue({ n: 2 });
+    t.enqueue({ n: 3 });
+    expect(await t.flushQueue('/log')).toBe(2);
+    expect(posted).toEqual(['3', '2', '1']);
+    // The rejected entry no longer blocks the queue on later flushes.
+    expect(t.queuedPayloads()).toEqual([]);
+  });
+});
+
+describe('non-JSON 200 bodies (expired LTI session → HTML login page)', () => {
+  it('post throws a NON-retryable TransportError instead of a plain Error', async () => {
+    const fetch: FetchLike = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw new SyntaxError('Unexpected token < in JSON');
+      },
+    });
+    const t = new Transport({ fetch, schedule: (fn) => fn() });
+    let caught: unknown;
+    await t.post('/x', { a: 1 }).catch((error: unknown) => {
+      caught = error;
+    });
+    expect(caught).toBeInstanceOf(TransportError);
+    expect((caught as TransportError).retryable).toBe(false);
+    expect(String(caught)).toContain('non-JSON');
+  });
+
+  it('postRetry gives up after ONE attempt rather than burning the retry ladder', async () => {
+    const fetch = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw new SyntaxError('Unexpected token <');
+      },
+    }));
+    const onRetry = vi.fn();
+    const t = new Transport({ fetch, schedule: (fn) => fn() });
+    await expect(t.postRetry('/x', { a: 1 }, { onRetry })).rejects.toBeInstanceOf(TransportError);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(onRetry).not.toHaveBeenCalled();
   });
 });
 

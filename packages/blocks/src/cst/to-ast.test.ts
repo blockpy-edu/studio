@@ -183,10 +183,12 @@ describe('sourceToAst', () => {
     expect(fn.body[0]!._astname).toBe('Return');
   });
 
-  it('bare star keyword-only marker', () => {
-    const fn = first<ir.FunctionDef>('def f(a, *, b):\n    pass');
-    expect(fn.args.vararg).toBeNull();
-    expect(fn.args.kwonlyargs.map((a) => a.arg)).toEqual(['b']);
+  it('bare star keyword-only marker has no block form (raw fallback)', () => {
+    expect(() => first<ir.FunctionDef>('def f(a, *, b):\n    pass')).toThrow(AstParseError);
+  });
+
+  it('positional-only marker has no block form (raw fallback)', () => {
+    expect(() => first<ir.FunctionDef>('def f(a, /, b):\n    pass')).toThrow(AstParseError);
   });
 
   it('decorated def takes the decorator line (Skulpt semantics)', () => {

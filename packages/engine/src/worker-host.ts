@@ -41,6 +41,16 @@ const noop = (): void => undefined;
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
+/**
+ * Student-facing one-liner for a non-fatal escape: a PythonError's message
+ * is the FULL traceback, whose last non-empty line is the actual
+ * `Type: text` summary. The full text travels in `traceback`.
+ */
+const lastLine = (text: string): string => {
+  const lines = text.split('\n').filter((line) => line.trim() !== '');
+  return lines.length > 0 ? lines[lines.length - 1]!.trim() : text;
+};
+
 export class WorkerHost {
   private runner: JobRunner | null = null;
   private interrupted = new Set<string>();
@@ -229,7 +239,7 @@ export class WorkerHost {
             // instructive; the raw cause stays in the traceback for the
             // dev console / bug-icon dialog.
             type: crashed ? 'EngineCrash' : 'EngineError',
-            message: crashed ? ENGINE_CRASH_MESSAGE : message,
+            message: crashed ? ENGINE_CRASH_MESSAGE : lastLine(message),
             line: null,
             studentLine: null,
             traceback: message + '\n',

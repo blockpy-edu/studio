@@ -134,3 +134,47 @@ describe('JobQueue drop reporting', () => {
     expect(queue.pendingCount()).toBe(0);
   });
 });
+
+describe('JobQueue execute failures', () => {
+  it('keeps pumping after execute rejects and reports the failed job', async () => {
+    const executed: string[] = [];
+    const failed: string[] = [];
+    const dropped: string[] = [];
+    const queue = new JobQueue({
+      execute: async (j) => {
+        executed.push(j.id);
+        if (j.id === 'bad') throw new Error('boom');
+      },
+      schedule: () => () => undefined,
+      onDropped: (j) => dropped.push(j.id),
+      onError: (j, error) => failed.push(`${j.id}:${(error as Error).message}`),
+    });
+    queue.enqueue(job('bad', 'student.run'));
+    queue.enqueue(job('after', 'student.run'));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(executed).toEqual(['bad', 'after']);
+    expect(failed).toEqual(['bad:boom']);
+    expect(dropped).toEqual([]);
+    expect(queue['running']).toBe(false);
+    // The queue is still alive for later jobs.
+    queue.enqueue(job('later', 'student.run'));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(executed).toEqual(['bad', 'after', 'later']);
+  });
+
+  it('falls back to onDropped when no onError is given', async () => {
+    const dropped: string[] = [];
+    const queue = new JobQueue({
+      execute: async (j) => {
+        if (j.id === 'bad') throw new Error('boom');
+      },
+      schedule: () => () => undefined,
+      onDropped: (j) => dropped.push(j.id),
+    });
+    queue.enqueue(job('bad', 'student.run'));
+    queue.enqueue(job('ok', 'student.run'));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(dropped).toEqual(['bad']);
+    expect(queue['running']).toBe(false);
+  });
+});

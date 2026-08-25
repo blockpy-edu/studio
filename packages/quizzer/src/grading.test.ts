@@ -72,6 +72,30 @@ describe('checkQuizQuestion (process_quiz port, quizzes.py:108-228)', () => {
     expect(dictForm?.message).toBe('check s1');
   });
 
+  it('matching: list-form feedback looks answers up as OWN properties only', () => {
+    const question = q('matching_question', {
+      statements: ['s1'],
+      answers: ['constructor', 'x'],
+    });
+    // A student answer of "constructor" must not resolve Object.prototype's
+    // constructor through the feedback map (it would stringify a function
+    // into the feedback message).
+    const result = checkQuizQuestion(
+      question,
+      { correct: ['x'], feedback: [{ x: 'never shown' }] },
+      ['constructor'],
+    );
+    expect(result?.message).toBe('Incorrect');
+    expect(result?.correct).toBe(false);
+    // An authored "constructor" key still works.
+    const authored = checkQuizQuestion(
+      question,
+      { correct: ['x'], feedback: [{ constructor: 'not that one' }] },
+      ['constructor'],
+    );
+    expect(authored?.message).toBe('not that one');
+  });
+
   it('dropdowns: per-blank credit, blank feedback string-or-map, wrong_any', () => {
     const question = q('multiple_dropdowns_question', {
       body: 'Pick [one] and [two]',

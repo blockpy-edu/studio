@@ -27,8 +27,11 @@ export interface LegacyDeferred<T> {
   done(callback: (value: T) => void): LegacyDeferred<T>;
   fail(callback: (error: unknown) => void): LegacyDeferred<T>;
   always(callback: () => void): LegacyDeferred<T>;
-  then<U>(onDone?: (value: T) => U, onFail?: (error: unknown) => U): Promise<U>;
-  catch<U>(onFail: (error: unknown) => U): Promise<U>;
+  then<U>(
+    onDone?: (value: T) => U | PromiseLike<U>,
+    onFail?: (error: unknown) => U | PromiseLike<U>,
+  ): LegacyDeferred<U>;
+  catch<U>(onFail: (error: unknown) => U | PromiseLike<U>): LegacyDeferred<U | T>;
 }
 
 export function asLegacyDeferred<T>(promise: Promise<T>): LegacyDeferred<T> {
@@ -45,8 +48,10 @@ export function asLegacyDeferred<T>(promise: Promise<T>): LegacyDeferred<T> {
       promise.then(callback, callback);
       return deferred;
     },
-    then: (onDone, onFail) => promise.then(onDone, onFail),
-    catch: (onFail) => promise.then(undefined, onFail),
+    // Chained promises are wrapped too, so `.then(…).done(…)` keeps working
+    // (a bare Promise has no .done/.fail/.always).
+    then: (onDone, onFail) => asLegacyDeferred(promise.then(onDone, onFail)),
+    catch: (onFail) => asLegacyDeferred(promise.then(undefined, onFail)),
   };
   return deferred;
 }

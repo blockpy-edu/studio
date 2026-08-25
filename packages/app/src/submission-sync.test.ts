@@ -456,3 +456,47 @@ describe('§14.3 grading sequence (on_run.js:164-175, server.js:663-693)', () =>
     expect(setStatus).not.toHaveBeenCalled();
   });
 });
+
+describe('save chains are keyed by assignment/submission, not filename alone', () => {
+  it("a save for assignment B never supersedes A's queued answer.py save", async () => {
+    const gate = gateFirst();
+    const { sync, posted } = harness({}, undefined, { fetch: gate.wrap });
+    const forA = sync.snapshotContext(); // assignment 101 / submission 5001
+    const forB = { ...forA, assignment_id: 202, submission_id: 6002 };
+    // A's first save is stuck in flight...
+    const first = sync.saveFileNow('answer.py', 'A-v1', forA);
+    await tick();
+    // ...the student edits A and clicks Next (flushPending → saveFileNow),
+    // then edits B - whose answer.py save must NOT count as "newer than
+    // A's" (before the fix that silently dropped A's final edits).
+    const second = sync.saveFileNow('answer.py', 'A-v2', forA);
+    const third = sync.saveFileNow('answer.py', 'B-v1', forB);
+    await tick();
+    // B is an independent chain: it leaves immediately, not behind A.
+    expect(gate.started()).toBe(2);
+    gate.release();
+    await Promise.all([first, second, third]);
+    const sent = posted.map((p) => [p.body.get('assignment_id'), p.body.get('code')]);
+    expect(sent).toContainEqual(['101', 'A-v1']);
+    expect(sent).toContainEqual(['101', 'A-v2']);
+    expect(sent).toContainEqual(['202', 'B-v1']);
+    // A's chain stays ordered.
+    const aCodes = posted
+      .filter((p) => p.body.get('assignment_id') === '101')
+      .map((p) => p.body.get('code'));
+    expect(aCodes).toEqual(['A-v1', 'A-v2']);
+  });
+
+  it('within ONE assignment a superseded queued save is still skipped', async () => {
+    const gate = gateFirst();
+    const { sync, posted } = harness({}, undefined, { fetch: gate.wrap });
+    const forA = sync.snapshotContext();
+    const first = sync.saveFileNow('answer.py', 'v1', forA);
+    await tick();
+    const second = sync.saveFileNow('answer.py', 'v2', forA);
+    const third = sync.saveFileNow('answer.py', 'v3', forA);
+    gate.release();
+    await Promise.all([first, second, third]);
+    expect(posted.map((p) => p.body.get('code'))).toEqual(['v1', 'v3']);
+  });
+});

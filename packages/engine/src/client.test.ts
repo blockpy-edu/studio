@@ -448,3 +448,47 @@ describe('EngineClient interactive input failure paths (§6.5)', () => {
     expect(result.success).toBe(false);
   });
 });
+
+describe('EngineClient with a synchronous port', () => {
+  it('runs two jobs back to back when results arrive synchronously inside postMessage', async () => {
+    // A port that answers `run` synchronously (loopback-style) settles the
+    // job before executeOnWorker's completion latch used to be armed -
+    // the first job hung the queue forever and the second never ran.
+    const ran: string[] = [];
+    const { factory } = fakePortFactory({
+      onRun: (message, post) => {
+        ran.push(message.job.id);
+        post({
+          kind: 'result',
+          result: {
+            jobId: message.job.id,
+            success: true,
+            stdout: '',
+            stderr: '',
+            artifacts: {},
+            durationMs: 1,
+          },
+        });
+      },
+    });
+    const client = new EngineClient({ workerFactory: factory });
+    const first = await client.run(job('one'));
+    expect(first.success).toBe(true);
+    const second = await client.run(job('two'));
+    expect(second.success).toBe(true);
+    expect(ran).toEqual(['one', 'two']);
+    await new Promise((r) => setTimeout(r, 0)); // let the pump loop unwind
+    expect(client['queue']['running']).toBe(false);
+    expect(client['active']).toBeNull();
+  });
+
+  it('settles a job whose execute rejects instead of leaking its promise', async () => {
+    const { factory } = fakePortFactory({});
+    const client = new EngineClient({ workerFactory: factory });
+    client['executeOnWorker'] = () => Promise.reject(new Error('worker exploded'));
+    const result = await client.run(job('broken'));
+    expect(result.success).toBe(false);
+    expect(result.error?.type).toBe('EngineError');
+    expect(result.error?.message).toContain('worker exploded');
+  });
+});

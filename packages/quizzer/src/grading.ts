@@ -142,7 +142,9 @@ export function checkQuizQuestion(
       for (let index = 0; index < feedbackCount; index += 1) {
         const entry = feedbackSource[index];
         feedbacks.push(
-          typeof entry === 'string' ? entry : (asRecord(entry)[String(answers[index])] ?? ''),
+          typeof entry === 'string'
+            ? entry
+            : (ownLookup(asRecord(entry), String(answers[index])) ?? ''),
         );
       }
     } else if (feedbackSource && typeof feedbackSource === 'object') {

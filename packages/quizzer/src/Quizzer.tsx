@@ -338,9 +338,11 @@ export function Quizzer(props: QuizzerProps) {
       });
     return () => {
       cancelled = true;
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      // Flush (not just drop) a rate-limited text save: navigating away
+      // within the 400 ms window must not lose the edit.
+      if (saveTimerRef.current) saveSubmission();
     };
-  }, [props.assignmentId, reloadNonce]);
+  }, [props.assignmentId, reloadNonce, saveSubmission]);
 
   // Tab-visibility telemetry (assignment_interface.ts:134-138 - all types).
   useEffect(() => {

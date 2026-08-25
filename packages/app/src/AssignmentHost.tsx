@@ -104,9 +104,16 @@ export function AssignmentHost(props: AssignmentHostProps) {
   // load fails so a half-applied switch never lingers on screen.
   const committed = useRef({ assignmentType, currentIds, editorVisible });
   committed.current = { assignmentType, currentIds, editorVisible };
+  // Dispatch generation: a blockpy dispatch awaits the editor load while a
+  // quiz/reading dispatch applies synchronously. When a later dispatch
+  // lands before the earlier load settles, the earlier continuation must
+  // NOT flip the type (or restore its `before`) over the newer surface.
+  const generationRef = useRef(0);
 
   const dispatch = useCallback(async (rawId: number) => {
     const { typeIndex, embed, loadEditorAssignment } = latest.current;
+    const generation = ++generationRef.current;
+    const isLatest = () => generation === generationRef.current;
     const id = parseInt(String(rawId), 10);
     replaceAssignmentIdInUrl(id, embed ?? false);
     const type = classifyAssignment(id, typeIndex);
@@ -132,12 +139,18 @@ export function AssignmentHost(props: AssignmentHostProps) {
     } catch (error) {
       // The load failed (the editor surfaces its own error): put the
       // previous surface back rather than leaving the slots half-switched
-      // with the editor shown over a stale assignment.
-      setAssignmentType(before.assignmentType);
-      setCurrentIds(before.currentIds);
-      setEditorVisible(before.editorVisible);
+      // with the editor shown over a stale assignment - unless a newer
+      // dispatch already owns the surface.
+      if (isLatest()) {
+        setAssignmentType(before.assignmentType);
+        setCurrentIds(before.currentIds);
+        setEditorVisible(before.editorVisible);
+      }
       throw error;
     }
+    // A newer dispatch (e.g. a quiz) landed while this load was in flight:
+    // its surface wins; flipping the type here would blank the page.
+    if (!isLatest()) return;
     // whenDone (editor.html:325-329): the type/blockpy-id flip waits for
     // the editor's async load; unknown ids leave the type null.
     setAssignmentType(isBlockPy ? 'blockpy' : null);

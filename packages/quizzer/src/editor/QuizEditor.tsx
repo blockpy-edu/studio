@@ -461,6 +461,9 @@ export function QuizEditor(props: QuizEditorProps) {
  * remote grading saves the scratch answers and submits through the real
  * endpoints (grading the last SAVED documents server-side).
  */
+/** The pool seed the Quizzer derives from a null submission id (`id ?? 0`). */
+const TRY_IT_POOL_SEED = 0;
+
 function TryItPanel(props: {
   instructionsText: string;
   instructions: QuizInstructions;
@@ -483,7 +486,9 @@ function TryItPanel(props: {
         settings: '{}',
       },
       submission: {
-        id: 1,
+        // No submission id: the Quizzer renders pools with seed 0, which
+        // must match the seed local grading uses below.
+        id: null,
         code: '',
         correct: false,
         dateStarted: null,
@@ -537,9 +542,12 @@ function TryItPanel(props: {
             return response;
           }
           const submission = JSON.parse(scratchAnswers.current || '{}');
-          // seed 0 = the Try It Quizzer's own pool seed (no submission id),
-          // so LD-35 grading sees the same pooled-visible set it rendered.
-          const result = processQuiz(props.instructions, props.checks, submission, { seed: 0 });
+          // seed 0 = the Try It Quizzer's own pool seed (submission id null
+          // → `id ?? 0`), so LD-35 grading sees the same pooled-visible set
+          // it rendered.
+          const result = processQuiz(props.instructions, props.checks, submission, {
+            seed: TRY_IT_POOL_SEED,
+          });
           setSummary(
             `Local grade: score ${(result.score * 100).toFixed(1)}% of ${result.pointsPossible} points; correct=${String(result.correct)}`,
           );

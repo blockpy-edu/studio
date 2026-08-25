@@ -147,6 +147,18 @@ export class EngineClient {
             this.disposed ? 'Engine disposed' : 'Superseded by a newer job',
           ),
         ),
+      // executeOnWorker never rejects by design; if it ever does, settle
+      // the job as an EngineError so the caller's promise is not leaked
+      // (the queue keeps pumping either way).
+      onError: (job, error) => {
+        const result = engineErrorResult(
+          job.id,
+          error instanceof Error ? error.message : String(error),
+        );
+        const active = this.active;
+        if (active?.job.id === job.id && !active.settled) this.finish(active, result);
+        else this.settlePending(job.id, result);
+      },
     });
     this.spawn();
   }
@@ -359,10 +371,16 @@ export class EngineClient {
     if (wallMs !== undefined && Number.isFinite(wallMs)) {
       active.cancelWatchdog = this.schedule(() => this.hardStop('TimeoutError'), wallMs);
     }
-    this.port.postMessage({ kind: 'run', job });
-    await new Promise<void>((done) => {
+    // Arm the completion latch BEFORE posting: a port that delivers the
+    // result synchronously (loopback/test ports) would otherwise call
+    // finish() with no latch, and this promise - and the queue - would
+    // hang forever.
+    const settled = new Promise<void>((done) => {
       active.onSettled = done;
     });
+    this.port.postMessage({ kind: 'run', job });
+    if (active.settled) return;
+    await settled;
   }
 
   /** Resolve a job that never reached the worker (queued/dropped). */

@@ -770,6 +770,9 @@ export function App({ config, extras, registerActions }: AppProps) {
     [paths.pyodideIndexURL, paths.assets],
   );
   runControllerRef.current = runController;
+  // The engine worker outlives nothing: terminate it (and settle every
+  // pending job) when the controller is replaced or the app unmounts.
+  useEffect(() => () => runController.dispose?.(), [runController]);
 
   // -- reading + quiz slots (spec §11.2/§11.3, M2.3/M2.4) -----------------------
   // Each component keeps its OWN loaded pair (legacy posts loadAssignment

@@ -59,6 +59,24 @@ describe('Feedback rating region (feedback.js:46-74, blockpy.js:789-817)', () =>
     expect(useEditorChromeStore.getState().promptedShare).toBe(true);
   });
 
+  it('clears the thank-you timer on unmount and ignores a second click while pending', () => {
+    vi.useFakeTimers();
+    const onRate = vi.fn();
+    const { container, unmount } = render(<Feedback onRate={onRate} />);
+    const thumbsDown = container.querySelector('.blockpy-rating-down')!;
+    fireEvent.click(thumbsDown);
+    fireEvent.click(thumbsDown); // double-click: no second rating, no second timer
+    fireEvent.click(container.querySelector('.blockpy-rating-up')!);
+    expect(onRate).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(1);
+    unmount();
+    // Unmount cancels the pending timer, so nothing sets state or prompts
+    // a share on a component that is gone.
+    expect(vi.getTimerCount()).toBe(0);
+    act(() => vi.advanceTimersByTime(1000));
+    expect(useEditorChromeStore.getState().promptedShare).toBe(false);
+  });
+
   it('collapse toggle persists like legacy localSettings', () => {
     const { container, unmount } = render(<Feedback onRate={() => undefined} />);
     expect(container.querySelector('.blockpy-feedback-response-full')).not.toBeNull();

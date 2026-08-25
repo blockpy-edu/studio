@@ -221,6 +221,8 @@ export interface RunController {
   /** REPL evaluation against the persistent run namespace (§6.4). */
   evaluate?(expression: string, handlers: RunHandlers, options?: EvalOptions): Promise<EvalOutcome>;
   stop?(): void;
+  /** Release the engine (worker) on unmount; a later run boots afresh. */
+  dispose?(): void;
 }
 
 export interface CodingEditorProps {

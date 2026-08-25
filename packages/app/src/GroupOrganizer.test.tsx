@@ -151,3 +151,35 @@ describe('GroupOrganizer (M4.6 slice 1)', () => {
     expect(container.querySelector('[aria-label="Name of assignment 101"]')).not.toBeNull();
   });
 });
+
+describe('GroupOrganizer failed api calls', () => {
+  afterEach(cleanup);
+
+  it('a thrown save lands on the status line instead of an unhandled rejection', async () => {
+    const { api, postRetry, navStore } = makeHarness(ALL_URLS);
+    postRetry.mockImplementation(() => Promise.reject(new Error('retries exhausted')));
+    const { container } = render(
+      <GroupOrganizer
+        api={api}
+        groupId={3}
+        assignments={ASSIGNMENTS}
+        navStore={navStore}
+        visible
+        onClose={() => {}}
+      />,
+    );
+    const nameInput = container.querySelector<HTMLInputElement>(
+      '[aria-label="Name of assignment 101"]',
+    )!;
+    fireEvent.change(nameInput, { target: { value: 'Hello v2' } });
+    const row = container.querySelector('[data-assignment-id="101"]')!;
+    fireEvent.click([...row.querySelectorAll('button')].find((b) => b.textContent === 'Save')!);
+    await waitFor(() =>
+      expect(container.querySelector('.blockpy-organizer-status')?.textContent).toContain(
+        'Assignment 101: FAILED: retries exhausted',
+      ),
+    );
+    // The nav header is untouched by a failed save.
+    expect(navStore.getSnapshot().entries.find((entry) => entry.id === 101)!.name).toBe('Hello');
+  });
+});

@@ -271,12 +271,20 @@ export class JobRunner {
         // module; the grading pass retries the install itself.
       }
     }
+    const isEval = job.phase === 'student.eval' || job.phase === 'instructor.on_eval';
     // Stage via a Python-side JSON parse to avoid proxy lifetime headaches.
-    this.pyodide.runPython(
-      `_studio_runtime.stage_files(__import__('json').loads(${JSON.stringify(
-        JSON.stringify(job.files),
-      )}))`,
-    );
+    // Console evaluations (§6.4) run against the LAST run's namespace and
+    // its working directory: staging would wipe /mnt/blockpy (stage_files
+    // clears the mount first), breaking `open("out.txt")` on a file the
+    // run just wrote. Artifacts are still collected, diffed against the
+    // last run's staged map, so files an eval creates are reported.
+    if (!isEval) {
+      this.pyodide.runPython(
+        `_studio_runtime.stage_files(__import__('json').loads(${JSON.stringify(
+          JSON.stringify(job.files),
+        )}))`,
+      );
+    }
 
     const onStdout = streams.onStdout ?? null;
     const onStderr = streams.onStderr ?? null;
@@ -302,14 +310,13 @@ export class JobRunner {
       (...args: unknown[]): PyProxy;
       callPromising?: (...args: unknown[]) => Promise<PyProxy>;
     };
-    const payload =
-      job.phase === 'student.eval' || job.phase === 'instructor.on_eval'
-        ? toJsDeep(this.runtime.evaluate(job.code, onStdout, onStderr))
-        : toJsDeep(
-            onInput !== null && jspiAvailable() && typeof runFn.callPromising === 'function'
-              ? await runFn.callPromising(...runArgs)
-              : runFn(...runArgs),
-          );
+    const payload = isEval
+      ? toJsDeep(this.runtime.evaluate(job.code, onStdout, onStderr))
+      : toJsDeep(
+          onInput !== null && jspiAvailable() && typeof runFn.callPromising === 'function'
+            ? await runFn.callPromising(...runArgs)
+            : runFn(...runArgs),
+        );
 
     const artifacts = toJsDeep(this.runtime.collect_artifacts()) as unknown as Record<
       string,

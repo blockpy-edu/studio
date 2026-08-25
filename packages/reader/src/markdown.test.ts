@@ -70,6 +70,43 @@ describe('link/image rewriting (plugins.ts:188-190, 244-260)', () => {
     expect(html).toContain('<a href="raw.csv">raw</a>');
     expect(html).toContain('<script>x()</script>');
   });
+
+  it('rejects script/file/data schemes in markdown links and images (validateLink)', () => {
+    const cases = [
+      '[x](javascript:alert(1))',
+      '[x](JavaScript:alert(1))',
+      '[x](vbscript:msgbox)',
+      '[x](file:///etc/passwd)',
+      '[x](data:text/html;base64,PHNjcmlwdD4=)',
+      '[x](java%09script:alert(1))',
+      '[x](&#106;avascript:alert(1))',
+      '![x](javascript:alert(1))',
+    ];
+    for (const source of cases) {
+      const html = renderReadingMarkdown(source, ENV);
+      expect(html, source).not.toMatch(/javascript|vbscript|file:|data:/i);
+      expect(html, source).not.toContain('<a ');
+      expect(html, source).not.toContain('<img ');
+      expect(html, source).toContain('x'); // the text survives
+    }
+    // downloadUrl never saw them either.
+    const seen: string[] = [];
+    renderReadingMarkdown('[x](javascript:alert(1))', { downloadUrl: (l) => (seen.push(l), l) });
+    expect(seen).toEqual([]);
+  });
+
+  it('keeps http(s), mailto, anchors, relative paths and image data-URLs', () => {
+    const html = renderReadingMarkdown(
+      '[a](https://x.example) [b](mailto:me@example.com) [c](#top) [d](../f.csv) ' +
+        '![e](data:image/png;base64,iVBORw0KGgo=)',
+      ENV,
+    );
+    expect(html).toContain('href="https://x.example"');
+    expect(html).toContain('href="/dl?filename=mailto:me@example.com"');
+    expect(html).toContain('href="/dl?filename=#top"');
+    expect(html).toContain('href="/dl?filename=../f.csv"');
+    expect(html).toContain('src="/dl?filename=data:image/png;base64,iVBORw0KGgo="');
+  });
 });
 
 describe('markdown-it parity options (A6 §3)', () => {

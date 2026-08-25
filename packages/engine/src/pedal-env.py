@@ -100,8 +100,17 @@ def _studio_pedal_stage(files):
             os.makedirs(parent, exist_ok=True)
         with open(base, 'w', encoding='utf-8') as handle:
             handle.write(contents)
-        if prefix in ('!', '?', '&') and base.endswith('.py'):
-            with open(os.path.join(_INSTRUCTOR_PKG, base), 'w', encoding='utf-8') as handle:
+        # The instructor-role staging view (vfs.stageFiles('instructor'))
+        # arrives PREFIX-STRIPPED, so every .py it carries is instructor
+        # space and must be importable as _instructor.<name>. Callers that
+        # still pass prefixed names get the same treatment (the ^/$/# wire
+        # names were skipped above).
+        if base.endswith('.py'):
+            target = os.path.join(_INSTRUCTOR_PKG, base)
+            target_parent = os.path.dirname(target)
+            if target_parent:
+                os.makedirs(target_parent, exist_ok=True)
+            with open(target, 'w', encoding='utf-8') as handle:
                 handle.write(contents)
     # fresh imports of _instructor.* each grading pass
     for module_name in list(sys.modules):
@@ -276,12 +285,15 @@ def _studio_pedal_grade(student_code, on_run, files_json, inputs, options_json):
         # student code.
         for _name, _contents in list(student_files.items()) + [('on_run.py', on_run)]:
             try:
-                _parent = os.path.dirname(_name)
+                # Same hardening as _studio_pedal_stage: an empty name or
+                # one escaping the working directory is never written.
+                _safe = _studio_safe_name(_name, _name)
+                _parent = os.path.dirname(_safe)
                 if _parent:
                     os.makedirs(_parent, exist_ok=True)
-                with open(_name, 'w', encoding='utf-8') as _handle:
+                with open(_safe, 'w', encoding='utf-8') as _handle:
                     _handle.write(_contents)
-            except (OSError, TypeError):
+            except (OSError, TypeError, ValueError):
                 pass  # odd names/contents: grading proceeds, lines degrade
         linecache.clearcache()
 

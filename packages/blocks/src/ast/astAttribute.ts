@@ -42,7 +42,11 @@ generator.forBlock['ast_Attribute'] = function (block) {
 
 generator.forBlock['ast_AttributeFull'] = function (block) {
   // Text value.
-  const value = generator.valueToCode(block, 'VALUE', generator.ORDER_NONE) || generator.blank;
+  let value = generator.valueToCode(block, 'VALUE', generator.ORDER_MEMBER) || generator.blank;
+  // `1.real` does not tokenize as an attribute access on an int literal.
+  if (/^\d[\d_]*$/.test(value)) {
+    value = '(' + value + ')';
+  }
   const attr = block.getFieldValue('ATTR');
   const code = value + '.' + attr;
   return [code, generator.ORDER_MEMBER];

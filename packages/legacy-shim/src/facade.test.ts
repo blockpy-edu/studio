@@ -69,6 +69,30 @@ describe('asLegacyDeferred', () => {
     expect(fail).toHaveBeenCalled();
     expect(done).not.toHaveBeenCalled();
   });
+
+  it('.then()/.catch() return a Deferred so .done()/.fail() chains keep working', async () => {
+    const done = vi.fn();
+    const fail = vi.fn();
+    const always = vi.fn();
+    const chained = asLegacyDeferred(Promise.resolve(2)).then((value) => value * 2);
+    expect(typeof chained.done).toBe('function');
+    chained.done(done).always(always);
+    // A thrown handler routes to .fail on the next link, and .catch recovers.
+    const recovered = asLegacyDeferred(Promise.resolve('x'))
+      .then(() => {
+        throw new Error('boom');
+      })
+      .fail(fail)
+      .catch(() => 'recovered');
+    expect(typeof recovered.done).toBe('function');
+    const recoveredDone = vi.fn();
+    recovered.done(recoveredDone);
+    for (let i = 0; i < 6; i += 1) await Promise.resolve();
+    expect(done).toHaveBeenCalledWith(4);
+    expect(always).toHaveBeenCalled();
+    expect(fail).toHaveBeenCalled();
+    expect(recoveredDone).toHaveBeenCalledWith('recovered');
+  });
 });
 
 /** Fake mount capturing what the facade forwards. */

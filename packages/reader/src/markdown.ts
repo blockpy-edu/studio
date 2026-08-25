@@ -96,6 +96,37 @@ function renderFence(source: string, info: string): string {
 const rewriteLink = (link: string, env: ReaderRenderEnv): string =>
   link.startsWith('http') ? link : env.downloadUrl(link);
 
+/**
+ * markdown-it's validateLink (lib/index.mjs): reject `javascript:`,
+ * `vbscript:`, `file:` and non-image `data:` schemes so a markdown link/
+ * image target cannot smuggle script. Everything else - http(s), mailto,
+ * relative paths, `#anchors` - passes to rewriteLink. (Raw HTML is still
+ * untouched, D4-A.)
+ */
+const BAD_PROTO_RE = /^(vbscript|javascript|file|data):/i;
+const GOOD_DATA_RE = /^data:image\/(gif|png|jpeg|webp);/i;
+export function isSafeLinkTarget(href: string): boolean {
+  // Decode the way markdown-it does (entities + percent-encodings) and
+  // strip control/whitespace noise, so `java\tscript:` / `javascript&#58;`
+  // cannot slip past the scheme test.
+  let candidate = href
+    .replace(/&#x([0-9a-f]+);?/gi, (_, hex: string) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);?/g, (_, dec: string) => String.fromCodePoint(Number(dec)))
+    .replace(/&colon;/gi, ':');
+  try {
+    candidate = decodeURIComponent(candidate);
+  } catch {
+    // Malformed percent-encoding: judge the raw string.
+  }
+  // eslint-disable-next-line no-control-regex -- stripping C0 controls is the point
+  candidate = candidate.replace(/[\u0000-\u0020]/g, '');
+  if (!BAD_PROTO_RE.test(candidate)) return true;
+  return GOOD_DATA_RE.test(candidate);
+}
+
+const safeTarget = (href: string, env: ReaderRenderEnv): string | null =>
+  isSafeLinkTarget(href) ? rewriteLink(href, env) : null;
+
 // One module-level Marked instance (constructing one per call was the hot
 // path); parsing is synchronous, so the env of the in-flight call can be
 // handed to the link/image renderers through a module variable.
@@ -116,12 +147,16 @@ const readingMarked = new Marked({
       return renderFence(text, lang ?? '');
     },
     link({ href, title, tokens }) {
-      const target = rewriteLink(href, requireEnv());
+      const target = safeTarget(href, requireEnv());
+      const inner = this.parser.parseInline(tokens);
+      // markdown-it renders an unsafe link as plain text (the link is dropped).
+      if (target === null) return inner;
       const titleAttr = title ? ` title="${escapeAttr(title)}"` : '';
-      return `<a href="${escapeAttr(target)}"${titleAttr}>${this.parser.parseInline(tokens)}</a>`;
+      return `<a href="${escapeAttr(target)}"${titleAttr}>${inner}</a>`;
     },
     image({ href, title, text }) {
-      const target = rewriteLink(href, requireEnv());
+      const target = safeTarget(href, requireEnv());
+      if (target === null) return escapeHtml(text);
       const titleAttr = title ? ` title="${escapeAttr(title)}"` : '';
       return `<img src="${escapeAttr(target)}" alt="${escapeAttr(text)}"${titleAttr}>`;
     },

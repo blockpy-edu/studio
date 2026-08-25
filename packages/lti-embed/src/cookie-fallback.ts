@@ -74,9 +74,13 @@ export function installCookieFallback(
 
   const targetFrame = win.parent;
   const platformOrigin = PLATFORM_ORIGIN;
-  const messageId = uuid();
+  // Distinct message ids per put_data post so the two responses can be told
+  // apart (the platform echoes message_id back).
+  const stateMessageId = uuid();
   const stateId = uuid();
+  const nonceMessageId = uuid();
   const nonceValue = uuid();
+  const messageIds = new Set([stateMessageId, nonceMessageId]);
 
   // First try to see if we can get the state and nonce values from the
   // platform. If we can't, then we'll need to generate new ones and store
@@ -91,8 +95,8 @@ export function installCookieFallback(
     if (data['subject'] !== 'lti.put_data.response') {
       return;
     }
-    // Validate the message id matches the id you sent
-    if (data['message_id'] !== messageId) {
+    // Validate the message id matches one of the ids you sent
+    if (typeof data['message_id'] !== 'string' || !messageIds.has(data['message_id'])) {
       // this is not the response you're looking for
       return;
     }
@@ -108,15 +112,17 @@ export function installCookieFallback(
       console.log(error['message']);
       return;
     }
-    // It's the response we expected - state and nonce values were stored.
-    console.log('Success! State and nonce values were stored.');
+    // It's the response we expected - this value was stored.
+    console.log(
+      `Success! ${data['message_id'] === stateMessageId ? 'State' : 'Nonce'} value was stored.`,
+    );
   };
   win.addEventListener('message', listener);
 
   targetFrame.postMessage(
     {
       subject: 'lti.put_data',
-      message_id: messageId,
+      message_id: stateMessageId,
       key: `blockpy_${stateId}`,
       value: stateId,
     },
@@ -125,7 +131,7 @@ export function installCookieFallback(
   targetFrame.postMessage(
     {
       subject: 'lti.put_data',
-      message_id: messageId,
+      message_id: nonceMessageId,
       key: `nonce_${nonceValue}`,
       value: nonceValue,
     },

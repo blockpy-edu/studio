@@ -479,7 +479,25 @@ export function SettingsEditor({ blob, assignment, onSave }: SettingsEditorProps
               type="button"
               className="btn btn-sm btn-outline-secondary"
               onClick={() => {
-                if (!rawOpen) setRawText(mergedBlob());
+                if (!rawOpen) {
+                  setRawText(mergedBlob());
+                } else {
+                  // Hiding hands control back to the form: fold valid raw
+                  // edits into the form state, then drop the raw override so
+                  // later form edits are what Save persists.
+                  if (rawText !== null) {
+                    try {
+                      const parsed = JSON.parse(rawText) as unknown;
+                      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                        setEdits(parsed as Record<string, unknown>);
+                      }
+                    } catch {
+                      // Invalid raw JSON is discarded on hide (the form wins).
+                    }
+                    setRawError(null);
+                  }
+                  setRawText(null);
+                }
                 setRawOpen(!rawOpen);
               }}
             >

@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render } from '@testing-library/react';
-import { ImageEditor, isImageDataUrl } from './ImageEditor';
+import { ImageEditor, isImageDataUrl, parseDimension } from './ImageEditor';
+import { MAX_PIXEL_DIMENSION } from './pixel-grid';
 
 // 1×1 transparent PNG.
 const PNG_URL =
@@ -67,11 +68,37 @@ describe('ImageEditor (M4.5, LD-27)', () => {
     expect(
       container.querySelectorAll('.blockpy-pixel-row')[0]!.querySelectorAll('.blockpy-pixel-cell'),
     ).toHaveLength(3);
+    // Clearing the field mid-edit (typing a new number) must NOT truncate
+    // the sprite to 1 column; NaN is ignored the same way.
+    fireEvent.change(container.querySelectorAll('.blockpy-pixel-size')[0]!, {
+      target: { value: '' },
+    });
+    expect(
+      container.querySelectorAll('.blockpy-pixel-row')[0]!.querySelectorAll('.blockpy-pixel-cell'),
+    ).toHaveLength(3);
+    fireEvent.change(container.querySelectorAll('.blockpy-pixel-size')[1]!, {
+      target: { value: '' },
+    });
+    expect(container.querySelectorAll('.blockpy-pixel-row')).toHaveLength(2);
+    fireEvent.change(container.querySelectorAll('.blockpy-pixel-size')[1]!, {
+      target: { value: '4' },
+    });
+    expect(container.querySelectorAll('.blockpy-pixel-row')).toHaveLength(4);
     // Apply in jsdom (no canvas backend) fails soft with the error notice.
     fireEvent.click(container.querySelector('.blockpy-pixel-apply')!);
     expect(container.querySelector('.blockpy-image-error')).not.toBeNull();
     // Cancel returns to the creator view without writing.
     fireEvent.click(container.querySelector('.blockpy-pixel-cancel')!);
     expect(container.querySelector('.blockpy-image-create')).not.toBeNull();
+  });
+
+  it('parseDimension ignores empty/NaN and clamps to the sprite range', () => {
+    expect(parseDimension('')).toBeNull();
+    expect(parseDimension('  ')).toBeNull();
+    expect(parseDimension('abc')).toBeNull();
+    expect(parseDimension('0')).toBe(1);
+    expect(parseDimension('-3')).toBe(1);
+    expect(parseDimension('7.9')).toBe(7);
+    expect(parseDimension('9999')).toBe(MAX_PIXEL_DIMENSION);
   });
 });

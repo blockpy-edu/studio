@@ -26,7 +26,9 @@ defineBlocks({
 generator.forBlock['ast_NamedExpr'] = function (block) {
   const target = generator.valueToCode(block, 'TARGET', generator.ORDER_ATOMIC) || generator.blank;
   const value = generator.valueToCode(block, 'VALUE', generator.ORDER_LAMBDA) || generator.blank;
-  return [target + ' := ' + value, generator.ORDER_LAMBDA];
+  // A bare walrus is only legal in a few positions (e.g. `if`/`while`
+  // tests); always parenthesize so it is valid anywhere, e.g. `x = (n := 10)`.
+  return ['(' + target + ' := ' + value + ')', generator.ORDER_ATOMIC];
 };
 
 registerConverter(

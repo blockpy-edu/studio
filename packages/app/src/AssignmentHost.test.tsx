@@ -141,3 +141,56 @@ describe('AssignmentHost dispatch (loadAssignmentWrapper port)', () => {
     expect(globals['altAssignmentChangingFunction']).toBeUndefined();
   });
 });
+
+describe('overlapping dispatches (blockpy load racing a sync quiz dispatch)', () => {
+  function deferred() {
+    let resolve!: () => void;
+    let reject!: (error: Error) => void;
+    const promise = new Promise<void>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return { promise, resolve, reject };
+  }
+
+  it('a stale blockpy load completing AFTER a quiz dispatch does not flip the surface', async () => {
+    const load = deferred();
+    const loadEditorAssignment = vi.fn(() => load.promise);
+    const { view, dispatch } = mountHost(loadEditorAssignment);
+    let pending!: Promise<void>;
+    act(() => {
+      pending = dispatch(101); // blockpy: awaits the editor load
+    });
+    await act(() => dispatch(102)); // quiz: sync, editor hidden
+    await act(async () => {
+      load.resolve();
+      await pending;
+    });
+    const editorWrap = view.container.querySelector('.blockpy-host-editor') as HTMLElement;
+    expect(editorWrap.style.display).toBe('none');
+    expect(view.container.querySelector('.blockpy-host-quiz')?.textContent).toContain(
+      'quiz assignment 102',
+    );
+  });
+
+  it('a stale blockpy load FAILING after a quiz dispatch does not restore its `before`', async () => {
+    const loadEditorAssignment = vi.fn(() => Promise.resolve());
+    const { view, dispatch } = mountHost(loadEditorAssignment);
+    await act(() => dispatch(103)); // reading showing first (the `before`)
+    const load = deferred();
+    loadEditorAssignment.mockImplementationOnce(() => load.promise);
+    let pending!: Promise<void>;
+    act(() => {
+      pending = dispatch(101).catch(() => undefined);
+    });
+    await act(() => dispatch(102)); // quiz wins
+    await act(async () => {
+      load.reject(new Error('load failed'));
+      await pending;
+    });
+    expect(view.container.querySelector('.blockpy-host-quiz')?.textContent).toContain(
+      'quiz assignment 102',
+    );
+    expect(view.container.querySelector('.blockpy-host-reading')).toBeNull();
+  });
+});

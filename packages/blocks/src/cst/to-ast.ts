@@ -713,15 +713,14 @@ class CstConverter {
   /** Parse `a.b as c, d` style alias lists. */
   private aliases(nodes: SyntaxNode[]): ir.Alias[] {
     const aliases: ir.Alias[] = [];
-    for (const group of this.commaSeparated(nodes)) {
+    // `from m import (a, b)` - the parentheses are plain sibling tokens.
+    const unwrapped = nodes.filter((c) => c.name !== '(' && c.name !== ')');
+    for (const group of this.commaSeparated(unwrapped)) {
+      if (group.length === 0) continue;
       const asIdx = group.findIndex((c) => c.name === 'as');
-      const nameParts = (asIdx === -1 ? group : group.slice(0, asIdx))
-        .filter((c) => c.name !== '.')
-        .map((c) => this.text(c));
       const dotted = (asIdx === -1 ? group : group.slice(0, asIdx))
         .map((c) => this.text(c))
         .join('');
-      void nameParts;
       aliases.push({
         _astname: 'alias',
         name: dotted,
@@ -746,14 +745,18 @@ class CstConverter {
     };
     let seenStar = false;
     for (const group of this.commaSeparated(children)) {
-      if (group.length === 0) continue;
+      if (group.length === 0) {
+        // The positional-only marker `/` is an anonymous token, so it shows
+        // up as an empty comma group. No block represents it.
+        this.fail(paramList, 'positional-only parameter marker (/) is not supported');
+      }
       let idx = 0;
       let kind: 'normal' | 'vararg' | 'kwarg' = 'normal';
       if (group[0]!.name === '*') {
         idx = 1;
         if (group.length === 1) {
-          seenStar = true; // bare `*` separator
-          continue;
+          // Bare `*` keyword-only separator: no block represents it.
+          this.fail(group[0]!, 'keyword-only parameter marker (*) is not supported');
         }
         kind = 'vararg';
       } else if (group[0]!.name === '**') {
@@ -814,9 +817,10 @@ class CstConverter {
    */
   private expressionSequence(
     nodes: SyntaxNode[],
-    _parent: SyntaxNode,
+    parent: SyntaxNode,
     ctx: ir.ExprContext = LOAD,
   ): ir.Expr {
+    if (nodes.length === 0) this.fail(parent, 'empty expression');
     const groups = this.commaSeparated(nodes);
     const hadComma = nodes.some((n) => n.name === ',') || groups.length > 1;
     const exprs = groups.map((group) => this.expressionGroup(group, ctx));
@@ -955,6 +959,11 @@ class CstConverter {
                   ? 'Invert'
                   : null;
         if (opName === null) this.fail(opNode, `unsupported unary ${opText}`);
+        if (opName === 'Not') {
+          // @lezer/python parses `not` with LOWER precedence than and/or, so
+          // `not a or b` arrives as not(a or b); Python binds it tighter.
+          return this.notExpression(node, ctx);
+        }
         return {
           _astname: 'UnaryOp',
           op: op(opName),
@@ -1102,6 +1111,70 @@ class CstConverter {
     };
   }
 
+  /**
+   * Re-associate a `not` UnaryExpression whose operand the parser attached
+   * too loosely. Walks the leftmost spine of unparenthesized and/or
+   * BinaryExpressions (and nested `not`s), applies the `not`(s) to the
+   * leftmost operand and rebuilds the BoolOps around it, so that
+   * `not a and b or c` becomes `((not a) and b) or c` as Python reads it.
+   * A ParenthesizedExpression is not a BinaryExpression, so `not (a or b)`
+   * naturally stays grouped.
+   */
+  private notExpression(node: SyntaxNode, ctx: ir.ExprContext, depth = 1): ir.Expr {
+    const loc = { lineno: this.lineOf(node), col_offset: this.colOf(node) };
+    const wrapNots = (operand: ir.Expr): ir.Expr => {
+      let result = operand;
+      for (let i = 0; i < depth; i += 1) {
+        result = { _astname: 'UnaryOp', op: op('Not'), operand: result, ...loc };
+      }
+      return result;
+    };
+    const children = this.childrenOf(node);
+    const operandNode = children[1]!;
+    if (operandNode.name === 'UnaryExpression') {
+      const innerOp = this.childrenOf(operandNode)[0];
+      if (innerOp !== undefined && innerOp.name === 'not') {
+        return this.notExpression(operandNode, ctx, depth + 1);
+      }
+    }
+    if (!this.isBoolOpNode(operandNode)) {
+      return wrapNots(this.expression(operandNode, ctx));
+    }
+    return this.notIntoBoolOp(operandNode, ctx, wrapNots);
+  }
+
+  /** Rebuild an and/or BinaryExpression with `wrap` applied to its leftmost leaf. */
+  private notIntoBoolOp(
+    node: SyntaxNode,
+    ctx: ir.ExprContext,
+    wrap: (leaf: ir.Expr) => ir.Expr,
+  ): ir.BoolOp {
+    const loc = { lineno: this.lineOf(node), col_offset: this.colOf(node) };
+    const opName = this.boolOpNameOf(node)!;
+    const children = this.childrenOf(node);
+    const opIdx = children.findIndex((c, i) => i > 0 && (c.name === 'and' || c.name === 'or'));
+    const left = children.slice(0, opIdx);
+    const right = children.slice(opIdx + 1);
+    const values: ir.Expr[] = [];
+    if (left.length === 1 && this.isBoolOpNode(left[0]!)) {
+      const leftBool = this.notIntoBoolOp(left[0]!, ctx, wrap);
+      if (leftBool.op._astname === opName) {
+        values.push(...leftBool.values); // same-op chain flattens like CPython
+      } else {
+        values.push(leftBool);
+      }
+    } else {
+      values.push(wrap(this.expressionSequence(left, node, ctx)));
+    }
+    values.push(this.expressionSequence(right, node));
+    return { _astname: 'BoolOp', op: op(opName), values, ...loc };
+  }
+
+  /** Is this CST node an (unparenthesized) and/or BinaryExpression? */
+  private isBoolOpNode(node: SyntaxNode): boolean {
+    return node.name === 'BinaryExpression' && this.boolOpNameOf(node) !== null;
+  }
+
   /** BoolOp name of a BinaryExpression CST node, if it is one. */
   private boolOpNameOf(node: SyntaxNode): 'And' | 'Or' | null {
     for (let c = node.firstChild; c !== null; c = c.nextSibling) {
@@ -1236,9 +1309,9 @@ class CstConverter {
     for (const group of this.commaSeparated(inner)) {
       if (group.length === 0) continue;
       if (group[0]!.name === '**') {
-        keys.push(null);
-        values.push(this.expressionSequence(group.slice(1), node));
-        continue;
+        // `{**a}` has no block representation (the Dict converter has no
+        // null-key item); fail cleanly so the statement becomes a raw block.
+        this.fail(group[0]!, 'dictionary unpacking (**) is not supported');
       }
       const parts = splitOn(group, ':');
       keys.push(this.expressionSequence(parts[0]!, node));
@@ -1341,8 +1414,40 @@ class CstConverter {
   private continuedString(
     node: SyntaxNode,
     loc: { lineno: number; col_offset: number },
-  ): ir.Str | ir.Bytes {
+  ): ir.Str | ir.Bytes | ir.JoinedStr {
     const parts = this.childrenOf(node);
+    const source = this.text(node);
+    if (parts.some((p) => p.name === 'FormatString')) {
+      // Implicit concatenation involving an f-string is itself an f-string:
+      // splice every part's chunks into one JoinedStr.
+      const values: (ir.Str | ir.FormattedValue)[] = [];
+      for (const part of parts) {
+        if (part.name === 'FormatString') {
+          values.push(...this.formatString(part, loc).values);
+        } else {
+          const partSource = this.text(part);
+          if (decodePythonString(partSource).isBytes) {
+            this.fail(part, 'cannot mix bytes and f-string');
+          }
+          // JoinedStr literal chunks are kept raw (see formatString): take
+          // the content between the quotes verbatim.
+          const openMatch = /^[a-zA-Z]*('''|"""|'|")/.exec(partSource);
+          const quote = openMatch ? openMatch[1]! : '"';
+          const raw = partSource.slice(
+            openMatch ? openMatch[0].length : 1,
+            partSource.length - quote.length,
+          );
+          values.push({
+            _astname: 'Str',
+            s: raw,
+            source: partSource,
+            lineno: this.lineOf(part),
+            col_offset: this.colOf(part),
+          });
+        }
+      }
+      return { _astname: 'JoinedStr', values, source, ...loc };
+    }
     let value = '';
     let isBytes = false;
     for (const part of parts) {
@@ -1350,7 +1455,6 @@ class CstConverter {
       value += decoded.value;
       isBytes = isBytes || decoded.isBytes;
     }
-    const source = this.text(node);
     if (isBytes) return { _astname: 'Bytes', s: value, source, ...loc };
     return { _astname: 'Str', s: value, source, ...loc };
   }

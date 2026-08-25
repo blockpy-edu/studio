@@ -71,6 +71,11 @@ export interface ContextSnapshot extends WirePayload {
   part_id: string;
 }
 
+/** The serialization key for a save: same file AND same assignment/submission. */
+function saveChainKey(filename: string, snapshot: ContextSnapshot): string {
+  return `${filename}|${snapshot.assignment_id ?? ''}|${snapshot.submission_id ?? ''}`;
+}
+
 interface PendingSave {
   timer: number;
   contents: string;
@@ -83,9 +88,14 @@ export class SubmissionSync {
   /** Monotonic display correctness (legacy submission.correct OR-chain). */
   private correct = false;
   private pending = new Map<string, PendingSave>();
-  /** Per-filename save chain: an older POST never overtakes a newer one. */
+  /**
+   * Per-(filename, assignment, submission) save chain: an older POST never
+   * overtakes a newer one for the SAME target. Every assignment's working
+   * file is `answer.py`, so keying by filename alone would let a save for
+   * assignment B supersede (and silently drop) a queued save for A.
+   */
   private inflight = new Map<string, Promise<void>>();
-  /** Per-filename sequence: the newest requested save wins. */
+  /** Per-chain sequence: the newest requested save for that target wins. */
   private latestSequence = new Map<string, number>();
   /**
    * This client saved an instructor file since the last version check.
@@ -183,19 +193,22 @@ export class SubmissionSync {
   ): Promise<void> {
     // The immediate save IS the latest - drop the queued older one.
     this.cancelPending(filename);
-    const sequence = (this.latestSequence.get(filename) ?? 0) + 1;
-    this.latestSequence.set(filename, sequence);
+    // A save is only superseded by a newer save for the SAME
+    // assignment/submission - not by the next assignment's `answer.py`.
+    const chainKey = saveChainKey(filename, snapshot);
+    const sequence = (this.latestSequence.get(chainKey) ?? 0) + 1;
+    this.latestSequence.set(chainKey, sequence);
     // Nothing in flight: start synchronously (the POST leaves before any
     // caller's next tick); otherwise queue behind the older save.
-    const previous = this.inflight.get(filename);
+    const previous = this.inflight.get(chainKey);
     const run = previous
-      ? previous.then(() => this.performSave(filename, contents, snapshot, sequence))
-      : this.performSave(filename, contents, snapshot, sequence);
-    this.inflight.set(filename, run);
+      ? previous.then(() => this.performSave(filename, contents, snapshot, chainKey, sequence))
+      : this.performSave(filename, contents, snapshot, chainKey, sequence);
+    this.inflight.set(chainKey, run);
     try {
       await run;
     } finally {
-      if (this.inflight.get(filename) === run) this.inflight.delete(filename);
+      if (this.inflight.get(chainKey) === run) this.inflight.delete(chainKey);
     }
   }
 
@@ -203,11 +216,12 @@ export class SubmissionSync {
     filename: string,
     contents: string,
     snapshot: ContextSnapshot,
+    chainKey: string,
     sequence: number,
   ): Promise<void> {
     // Superseded while queued behind an older POST: the newer save carries
     // the newer contents, so this one would only reorder them.
-    if (this.latestSequence.get(filename) !== sequence) return;
+    if (this.latestSequence.get(chainKey) !== sequence) return;
     if (this.options.readOnly()) {
       this.options.setStatus('saveFile', 'offline');
       return;

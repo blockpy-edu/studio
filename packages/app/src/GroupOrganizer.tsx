@@ -66,30 +66,45 @@ export function GroupOrganizer(props: GroupOrganizerProps) {
     return outcome.success === true;
   };
 
+  // A thrown api call (retries exhausted, 4xx, non-JSON body) must land on
+  // the status line, not as an unhandled rejection with the status stuck.
+  const failed = (action: string, error: unknown) =>
+    setStatus(`${action}: FAILED: ${error instanceof Error ? error.message : String(error)}`);
+
   const saveGroup = async () => {
     if (props.groupId === null || groupName.trim() === '') return;
-    const outcome = await api.editAssignmentGroup({
-      assignment_group_id: props.groupId,
-      new_name: groupName.trim(),
-      ...(groupUrl.trim() !== '' ? { new_url: groupUrl.trim() } : {}),
-    });
-    report(outcome, 'Group');
+    try {
+      const outcome = await api.editAssignmentGroup({
+        assignment_group_id: props.groupId,
+        new_name: groupName.trim(),
+        ...(groupUrl.trim() !== '' ? { new_url: groupUrl.trim() } : {}),
+      });
+      report(outcome, 'Group');
+    } catch (error) {
+      failed('Group', error);
+    }
   };
 
   const saveRow = async (id: number) => {
     const rowEdits = edits[id];
     if (!rowEdits) return;
-    const outcome = await api.saveAssignment({
-      assignment_id: id,
-      ...(rowEdits.name !== undefined ? { name: rowEdits.name } : {}),
-      ...(rowEdits.url !== undefined ? { url: rowEdits.url } : {}),
-      ...(rowEdits.points !== undefined && rowEdits.points !== ''
-        ? { points: rowEdits.points }
-        : {}),
-      ...(rowEdits.public !== undefined ? { public: String(rowEdits.public) } : {}),
-      ...(rowEdits.hidden !== undefined ? { hidden: String(rowEdits.hidden) } : {}),
-      ...(rowEdits.reviewed !== undefined ? { reviewed: String(rowEdits.reviewed) } : {}),
-    });
+    let outcome;
+    try {
+      outcome = await api.saveAssignment({
+        assignment_id: id,
+        ...(rowEdits.name !== undefined ? { name: rowEdits.name } : {}),
+        ...(rowEdits.url !== undefined ? { url: rowEdits.url } : {}),
+        ...(rowEdits.points !== undefined && rowEdits.points !== ''
+          ? { points: rowEdits.points }
+          : {}),
+        ...(rowEdits.public !== undefined ? { public: String(rowEdits.public) } : {}),
+        ...(rowEdits.hidden !== undefined ? { hidden: String(rowEdits.hidden) } : {}),
+        ...(rowEdits.reviewed !== undefined ? { reviewed: String(rowEdits.reviewed) } : {}),
+      });
+    } catch (error) {
+      failed(`Assignment ${id}`, error);
+      return;
+    }
     if (report(outcome, `Assignment ${id}`)) {
       if (rowEdits.name !== undefined) {
         props.navStore?.renameEntry(id, rowEdits.name);
@@ -104,11 +119,17 @@ export function GroupOrganizer(props: GroupOrganizerProps) {
   const removeRow = async (id: number) => {
     if (props.groupId === null) return;
     if (!window.confirm(`Remove assignment ${id} from this group?`)) return;
-    const outcome = await api.moveMembership({
-      assignment_id: id,
-      old_group_id: props.groupId,
-      new_group_id: -1,
-    });
+    let outcome;
+    try {
+      outcome = await api.moveMembership({
+        assignment_id: id,
+        old_group_id: props.groupId,
+        new_group_id: -1,
+      });
+    } catch (error) {
+      failed(`Remove ${id}`, error);
+      return;
+    }
     if (report(outcome, `Remove ${id}`)) {
       props.navStore?.removeEntry(id);
       setRows((current) => current.filter((row) => row.id !== id));
@@ -118,11 +139,17 @@ export function GroupOrganizer(props: GroupOrganizerProps) {
   const addAssignment = async () => {
     const id = Number(addId);
     if (props.groupId === null || !Number.isInteger(id) || id <= 0) return;
-    const outcome = await api.moveMembership({
-      assignment_id: id,
-      old_group_id: -1,
-      new_group_id: props.groupId,
-    });
+    let outcome;
+    try {
+      outcome = await api.moveMembership({
+        assignment_id: id,
+        old_group_id: -1,
+        new_group_id: props.groupId,
+      });
+    } catch (error) {
+      failed(`Add ${id}`, error);
+      return;
+    }
     if (report(outcome, `Add ${id}`)) {
       setRows((current) =>
         current.some((row) => row.id === id)
