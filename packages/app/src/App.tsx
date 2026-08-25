@@ -249,11 +249,21 @@ export function App({ config, extras, registerActions }: AppProps) {
         data['submission'] && typeof data['submission'] === 'object'
           ? decodeSubmission(data['submission'] as RawRecord)
           : null;
+      // part_id (A4; blockpy.js:172/431, server.js:197): this editor edits
+      // ONE `##### Part` section of the submission; the id rides every
+      // payload so the server merges the part back into the whole. The
+      // settings-* URL overrides apply here too (they win at render).
+      const loadedSettings = {
+        ...parseAssignmentSettings(decoded.settings),
+        ...config.settings,
+      };
+      const partId = typeof loadedSettings['part_id'] === 'string' ? loadedSettings['part_id'] : '';
       if (api) {
         // The wire context follows the loaded pair (legacy createServerData
         // reads the live model): every later call carries these ids.
         api.context.assignmentId = decoded.id;
         api.context.assignmentVersion = decoded.version;
+        api.context.partId = partId;
         api.context.submissionId = submission?.id ?? null;
         api.context.submissionVersion = submission?.version ?? 0;
       }
@@ -273,11 +283,11 @@ export function App({ config, extras, registerActions }: AppProps) {
       setLoaded({
         assignment: decoded,
         submission,
-        vfs: vfsFromAssignment(decoded, submission ?? undefined),
+        vfs: vfsFromAssignment(decoded, submission ?? undefined, partId),
       });
       setLoadError(null);
     },
-    [api, sync, store],
+    [api, sync, store, config.settings],
   );
 
   const loadAssignment = useCallback(
@@ -644,14 +654,24 @@ export function App({ config, extras, registerActions }: AppProps) {
     });
   }, [navStore, active, settings]);
 
-  // preload_all_files (files.js:677-696): fetch the uploaded listing at
-  // assignment load instead of waiting for the images tab. The specific
-  // `preload_files` JSON variant lands with CORGIS (§10.4).
+  // preload_files / preload_all_files (files.js:677-696): at assignment
+  // load, preload_files' JSON (`{placement: [[filename, url], …]}`) is
+  // registered directly as the remote file map; otherwise preload_all_files
+  // fetches the uploaded listing instead of waiting for the images tab.
+  // Invalid preload_files JSON logs and preloads nothing (files.js:684-687).
   useEffect(() => {
-    if (active && uploads && settingBool(settings['preload_all_files'] ?? false)) {
+    if (!active) return;
+    const preloadFiles = settings['preload_files'];
+    if (typeof preloadFiles === 'string' && preloadFiles.trim() !== '') {
+      try {
+        void syncRemoteFiles(JSON.parse(preloadFiles) as UploadedFilesMap);
+      } catch (error) {
+        console.error('Failed to preload files, invalid structure: ', error);
+      }
+    } else if (uploads && settingBool(settings['preload_all_files'] ?? false)) {
       void uploads.list().catch(() => undefined);
     }
-  }, [active, uploads, settings]);
+  }, [active, uploads, settings, syncRemoteFiles]);
 
   const loadHistory = useMemo(() => {
     if (!api?.isEndpointConnected('loadHistory')) return undefined;
@@ -1092,28 +1112,28 @@ export function App({ config, extras, registerActions }: AppProps) {
       {/* Proactive not-owned notice (M7.9, LD-42): decoded ownership predicts
           the fork BEFORE the first rejected save is the discovery moment. */}
       {instructorView && !focusedMode && api !== null && active !== null && !canEditActive && (
-          <div className="alert alert-warning blockpy-fork-notice">
-            This assignment belongs to another course (course ID {active.assignment.courseId}), so
-            your edits cannot be saved to it.{' '}
-            {api.isEndpointConnected('forkAssignment') ? (
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-secondary blockpy-fork-open"
-                onClick={() => {
-                  setForkError('');
-                  setForkOffer({ message: '' });
-                }}
-              >
-                Fork it into your course…
-              </button>
-            ) : (
-              <span>
-                (Forking is not configured on this page - ask your server administrator to publish
-                the forkAssignment endpoint.)
-              </span>
-            )}
-          </div>
-        )}
+        <div className="alert alert-warning blockpy-fork-notice">
+          This assignment belongs to another course (course ID {active.assignment.courseId}), so
+          your edits cannot be saved to it.{' '}
+          {api.isEndpointConnected('forkAssignment') ? (
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-secondary blockpy-fork-open"
+              onClick={() => {
+                setForkError('');
+                setForkOffer({ message: '' });
+              }}
+            >
+              Fork it into your course…
+            </button>
+          ) : (
+            <span>
+              (Forking is not configured on this page - ask your server administrator to publish the
+              forkAssignment endpoint.)
+            </span>
+          )}
+        </div>
+      )}
       {/* OFFER_FORK (M7.9, LD-42) - the legacy dialog with WORKING buttons.
           Single-assignment fork via /assignments/fork (forks into the
           CALLER's course); "fork entire group" needs a server route a
@@ -1284,6 +1304,40 @@ export function App({ config, extras, registerActions }: AppProps) {
             }
             disableTifa={settingBool(settings['disable_tifa'] ?? false)}
             disableInstructorRun={settingBool(settings['disable_instructor_run'] ?? false)}
+            // Execution settings (A4): timeouts, blank student run, tracing,
+            // and persisted graphical output (saveImage endpoint).
+            disableTimeout={settingBool(settings['disable_timeout'] ?? false)}
+            disableStudentRun={settingBool(settings['disable_student_run'] ?? false)}
+            disableTrace={settingBool(settings['disable_trace'] ?? false)}
+            saveTurtleOutput={settingBool(settings['save_turtle_output'] ?? false)}
+            onSaveImage={
+              api?.isEndpointConnected('saveImage')
+                ? (directory, dataUrl) => {
+                    void api.saveImage(directory, dataUrl).catch(() => undefined);
+                  }
+                : undefined
+            }
+            // Editor restrictions (student-only; the instructor view is
+            // exempt inside CodingEditor).
+            disableEdit={settingBool(settings['disable_edit'] ?? false)}
+            onlyUploads={settingBool(settings['only_uploads'] ?? false)}
+            canBlocks={
+              settings['can_blocks'] !== undefined ? settingBool(settings['can_blocks']) : true
+            }
+            canImage={settingBool(settings['can_image'] ?? false)}
+            isParsons={settingBool(settings['is_parsons'] ?? false)}
+            hideImportStatements={settingBool(settings['hide_import_statements'] ?? false)}
+            // Interface visibility.
+            hideEditors={settingBool(settings['hide_editors'] ?? false)}
+            onlyInteractive={settingBool(settings['only_interactive'] ?? false)}
+            hideMiddlePanel={settingBool(settings['hide_middle_panel'] ?? false)}
+            hideAll={settingBool(settings['hide_all'] ?? false)}
+            hideSubmission={settingBool(settings['hide_submission'] ?? false)}
+            hideImportDatasetsButton={settingBool(settings['hide_import_datasets_button'] ?? false)}
+            hideTraceButton={settingBool(settings['hide_trace_button'] ?? false)}
+            smallLayout={settingBool(settings['small_layout'] ?? false)}
+            // instructions_pool: seed-drawn instructions + on_run.
+            instructionsPool={settingBool(settings['instructions_pool'] ?? false)}
             // Pool-question seed (on_run.js:43-45; LD-22): legacy currentSeed
             // = poolSeed || submission.id - no poolSeed UI yet (M2 deferral).
             seed={active?.submission?.id != null ? String(active.submission.id) : undefined}
@@ -1390,6 +1444,10 @@ export function App({ config, extras, registerActions }: AppProps) {
               hasClock: settingBool(settings['has_clock'] ?? false),
               // hide_queued_inputs (blockpy.js:627): hides Edit Inputs.
               hideQueuedInputs: settingBool(settings['hide_queued_inputs'] ?? false),
+              // instructions_pool Seed box (interface.js:183-191); the
+              // placeholder is the default seed (submission id).
+              instructionsPool: settingBool(settings['instructions_pool'] ?? false),
+              defaultSeed: active?.submission?.id != null ? String(active.submission.id) : '',
               // Fullscreen event stream (X-Display.Fullscreen.*, A2).
               onLogEvent: (eventType, message) => logEvent(eventType, '', '', message, ''),
               // Legacy canShare (blockpy.js:632-650): parts base64 → shareUrl.

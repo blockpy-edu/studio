@@ -47,6 +47,11 @@ export interface FeedbackProps {
   score?: number;
   /** Legacy ui.feedback.resetScore (blockpy.js:784-788). */
   onResetScore?: () => void;
+  /**
+   * Legacy `hide_trace_button` (blockpy.js:667-669, students only - the
+   * parent resolves the instructor exemption): no View Trace affordance.
+   */
+  hideTraceButton?: boolean;
 }
 
 export function Feedback({ size = 'col-md-6', ...props }: FeedbackProps) {
@@ -125,7 +130,7 @@ export function Feedback({ size = 'col-md-6', ...props }: FeedbackProps) {
             <u>(reset)</u>
           </small>
         )}
-        {hasTrace && (
+        {hasTrace && !props.hideTraceButton && (
           <button
             type="button"
             className="btn btn-sm btn-outline-secondary blockpy-panel-header-action"

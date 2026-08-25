@@ -158,7 +158,13 @@ export function createEngineRunController(options: EngineAdapterOptions = {}): R
             // raising EOFError.
             inputsPrefill: runOptions?.inputs,
             interactiveInput: handlers.onInput !== undefined,
-            limits: { wallMs: warmPedal ? 180_000 : (options.wallMs ?? 5000) },
+            limits: {
+              wallMs: runOptions?.disableTimeout
+                ? Number.POSITIVE_INFINITY
+                : warmPedal
+                  ? 180_000
+                  : (options.wallMs ?? 5000),
+            },
           },
           {
             onStdout: (chunk) => handlers.stdout(chunk),
@@ -420,7 +426,13 @@ async function gradeWithPedal(
         seed: runOptions?.seed,
       },
       // First grading job includes the wheel install; later ones are ~ms.
-      limits: { wallMs: pedalReady ? 15_000 : 180_000 },
+      limits: {
+        wallMs: runOptions?.disableTimeout
+          ? Number.POSITIVE_INFINITY
+          : pedalReady
+            ? 15_000
+            : 180_000,
+      },
     },
     {
       // Instructor-code output belongs to the dev console, not the

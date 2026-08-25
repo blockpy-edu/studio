@@ -55,12 +55,46 @@ export function parseAssignmentSettings(blob: string): Record<string, unknown> {
  * - `extra_instructor_files` / `extra_starting_files` / submission
  *   `extra_files` carry their prefixed names verbatim.
  */
+const DEFAULT_SECTION_PATTERN = /^(##### Part (.+))$/gm;
+
+/**
+ * Legacy `extractPart` (utilities.js:240-262): find the `##### Part <id>`
+ * section of a multi-part document. Empty/null id = the whole text;
+ * a missing part = null.
+ */
+export function extractPart(text: string, partId: string | null | undefined): string | null {
+  if (partId === '' || partId == null) {
+    return text;
+  }
+  const parts = text.split(DEFAULT_SECTION_PATTERN);
+  for (let i = 2; i < parts.length; i += 3) {
+    if (parts[i] === partId) {
+      let body = parts[i + 1] ?? '';
+      if (body && body[0] === '\n') {
+        body = body.slice(1);
+      }
+      if (i !== parts.length - 3 && body && body.slice(-1) === '\n') {
+        body = body.slice(0, -1);
+      }
+      return body;
+    }
+  }
+  return null;
+}
+
 export function vfsFromAssignment(
   assignment: DecodedAssignment,
   submission?: DecodedSubmission,
+  /** `part_id` setting: this editor edits ONE `##### Part` section. */
+  partId = '',
 ): Vfs {
   const vfs = new Vfs();
-  vfs.write('answer.py', submission ? submission.code : assignment.startingCode);
+  // blockpy.js:172/472 - the submission code is narrowed to the part
+  // (`extractPart(...) || ""`); a missing part starts empty.
+  vfs.write(
+    'answer.py',
+    submission ? (extractPart(submission.code, partId) ?? '') : assignment.startingCode,
+  );
   vfs.write('!instructions.md', assignment.instructions);
   vfs.write('!on_run.py', assignment.onRun);
   vfs.write('^starting_code.py', assignment.startingCode);

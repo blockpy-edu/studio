@@ -190,7 +190,7 @@ export class EngineClient {
         void onInput(message.prompt).then((value) => {
           if (this.active !== active || active.settled || !this.port) return;
           const wallMs = active.job.limits?.wallMs ?? this.options.defaultWallMs;
-          if (wallMs !== undefined) {
+          if (wallMs !== undefined && Number.isFinite(wallMs)) {
             active.cancelWatchdog = this.schedule(() => this.hardStop('TimeoutError'), wallMs);
           }
           this.port.postMessage({ kind: 'input-response', jobId: active.job.id, value });
@@ -211,6 +211,9 @@ export class EngineClient {
     this.pendingCallbacks.delete(job.id);
     if (!pending || !this.port) return;
 
+    // A non-finite wallMs (legacy disable_timeout → execLimit Infinity,
+    // configurations.js:60) means NO watchdog: setTimeout(Infinity) would
+    // fire immediately.
     const wallMs = job.limits?.wallMs ?? this.options.defaultWallMs;
     const active: ActiveJob = {
       job,
@@ -220,7 +223,7 @@ export class EngineClient {
       settled: false,
     };
     this.active = active;
-    if (wallMs !== undefined) {
+    if (wallMs !== undefined && Number.isFinite(wallMs)) {
       active.cancelWatchdog = this.schedule(() => this.hardStop('TimeoutError'), wallMs);
     }
     this.port.postMessage({ kind: 'run', job });

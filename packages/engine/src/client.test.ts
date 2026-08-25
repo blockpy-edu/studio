@@ -227,3 +227,25 @@ describe('EngineClient interactive input (§6.5)', () => {
     expect(result.stdout).toBe('penguin\n');
   });
 });
+
+describe('disable_timeout (non-finite wallMs)', () => {
+  it('schedules no watchdog when the job wallMs is Infinity', async () => {
+    const { factory } = fakePortFactory({ onRun: () => undefined /* hangs */ });
+    const scheduled: number[] = [];
+    const client = new EngineClient({
+      workerFactory: factory,
+      defaultWallMs: 100,
+      schedule: (fn, ms) => {
+        if (ms > 0) scheduled.push(ms);
+        else queueMicrotask(fn);
+        return () => undefined;
+      },
+    });
+    const pending = client.run({ ...job('forever'), limits: { wallMs: Number.POSITIVE_INFINITY } });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(scheduled).toEqual([]);
+    client.interrupt('forever');
+    const result = await pending;
+    expect(result.success).toBe(false);
+  });
+});

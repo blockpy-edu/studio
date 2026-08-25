@@ -136,6 +136,12 @@ export interface EditorChromeState {
   /** Where the console's Evaluate affordance is in its lifecycle. */
   evalState: EvalState;
   /**
+   * Pool-question seed override (legacy `display.poolSeed`, the quick
+   * menu's Seed box under `instructions_pool`). Null = use the submission
+   * id (legacy currentSeed, blockpy.js:658-660).
+   */
+  poolSeed: string | null;
+  /**
    * Dev console (STUDIO EXTENSION, no legacy analog): a secondary,
    * instructor-only console for system messages (engine boot, grader
    * lifecycle) and instructor-code output, keeping the student console
@@ -208,6 +214,7 @@ export interface EditorChromeState {
   setPasscode(passcode: string): void;
   setDirtySubmission(dirty: boolean): void;
   setEvalState(state: EvalState): void;
+  setPoolSeed(seed: string | null): void;
   appendDevConsole(entry: ConsoleEntry): void;
   clearDevConsole(): void;
   /** Swap the console slot; clears the shown console's unseen counter. */
@@ -286,7 +293,9 @@ export function readStoredPythonMode(): DualEditorMode | null {
 export function resolveStartPythonMode(startView?: string | null): DualEditorMode {
   const stored = readStoredPythonMode();
   if (stored) return stored;
-  return PYTHON_MODES.includes(startView as DualEditorMode) ? (startView as DualEditorMode) : 'text';
+  return PYTHON_MODES.includes(startView as DualEditorMode)
+    ? (startView as DualEditorMode)
+    : 'text';
 }
 
 function readStoredFlag(key: string): boolean {
@@ -365,6 +374,7 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
   passcode: '',
   dirtySubmission: true,
   evalState: 'hidden',
+  poolSeed: null,
   devConsole: [],
   activeConsole: 'student',
   consoleUnseen: 0,
@@ -383,6 +393,7 @@ export const useEditorChromeStore = create<EditorChromeState>((set) => ({
     set({ pythonMode: mode });
   },
   applyPythonMode: (mode) => set({ pythonMode: mode }),
+  setPoolSeed: (seed) => set({ poolSeed: seed }),
   toggleHistoryMode: () => set((state) => ({ historyMode: !state.historyMode })),
   setHistoryMode: (on) => set({ historyMode: on }),
   setRunState: (runState) => set({ runState }),

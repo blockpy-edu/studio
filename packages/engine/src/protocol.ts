@@ -48,7 +48,8 @@ export interface EngineJob {
    */
   interactiveInput?: boolean;
   /**
-   * wallMs: client-side watchdog (compat hard stop = worker termination).
+   * wallMs: client-side watchdog (compat hard stop = worker termination);
+   * a non-finite value (Infinity) disables it (legacy disable_timeout).
    * traceSteps: instruction limit enforced by the tracer when trace is on
    * (legacy `execLimit` maps here, §6.2).
    */

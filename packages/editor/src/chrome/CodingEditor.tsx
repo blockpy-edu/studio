@@ -35,6 +35,7 @@ import { convertIpynbToPython, downloadPlan, triggerBrowserDownload } from './fi
 import { QuickMenu, type QuickMenuProps } from './QuickMenu';
 import { SettingsEditor, type AssignmentFields } from './SettingsEditor';
 import { TraceExplorer } from './TraceExplorer';
+import { extractFromPool, formatPoolInstructions, POOL_SEPARATORS } from './pools';
 import {
   useEditorChromeStore,
   resolveStartPythonMode,
@@ -121,6 +122,12 @@ export interface RunOptions {
   disableInstructorRun?: boolean;
   /** Pool-question seed (legacy currentSeed = poolSeed || submission.id). */
   seed?: string;
+  /**
+   * Legacy `disable_timeout` (configurations.js:34-60, student.js:9,
+   * instructor.js:15): no execution watchdog on either the student run or
+   * the grading pass - infinite loops are the instructor's choice.
+   */
+  disableTimeout?: boolean;
 }
 
 /** Graphic extensions served by the ImageEditor tab body (M4.5, LD-27). */
@@ -258,6 +265,85 @@ export interface CodingEditorProps {
   /** Pool-question seed - legacy currentSeed = poolSeed ?? submission.id. */
   seed?: string;
   /**
+   * Legacy `instructions_pool` (pools.js): instructions and on_run hold
+   * several alternatives; the seed (quick-menu Seed box, else submission
+   * id) picks one for this student.
+   */
+  instructionsPool?: boolean;
+  /** Legacy `disable_timeout`: no execution watchdog (see RunOptions). */
+  disableTimeout?: boolean;
+  /**
+   * Legacy `disable_student_run` (run.js:9-11): Run executes an EMPTY
+   * program (the grader still runs) - answer.py is still saved.
+   */
+  disableStudentRun?: boolean;
+  /** Legacy `disable_trace`: no execution trace (no Trace explorer). */
+  disableTrace?: boolean;
+  /**
+   * Legacy `save_turtle_output` (console.js:467-482): graphical output of
+   * a run is persisted through `onSaveImage('turtle_output', dataUrl)`.
+   * Studio's engine delivers turtle/matplotlib canvases as run images.
+   */
+  saveTurtleOutput?: boolean;
+  onSaveImage?: (directory: string, dataUrl: string) => void;
+  /** Legacy `disable_edit`: students cannot edit answer.py. */
+  disableEdit?: boolean;
+  /**
+   * Legacy `only_uploads` (python.js:434-448): students cannot type into
+   * answer.py but can still Upload a file into it.
+   */
+  onlyUploads?: boolean;
+  /**
+   * Legacy `can_blocks` (default TRUE): when false, students see the block
+   * view but cannot edit it (read-only Blockly overlay; text stays live).
+   */
+  canBlocks?: boolean;
+  /** Legacy `can_image` → BlockMirror `imageMode` (python.js:378-380). */
+  canImage?: boolean;
+  /**
+   * Legacy `is_parsons` (BlockPy v1 toolbar.js:55-57 + utilities.js
+   * shuffle; dropped, TODO-only, in the v2 rewrite): the top-level blocks
+   * are scattered on load and on every Reset so the student reassembles
+   * the program.
+   */
+  isParsons?: boolean;
+  /**
+   * Legacy `hide_import_statements` (INCOMPLETE upstream): Studio drops the
+   * toolbox's Imports category for students.
+   */
+  hideImportStatements?: boolean;
+  /** Legacy `hide_editors` (blockpy.js:1039-1042): students see no editor. */
+  hideEditors?: boolean;
+  /**
+   * Legacy `only_interactive` (blockpy.js:568-571, 1039-1042): students
+   * see no editor or quick menu; the program runs on load and the console
+   * drops straight into Evaluate mode.
+   */
+  onlyInteractive?: boolean;
+  /** Legacy `hide_middle_panel` (blockpy.js:670-672): no console/feedback. */
+  hideMiddlePanel?: boolean;
+  /**
+   * Legacy `hide_submission`: the server hides the submission's code and
+   * history from Canvas reports; the client hides the History button from
+   * students to match.
+   */
+  hideSubmission?: boolean;
+  /** Legacy `hide_import_datasets_button` (python.js:58). */
+  hideImportDatasetsButton?: boolean;
+  /** Legacy `hide_trace_button` (students only, blockpy.js:667-669). */
+  hideTraceButton?: boolean;
+  /**
+   * Legacy `small_layout` (students only, blockpy.js:545-546): console +
+   * feedback sit beside the editor (col-md-5 / col-md-7), the footer and
+   * the datasets button are hidden.
+   */
+  smallLayout?: boolean;
+  /**
+   * Legacy `hide_all` (INCOMPLETE upstream): Studio renders nothing for
+   * students - the host page (textbook, LMS) is the whole interface.
+   */
+  hideAll?: boolean;
+  /**
    * Assignment-level columns shown in the Settings form (M3.5); the section
    * renders only when provided.
    */
@@ -356,10 +442,26 @@ export function CodingEditor(props: CodingEditorProps) {
     disableTifa,
     disableInstructorRun,
     seed,
+    instructionsPool,
+    disableTimeout,
+    disableStudentRun,
+    disableTrace,
+    saveTurtleOutput,
+    onSaveImage,
+    onlyInteractive,
+    canBlocks,
+    isParsons,
     loadHistory,
     startingCode,
     assignmentHidden,
   } = props;
+  // Legacy gates most restrictions on `!display.instructor()` - the
+  // instructor view sees the full interface regardless of the settings.
+  const isStudent = !(props.instructor ?? false);
+  const poolSeed = useEditorChromeStore((state) => state.poolSeed);
+  // Legacy currentSeed (blockpy.js:658-660): the Seed box wins over the
+  // submission id.
+  const effectiveSeed = poolSeed ?? seed;
   const role: Role = props.role ?? 'student';
   const [activeFile, setActiveFile] = useState('answer.py');
   const [code, setCode] = useState(() => vfs?.read('answer.py') ?? startingCode ?? '');
@@ -453,7 +555,18 @@ export function CodingEditor(props: CodingEditorProps) {
   // Only answer.py gets the block/split modes; every other file is a plain
   // text file (legacy python.js forces TEXT for non-answer files).
   const isAnswerFile = activeFile === 'answer.py';
-  const fileReadOnly = (props.readOnly ?? false) || (vfs ? !vfs.canEdit(activeFile, role) : false);
+  // disable_edit / only_uploads lock answer.py for students (python.js:
+  // 443-447 decideIfNotEditable; disable_edit is the same lock without the
+  // upload escape hatch).
+  const settingsLocked =
+    isStudent && isAnswerFile && ((props.disableEdit ?? false) || (props.onlyUploads ?? false));
+  const fileReadOnly =
+    (props.readOnly ?? false) || settingsLocked || (vfs ? !vfs.canEdit(activeFile, role) : false);
+  // only_uploads: the file is not typeable, but Upload still writes it.
+  const uploadAllowed =
+    !(props.readOnly ?? false) &&
+    (vfs ? vfs.canEdit(activeFile, role) : true) &&
+    !(isStudent && isAnswerFile && (props.disableEdit ?? false));
 
   const handleSelectFile = useCallback(
     (legacyName: string) => {
@@ -540,9 +653,9 @@ export function CodingEditor(props: CodingEditorProps) {
   );
 
   const handleCodeChange = useCallback(
-    (newCode: string) => {
+    (newCode: string, viaUpload = false) => {
       setCode(newCode);
-      if (vfs && !fileReadOnly) {
+      if (vfs && (!fileReadOnly || (viaUpload && uploadAllowed))) {
         vfs.write(activeFile, newCode);
         // Autosave hook (legacy file subscriptions, server.js:114-134).
         onFileEdit?.(activeFile, newCode);
@@ -553,7 +666,7 @@ export function CodingEditor(props: CodingEditorProps) {
         onCodeChange?.(newCode);
       }
     },
-    [onCodeChange, onFileEdit, vfs, activeFile, fileReadOnly, store],
+    [onCodeChange, onFileEdit, vfs, activeFile, fileReadOnly, uploadAllowed, store],
   );
 
   // -- local upload/download (M7.4, LD-39) -----------------------------------
@@ -574,7 +687,9 @@ export function CodingEditor(props: CodingEditorProps) {
           }
         }
         onLogEvent?.('X-File.Upload', '', '', contents, activeFile);
-        handleCodeChange(contents);
+        handleCodeChange(contents, true);
+        // only_uploads: the editor is read-only, so push the upload in.
+        editorRef.current?.setCode(contents);
       };
       reader.readAsText(file);
     },
@@ -588,9 +703,18 @@ export function CodingEditor(props: CodingEditorProps) {
   }, [vfs, activeFile, code, onLogEvent, props.assignmentName]);
 
   // Live toolbox reload on settings change (legacy `reloadToolbox`).
-  const toolboxSpec = props.toolboxSetting
+  const baseToolboxSpec = props.toolboxSetting
     ? resolveToolboxSetting(props.toolboxSetting, vfs)
     : (props.toolbox ?? 'normal');
+  // hide_import_statements: students lose the Imports category (the
+  // preset is expanded so the filter applies uniformly).
+  const toolboxSpec: ToolboxSpec =
+    isStudent && (props.hideImportStatements ?? false)
+      ? (typeof baseToolboxSpec === 'string'
+          ? (TOOLBOXES[baseToolboxSpec] ?? TOOLBOXES['normal'] ?? [])
+          : baseToolboxSpec
+        ).filter((entry) => typeof entry === 'string' || entry.name !== 'Imports')
+      : baseToolboxSpec;
   const lastToolbox = useRef(toolboxSpec);
   useEffect(() => {
     if (lastToolbox.current !== toolboxSpec && editorRef.current) {
@@ -618,6 +742,16 @@ export function CodingEditor(props: CodingEditorProps) {
   useEffect(() => {
     editorRef.current?.setKeyboardNav(keyboardNavOn);
   }, [keyboardNavOn]);
+
+  // can_blocks=false: blocks visible but not editable for students. Runs
+  // after DualEditorView's own readOnly effect (child effects first), so
+  // the block-only overlay wins whenever the shared flag flips back.
+  const blocksLocked = isStudent && isAnswerFile && !(canBlocks ?? true);
+  useEffect(() => {
+    if (!fileReadOnly) {
+      editorRef.current?.blockEditor.setReadOnly(blocksLocked);
+    }
+  }, [blocksLocked, fileReadOnly, activeFile]);
 
   // System messages (engine boot, grader lifecycle, instructor output) go
   // to the footer status line + the instructor-only dev console - never the
@@ -664,9 +798,19 @@ export function CodingEditor(props: CodingEditorProps) {
     // the Compile event (run.js:14).
     onRunStart?.(studentCode);
     onLogEvent?.('Compile', '', '', '', 'answer.py');
+    // disable_student_run (run.js:9-11): the program itself is blanked;
+    // the grader still receives the real answer.py via the staged files.
+    const executedCode = disableStudentRun ? '' : studentCode;
+    // instructions_pool: the grader script is one drawn from the pool
+    // (on_run.js:103-111).
+    const onRunScript = vfs ? (vfs.read('!on_run.py') ?? '') : undefined;
+    const pooledOnRun =
+      onRunScript !== undefined && instructionsPool
+        ? extractFromPool(onRunScript, POOL_SEPARATORS.TESTS, effectiveSeed)
+        : onRunScript;
     try {
       const outcome = await controller.run(
-        studentCode,
+        executedCode,
         {
           stdout: (text) => appendConsole({ kind: 'stdout', text }),
           stderr: (text) => appendConsole({ kind: 'stderr', text }),
@@ -677,13 +821,14 @@ export function CodingEditor(props: CodingEditorProps) {
           systemError: (traceback) => store.getState().setGraderError(traceback),
         },
         {
-          trace: true,
+          trace: !(disableTrace ?? false),
           inputs: runInputs,
           disableFeedback: disableFeedback,
           allowRealRequests: allowRealRequests,
           disableTifa: disableTifa,
           disableInstructorRun: disableInstructorRun,
-          seed: seed,
+          disableTimeout: disableTimeout,
+          seed: effectiveSeed,
           // Grade with the CURRENT !on_run.py - instructor edits to the On
           // Run tab apply on the very next run (§7: the VFS is the source
           // of truth) - and stage the live VFS into both jobs: the student
@@ -691,7 +836,7 @@ export function CodingEditor(props: CodingEditorProps) {
           // grader helper imports (A1 §3/§4a).
           ...(vfs
             ? {
-                onRun: vfs.read('!on_run.py') ?? '',
+                onRun: pooledOnRun ?? '',
                 files: vfs.stageFiles('student'),
                 graderFiles: vfs.stageFiles('instructor'),
               }
@@ -729,6 +874,12 @@ export function CodingEditor(props: CodingEditorProps) {
       // Plots print into the console flow as image lines (§10.2).
       for (const image of outcome.images ?? []) {
         appendConsole({ kind: 'image', text: `data:image/png;base64,${image}` });
+      }
+      // save_turtle_output (console.js:467-482): the LAST canvas of the run
+      // is persisted as the submission's turtle_output image.
+      const lastImage = outcome.images?.[outcome.images.length - 1];
+      if (saveTurtleOutput && lastImage !== undefined) {
+        onSaveImage?.('turtle_output', `data:image/png;base64,${lastImage}`);
       }
       if (outcome.feedback) {
         setFeedback(outcome.feedback);
@@ -779,7 +930,9 @@ export function CodingEditor(props: CodingEditorProps) {
       // Successful run offers the console Evaluate button (run.js:57-59),
       // unless the hide_evaluate setting is on.
       if (succeeded && !(hideEvaluate ?? false)) {
-        after.setEvalState('button');
+        // only_interactive: straight into the Evaluate input (blockpy.js
+        // "the console enters Eval mode").
+        after.setEvalState(onlyInteractive && isStudent ? 'input' : 'button');
       }
     } catch (error) {
       setRunState('error');
@@ -801,13 +954,31 @@ export function CodingEditor(props: CodingEditorProps) {
     // were missing, so mid-session settings changes didn't reach the run.
     disableTifa,
     disableInstructorRun,
-    seed,
+    disableTimeout,
+    disableStudentRun,
+    disableTrace,
+    saveTurtleOutput,
+    onSaveImage,
+    onlyInteractive,
+    isStudent,
+    instructionsPool,
+    effectiveSeed,
     onRunStart,
     onGraded,
     onLogEvent,
     store,
     handleSystem,
   ]);
+
+  // only_interactive: "the program is automatically run" on load
+  // (students only; the instructor view keeps the manual Run).
+  const autoRan = useRef(false);
+  useEffect(() => {
+    if (onlyInteractive && isStudent && runController && !autoRan.current) {
+      autoRan.current = true;
+      void handleRun();
+    }
+  }, [onlyInteractive, isStudent, runController, handleRun]);
 
   const handleEvaluate = useCallback(
     (expression: string) => {
@@ -954,9 +1125,11 @@ export function CodingEditor(props: CodingEditorProps) {
     if (isAnswerFile) {
       setCode(starting);
       editorRef.current?.setCode(starting);
+      // is_parsons: Reset re-jumbles the blocks (v1 toolbar.js:55-57).
+      if (isParsons) editorRef.current?.blockEditor.shuffle();
     }
     onLogEvent?.('X-File.Reset', '', '', '', 'answer.py');
-  }, [startingCode, onLogEvent, vfs, isAnswerFile]);
+  }, [startingCode, onLogEvent, vfs, isAnswerFile, isParsons]);
 
   // X-View.Change on Blocks/Split/Text toggles (blockpy.js:1071-1075) -
   // logged on changes only, not the initial mode.
@@ -987,6 +1160,7 @@ export function CodingEditor(props: CodingEditorProps) {
           instructor={props.instructor}
           score={props.submissionScore}
           onResetScore={props.onResetScore}
+          hideTraceButton={isStudent && (props.hideTraceButton ?? false)}
           onRate={
             props.provideRatings
               ? (rating) => {
@@ -1002,21 +1176,34 @@ export function CodingEditor(props: CodingEditorProps) {
     </div>
   );
   const feedbackBadge = categoryPresentation(feedback.category);
+  // Pedal questions (on_run.js:74-76): grader-set instructions win until
+  // the next assignment load (the mount effect clears them). Pooled
+  // instructions (blockpy.js:555-563) draw one prompt by seed.
+  const rawInstructions = instructionsOverride ?? props.instructions ?? '';
+  const instructionsMarkdown = instructionsPool
+    ? formatPoolInstructions(rawInstructions, effectiveSeed, !isStudent)
+    : rawInstructions;
+  // Student-only interface reductions (blockpy.js: menu.visible 568-571,
+  // editors.view 1039-1042, smallLayout 545-546, footer.visible 1211-1215).
+  const editorsHidden = isStudent && ((props.hideEditors ?? false) || (onlyInteractive ?? false));
+  const menuHidden = isStudent && (onlyInteractive ?? false);
+  const smallLayout = isStudent && (props.smallLayout ?? false);
+  const middlePanelHidden = props.hideMiddlePanel ?? false;
+
+  // hide_all: nothing at all for students.
+  if (isStudent && (props.hideAll ?? false)) {
+    return <div className="blockpy-content container-fluid blockpy-hidden-all" />;
+  }
 
   return (
     <div className="blockpy-content container-fluid">
       {!focusedMode && (
         <div className="row">
-          <Instructions
-            // Pedal questions (on_run.js:74-76): grader-set instructions win
-            // until the next assignment load (the mount effect clears them).
-            markdown={instructionsOverride ?? props.instructions ?? ''}
-            assignmentName={props.assignmentName}
-          />
-          <QuickMenu {...props.quickMenu} onRun={() => void handleRun()} />
+          <Instructions markdown={instructionsMarkdown} assignmentName={props.assignmentName} />
+          {!menuHidden && <QuickMenu {...props.quickMenu} onRun={() => void handleRun()} />}
         </div>
       )}
-      {!focusedMode && (
+      {!focusedMode && !middlePanelHidden && !smallLayout && (
         <div className="row">
           <div className="col-md-12">{consoleAndFeedback}</div>
         </div>
@@ -1042,6 +1229,11 @@ export function CodingEditor(props: CodingEditorProps) {
           </div>
         )}
       <div className="row">
+        {/* small_layout: console + feedback share the editor's row
+            (legacy secondRow.width col-md-5, editors.width col-md-7). */}
+        {!focusedMode && !middlePanelHidden && smallLayout && (
+          <div className="col-md-5">{consoleAndFeedback}</div>
+        )}
         {!focusedMode && showFileTree && vfs && (
           <div className="col-md-3 blockpy-panel blockpy-file-tree-rail">
             <div className="blockpy-panel-header">
@@ -1067,176 +1259,206 @@ export function CodingEditor(props: CodingEditorProps) {
             />
           </div>
         )}
-        <div
-          // Grid negotiation (M3.7 rails + M4.3 docs): 12 minus 3 per open
-          // side panel; focused mode always takes the full width.
-          className={`blockpy-panel blockpy-editor col-md-${
-            focusedMode ? 12 : 12 - (showFileTree && vfs ? 3 : 0) - (showDocs ? 3 : 0)
-          }`}
-        >
-          <PythonToolbar
-            onRun={() => void handleRun()}
-            onStop={handleStop}
-            onReset={handleReset}
-            enableBlocks={(props.enableBlocks ?? true) && isAnswerFile}
-            onToggleFocus={() => setFocused(!focusedMode)}
-            focusedMode={focusedMode}
-            {...(props.docsUrl
-              ? {
-                  onToggleDocs: () => store.getState().toggleDocsPanel(),
-                  docsOpen: showDocs,
-                }
-              : {})}
-            onHistory={loadHistory ? handleToggleHistory : undefined}
-            // Local upload/download (M7.4, LD-39). Upload respects the
-            // read-only guard (D3-A: never overwrite an uneditable file).
-            onUpload={fileReadOnly ? undefined : handleUpload}
-            onDownload={handleDownload}
-            // File actions for the ACTIVE file (M3.7 / LD-21), gated by the
-            // VFS capability guards + role editability.
-            {...(vfs
-              ? {
-                  onDeleteFile: () => handleDeleteFile(activeFile),
-                  onRenameFile: () => handleRenameFile(activeFile),
-                  canDeleteFile: vfs.canDeleteName(activeFile) && vfs.canEdit(activeFile, role),
-                  canRenameFile: vfs.canRenameName(activeFile) && vfs.canEdit(activeFile, role),
-                }
-              : {})}
-          />
-          {historyMode && (
-            <HistoryToolbar
-              entries={historyEntries}
-              filename={activeFile}
-              index={historyIndex}
-              onSelect={setHistoryIndex}
-              onUse={handleUseHistory}
-              assignmentHidden={assignmentHidden}
-            />
-          )}
-          {historyMode ? (
-            <HistoryDiffView
-              original={
-                editEvents(historyEntries, activeFile, assignmentHidden)[historyIndex]?.message ??
-                ''
+        {!editorsHidden && (
+          <div
+            // Grid negotiation (M3.7 rails + M4.3 docs): 12 minus 3 per open
+            // side panel; focused mode always takes the full width; small
+            // layout leaves col-md-5 to the console/feedback pair.
+            className={`blockpy-panel blockpy-editor col-md-${
+              focusedMode
+                ? 12
+                : (smallLayout ? 7 : 12) - (showFileTree && vfs ? 3 : 0) - (showDocs ? 3 : 0)
+            }`}
+          >
+            <PythonToolbar
+              onRun={() => void handleRun()}
+              onStop={handleStop}
+              onReset={handleReset}
+              enableBlocks={(props.enableBlocks ?? true) && isAnswerFile}
+              onToggleFocus={() => setFocused(!focusedMode)}
+              focusedMode={focusedMode}
+              {...(props.docsUrl
+                ? {
+                    onToggleDocs: () => store.getState().toggleDocsPanel(),
+                    docsOpen: showDocs,
+                  }
+                : {})}
+              // hide_submission: students get no History (their submission's
+              // code/history is hidden server-side too).
+              onHistory={
+                loadHistory && !(isStudent && (props.hideSubmission ?? false))
+                  ? handleToggleHistory
+                  : undefined
               }
-              current={code}
-              height={400}
-            />
-          ) : activeFile.endsWith('images.blockpy') && props.uploads ? (
-            // Legacy editor dispatch by extension (images.js: extensions
-            // ["images.blockpy"]) - the uploaded-files manager replaces the
-            // code editor for this tab.
-            <ImagesManager uploads={props.uploads} instructor={props.instructor} />
-          ) : activeFile === '!assignment_settings.blockpy' ? (
-            // The Settings tab is a FORM over the settings blob, not a text
-            // editor (M3.5; legacy ASSIGNMENT_SETTINGS_EDITOR_HTML port).
-            <SettingsEditor
-              key={vfs ? activeFile : `${activeFile}-plain`}
-              blob={vfs?.read(activeFile) ?? code}
-              assignment={props.assignmentFields}
-              onSave={(blob, fields) => {
-                if (vfs) {
-                  vfs.write(activeFile, blob);
-                  onFileEdit?.(activeFile, blob);
-                }
-                setCode(blob);
-                props.onSaveSettings?.(blob, fields);
-              }}
-            />
-          ) : !rawStructured && IMAGE_FILE.test(activeFile) ? (
-            // M4.5 (LD-27): image preview + sprite pixel editor. The
-            // editable representation is the file's VFS contents as a
-            // data-URL; uploads stay in the ImagesManager.
-            <ImageEditor
-              key={activeFile}
-              value={code}
-              readOnly={fileReadOnly}
-              onChange={handleCodeChange}
-              onRawView={() => setRawStructured(true)}
-            />
-          ) : !rawStructured &&
-            activeFile.toLowerCase().endsWith('.csv') &&
-            parseCsv(code) !== null ? (
-            // M4.4 (LD-26): grid editor for parseable CSV tabs; unparseable
-            // content falls through to the text editor. `&`-space read-only
-            // rides fileReadOnly (D3-A).
-            <CsvEditor
-              key={activeFile}
-              value={code}
-              readOnly={fileReadOnly}
-              onChange={handleCodeChange}
-              onRawView={() => setRawStructured(true)}
-            />
-          ) : !rawStructured && activeFile.toLowerCase().endsWith('.json') ? (
-            // M4.4 (LD-26): CM6 JSON editor with live parse status + tree.
-            <JsonEditor
-              key={activeFile}
-              value={code}
-              readOnly={fileReadOnly}
-              onChange={handleCodeChange}
-              onRawView={() => setRawStructured(true)}
-            />
-          ) : (
-            <div
-              className="blockpy-python-blockmirror"
-              // X-Editor.Paste (python.js:238-248) with REAL character
-              // counts - legacy's shadowed `const characters` always
-              // logged {characters: 0} (LD-2a; trustworthy from Studio on).
-              onPaste={(event) => {
-                let characters = 0;
-                try {
-                  characters = event.clipboardData.getData('Text').length;
-                } catch {
-                  // Clipboard unreadable - log the 0 like legacy's catch.
-                }
-                onLogEvent?.('X-Editor.Paste', '', '', JSON.stringify({ characters }), activeFile);
-              }}
-            >
-              {rawStructured &&
-                (activeFile.toLowerCase().endsWith('.csv') ||
-                  activeFile.toLowerCase().endsWith('.json') ||
-                  IMAGE_FILE.test(activeFile)) && (
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-outline-secondary blockpy-structured-return"
-                    onClick={() => setRawStructured(false)}
-                  >
-                    Back to{' '}
-                    {activeFile.toLowerCase().endsWith('.csv')
-                      ? 'Grid'
-                      : IMAGE_FILE.test(activeFile)
-                        ? 'Image'
-                        : 'JSON'}{' '}
-                    Editor
-                  </button>
-                )}
-              <DualEditorView
-                // Height is construction-time config - the key remounts the
-                // editor taller for focused mode (code survives via props).
-                key={focusedMode ? 'focused' : 'normal'}
-                mode={isAnswerFile ? pythonMode : 'text'}
-                code={code}
-                onCodeChange={handleCodeChange}
-                readOnly={fileReadOnly}
-                blocklyMediaPath={props.blocklyMediaPath}
-                toolbox={toolboxSpec}
-                height={focusedMode ? Math.max(500, window.innerHeight - 220) : 400}
-                editorRef={(editor) => {
-                  editorRef.current = editor;
-                  // Apply the configured/persisted preferences to the fresh
-                  // editor (the effects only fire on later changes).
-                  if (editor && enableAutocomplete) {
-                    editor.setAutocomplete(true);
+              hideDatasetsButton={
+                (isStudent && (props.hideImportDatasetsButton ?? false)) || smallLayout
+              }
+              // Local upload/download (M7.4, LD-39). Upload respects the
+              // read-only guard (D3-A: never overwrite an uneditable file) -
+              // except only_uploads, whose whole point is uploading.
+              onUpload={uploadAllowed ? handleUpload : undefined}
+              onDownload={handleDownload}
+              // File actions for the ACTIVE file (M3.7 / LD-21), gated by the
+              // VFS capability guards + role editability.
+              {...(vfs
+                ? {
+                    onDeleteFile: () => handleDeleteFile(activeFile),
+                    onRenameFile: () => handleRenameFile(activeFile),
+                    canDeleteFile: vfs.canDeleteName(activeFile) && vfs.canEdit(activeFile, role),
+                    canRenameFile: vfs.canRenameName(activeFile) && vfs.canEdit(activeFile, role),
                   }
-                  if (editor && store.getState().blockKeyboardNav) {
-                    editor.setKeyboardNav(true);
+                : {})}
+            />
+            {historyMode && (
+              <HistoryToolbar
+                entries={historyEntries}
+                filename={activeFile}
+                index={historyIndex}
+                onSelect={setHistoryIndex}
+                onUse={handleUseHistory}
+                assignmentHidden={assignmentHidden}
+              />
+            )}
+            {historyMode ? (
+              <HistoryDiffView
+                original={
+                  editEvents(historyEntries, activeFile, assignmentHidden)[historyIndex]?.message ??
+                  ''
+                }
+                current={code}
+                height={400}
+              />
+            ) : activeFile.endsWith('images.blockpy') && props.uploads ? (
+              // Legacy editor dispatch by extension (images.js: extensions
+              // ["images.blockpy"]) - the uploaded-files manager replaces the
+              // code editor for this tab.
+              <ImagesManager uploads={props.uploads} instructor={props.instructor} />
+            ) : activeFile === '!assignment_settings.blockpy' ? (
+              // The Settings tab is a FORM over the settings blob, not a text
+              // editor (M3.5; legacy ASSIGNMENT_SETTINGS_EDITOR_HTML port).
+              <SettingsEditor
+                key={vfs ? activeFile : `${activeFile}-plain`}
+                blob={vfs?.read(activeFile) ?? code}
+                assignment={props.assignmentFields}
+                onSave={(blob, fields) => {
+                  if (vfs) {
+                    vfs.write(activeFile, blob);
+                    onFileEdit?.(activeFile, blob);
                   }
-                  props.onEditorReady?.(editor);
+                  setCode(blob);
+                  props.onSaveSettings?.(blob, fields);
                 }}
               />
-            </div>
-          )}
-        </div>
+            ) : !rawStructured && IMAGE_FILE.test(activeFile) ? (
+              // M4.5 (LD-27): image preview + sprite pixel editor. The
+              // editable representation is the file's VFS contents as a
+              // data-URL; uploads stay in the ImagesManager.
+              <ImageEditor
+                key={activeFile}
+                value={code}
+                readOnly={fileReadOnly}
+                onChange={handleCodeChange}
+                onRawView={() => setRawStructured(true)}
+              />
+            ) : !rawStructured &&
+              activeFile.toLowerCase().endsWith('.csv') &&
+              parseCsv(code) !== null ? (
+              // M4.4 (LD-26): grid editor for parseable CSV tabs; unparseable
+              // content falls through to the text editor. `&`-space read-only
+              // rides fileReadOnly (D3-A).
+              <CsvEditor
+                key={activeFile}
+                value={code}
+                readOnly={fileReadOnly}
+                onChange={handleCodeChange}
+                onRawView={() => setRawStructured(true)}
+              />
+            ) : !rawStructured && activeFile.toLowerCase().endsWith('.json') ? (
+              // M4.4 (LD-26): CM6 JSON editor with live parse status + tree.
+              <JsonEditor
+                key={activeFile}
+                value={code}
+                readOnly={fileReadOnly}
+                onChange={handleCodeChange}
+                onRawView={() => setRawStructured(true)}
+              />
+            ) : (
+              <div
+                className="blockpy-python-blockmirror"
+                // X-Editor.Paste (python.js:238-248) with REAL character
+                // counts - legacy's shadowed `const characters` always
+                // logged {characters: 0} (LD-2a; trustworthy from Studio on).
+                onPaste={(event) => {
+                  let characters = 0;
+                  try {
+                    characters = event.clipboardData.getData('Text').length;
+                  } catch {
+                    // Clipboard unreadable - log the 0 like legacy's catch.
+                  }
+                  onLogEvent?.(
+                    'X-Editor.Paste',
+                    '',
+                    '',
+                    JSON.stringify({ characters }),
+                    activeFile,
+                  );
+                }}
+              >
+                {rawStructured &&
+                  (activeFile.toLowerCase().endsWith('.csv') ||
+                    activeFile.toLowerCase().endsWith('.json') ||
+                    IMAGE_FILE.test(activeFile)) && (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-secondary blockpy-structured-return"
+                      onClick={() => setRawStructured(false)}
+                    >
+                      Back to{' '}
+                      {activeFile.toLowerCase().endsWith('.csv')
+                        ? 'Grid'
+                        : IMAGE_FILE.test(activeFile)
+                          ? 'Image'
+                          : 'JSON'}{' '}
+                      Editor
+                    </button>
+                  )}
+                <DualEditorView
+                  // Height and imageMode are construction-time config - the
+                  // key remounts the editor for focused mode / can_image
+                  // changes (code survives via props).
+                  key={`${focusedMode ? 'focused' : 'normal'}-${props.canImage ? 'img' : 'noimg'}`}
+                  mode={isAnswerFile ? pythonMode : 'text'}
+                  code={code}
+                  onCodeChange={handleCodeChange}
+                  readOnly={fileReadOnly}
+                  imageMode={props.canImage ?? false}
+                  blocklyMediaPath={props.blocklyMediaPath}
+                  toolbox={toolboxSpec}
+                  height={focusedMode ? Math.max(500, window.innerHeight - 220) : 400}
+                  editorRef={(editor) => {
+                    editorRef.current = editor;
+                    // Apply the configured/persisted preferences to the fresh
+                    // editor (the effects only fire on later changes).
+                    if (editor && enableAutocomplete) {
+                      editor.setAutocomplete(true);
+                    }
+                    if (editor && store.getState().blockKeyboardNav) {
+                      editor.setKeyboardNav(true);
+                    }
+                    if (editor && blocksLocked && !fileReadOnly) {
+                      editor.blockEditor.setReadOnly(true);
+                    }
+                    // is_parsons: the problem opens jumbled.
+                    if (editor && isParsons && isAnswerFile) {
+                      editor.blockEditor.shuffle();
+                    }
+                    props.onEditorReady?.(editor);
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        )}
         {/* Docs browser rail (M4.3; renders only when docs_url is set and
             the persisted toggle is on). */}
         {!focusedMode && showDocs && props.docsUrl && (
@@ -1315,9 +1537,11 @@ export function CodingEditor(props: CodingEditorProps) {
         <br />
         Please reload the page and try again.
       </Dialog>
-      <div className="row">
-        <Footer instructor={props.instructor} {...props.footer} />
-      </div>
+      {!smallLayout && (
+        <div className="row">
+          <Footer instructor={props.instructor} {...props.footer} />
+        </div>
+      )}
     </div>
   );
 }

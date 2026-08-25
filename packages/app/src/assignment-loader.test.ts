@@ -91,3 +91,31 @@ describe('parseAssignmentSettings (A4 blob)', () => {
     expect(parseAssignmentSettings('nope')).toEqual({});
   });
 });
+
+describe('extractPart (legacy utilities.js:240-262)', () => {
+  const DOC = 'shared\n##### Part one\nfirst = 1\n##### Part two\nsecond = 2\n';
+  it('returns the whole text without a part id, the section with one, null when missing', async () => {
+    const { extractPart } = await import('./assignment-loader');
+    expect(extractPart(DOC, '')).toBe(DOC);
+    expect(extractPart(DOC, null)).toBe(DOC);
+    expect(extractPart(DOC, 'one')).toBe('first = 1');
+    // Verbatim legacy quirk: the "last part" check is `i !== length - 3`,
+    // so the final section's trailing newline is stripped too.
+    expect(extractPart(DOC, 'two')).toBe('second = 2');
+    expect(extractPart(DOC, 'three')).toBeNull();
+  });
+  it('narrows the submission into answer.py when the VFS is built with a part id', () => {
+    const assignment = decodeAssignment(RAW_ASSIGNMENT);
+    const submission = decodeSubmission({
+      id: 1,
+      code: DOC,
+      extra_files: '{}',
+      version: 1,
+      correct: false,
+      score: 0,
+    });
+    expect(vfsFromAssignment(assignment, submission, 'one').read('answer.py')).toBe('first = 1');
+    expect(vfsFromAssignment(assignment, submission, 'nope').read('answer.py')).toBe('');
+    expect(vfsFromAssignment(assignment, submission).read('answer.py')).toBe(DOC);
+  });
+});

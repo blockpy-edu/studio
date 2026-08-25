@@ -122,6 +122,8 @@ export class DualBlockEditor {
   private keyboardNav_ = false;
   private outOfDate_: string | null = null;
   private readOnlyDiv_: HTMLElement | null = null;
+  /** A shuffle requested while hidden - applied on the next visible load. */
+  private pendingShuffle_ = false;
   private toolbox_: ToolboxSpec;
 
   constructor(host: BlockEditorHost) {
@@ -305,16 +307,54 @@ export class DualBlockEditor {
         try {
           Blockly.Xml.clearWorkspaceAndLoadFromXml(xml, this.workspace);
           this.workspace.cleanUp();
+          this.applyPendingShuffle();
         } finally {
           Blockly.Events.enable();
         }
       } else {
         Blockly.Xml.clearWorkspaceAndLoadFromXml(xml, this.workspace);
         this.workspace.cleanUp();
+        this.applyPendingShuffle();
       }
     } catch (error) {
       console.error(error);
     }
+  }
+
+  private applyPendingShuffle(): void {
+    if (this.pendingShuffle_) {
+      this.pendingShuffle_ = false;
+      this.shuffle();
+    }
+  }
+
+  /**
+   * Parsons mode (legacy BlockPy v1 `WorkspaceSvg.prototype.shuffle`,
+   * utilities.js:152-167, invoked from the Reset button when
+   * `is_parsons`): scatter every top-level block to a random position so
+   * the student reassembles the program. Hidden workspaces have no
+   * metrics, so the shuffle is deferred to the next visible load.
+   */
+  shuffle(): void {
+    if (!this.isVisible()) {
+      this.pendingShuffle_ = true;
+      return;
+    }
+    const metrics = this.workspace.getMetrics();
+    const width = metrics.viewWidth / 2;
+    const height = metrics.viewHeight;
+    const blocks = this.workspace.getTopBlocks(false);
+    if (blocks.length === 0) return;
+    const randomInteger = (min: number, max: number) =>
+      Math.floor(Math.random() * (max - min + 1)) + min;
+    let y = 5;
+    const maximalIncrease = height / blocks.length;
+    blocks.forEach((block, i) => {
+      const properties = block.getRelativeToSurfaceXY();
+      const x = i === 0 ? 5 : -properties.x + randomInteger(10, width);
+      block.moveBy(x, -properties.y + y);
+      y += randomInteger(5, maximalIncrease);
+    });
   }
 
   isVisible(): boolean {

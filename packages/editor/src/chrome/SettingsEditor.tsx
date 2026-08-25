@@ -47,7 +47,11 @@ const BOOLEAN_SETTINGS: [key: string, def: boolean, doc: string][] = [
     false,
     'If checked, then students code is allowed to run without timeouts (potentially allowing infinite loops).',
   ],
-  ['is_parsons', false, "If checked, then this is a parson's style question (jumbled)."],
+  [
+    'is_parsons',
+    false,
+    "If checked, then this is a parson's style question: the blocks are jumbled on load and on Reset.",
+  ],
   [
     'save_turtle_output',
     false,
@@ -118,7 +122,11 @@ const BOOLEAN_SETTINGS: [key: string, def: boolean, doc: string][] = [
   ],
   ['hide_editors', false, 'If checked, then all of the editors are hidden.'],
   ['hide_middle_panel', false, 'If checked, then the console and feedback areas is hidden.'],
-  ['hide_all', false, 'INCOMPLETE: If checked, then the entire interface is hidden.'],
+  [
+    'hide_all',
+    false,
+    'If checked, then the entire interface is hidden for students (the instructor view is unaffected).',
+  ],
   ['hide_evaluate', false, 'If checked, then the Evaluate button is not shown on the console.'],
   [
     'hide_import_datasets_button',
@@ -128,9 +136,13 @@ const BOOLEAN_SETTINGS: [key: string, def: boolean, doc: string][] = [
   [
     'hide_import_statements',
     false,
-    'INCOMPLETE: If checked, certain kinds of import statements (matplotlib, turtle, datasets) are not shown in the block interface.',
+    'If checked, then the Imports category is removed from the block toolbox for students.',
   ],
-  ['hide_coverage_button', false, 'INCOMPLETE: If checked, the coverage button is not shown.'],
+  [
+    'hide_coverage_button',
+    false,
+    'NOT IMPLEMENTED (no coverage button exists): If checked, the coverage button is not shown.',
+  ],
   ['hide_trace_button', false, 'If checked, then the Trace button is not shown.'],
   ['small_layout', false, 'If checked, then the interface fits into a smaller region.'],
   ['has_clock', false, 'If checked, then a clock is shown in the top right corner.'],

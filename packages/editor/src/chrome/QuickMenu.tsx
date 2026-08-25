@@ -95,6 +95,13 @@ export interface QuickMenuProps {
   onInstructorChange?(instructor: boolean): void;
   /** `has_clock` setting: true ⇒ ticking wall clock (A4 §6). */
   hasClock?: boolean;
+  /**
+   * `instructions_pool` setting (interface.js:183-191): show the Seed box
+   * that overrides the submission-id seed (legacy display.poolSeed).
+   */
+  instructionsPool?: boolean;
+  /** Placeholder for the Seed box - the default seed (submission id). */
+  defaultSeed?: string;
   /** `hide_queued_inputs` setting. */
   hideQueuedInputs?: boolean;
   /**
@@ -117,6 +124,8 @@ export function QuickMenu(props: QuickMenuProps) {
   const [inputsDraft, setInputsDraft] = useState('');
   const [reuseDraft, setReuseDraft] = useState(false);
   const [clockText, setClockText] = useState('');
+  const poolSeed = useEditorChromeStore((state) => state.poolSeed);
+  const setPoolSeed = useEditorChromeStore((state) => state.setPoolSeed);
 
   const store = useEditorChromeStore;
   const dirty = useEditorChromeStore((state) => state.dirtySubmission);
@@ -331,6 +340,21 @@ export function QuickMenu(props: QuickMenuProps) {
         </button>
       )}
       {props.hasClock && <span className="blockpy-menu-clock">{clockText}</span>}
+      {props.instructionsPool && (
+        <div style={{ display: 'flex' }}>
+          <label htmlFor="blockpy-set-seed" className="my-1 mr-2">
+            Seed
+          </label>
+          <input
+            type="text"
+            className="form-control mb-2 mr-sm-2"
+            id="blockpy-set-seed"
+            value={poolSeed ?? ''}
+            placeholder={props.defaultSeed ?? ''}
+            onChange={(event) => setPoolSeed(event.target.value === '' ? null : event.target.value)}
+          />
+        </div>
+      )}
 
       <Dialog
         title="Internal Grading Error"

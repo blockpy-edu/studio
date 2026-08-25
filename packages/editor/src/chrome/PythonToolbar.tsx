@@ -48,6 +48,11 @@ export interface PythonToolbarProps {
    */
   onUpload?(file: File): void;
   onDownload?(): void;
+  /**
+   * Legacy `!hideImportDatasetsButton() && !ui.smallLayout()`
+   * (python.js:58): drop the Import datasets group entirely.
+   */
+  hideDatasetsButton?: boolean;
 }
 
 const MODE_TABS: { name: string; iconName: IconName; mode: DualEditorMode }[] = [
@@ -72,6 +77,7 @@ export function PythonToolbar({
   docsOpen = false,
   onUpload,
   onDownload,
+  hideDatasetsButton = false,
 }: PythonToolbarProps) {
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const runState = useEditorChromeStore((state) => state.runState);
@@ -134,11 +140,13 @@ export function PythonToolbar({
           <Icon name="reset" /> Reset
         </button>
       </div>
-      <div className="btn-group mr-2" role="group">
-        <button type="button" className="btn btn-outline-secondary" disabled>
-          <Icon name="datasets" /> Import datasets
-        </button>
-      </div>
+      {!hideDatasetsButton && (
+        <div className="btn-group mr-2" role="group">
+          <button type="button" className="btn btn-outline-secondary" disabled>
+            <Icon name="datasets" /> Import datasets
+          </button>
+        </div>
+      )}
       {/* Local upload/download (M7.4, LD-39): upload writes the chosen
           file into the active tab (.ipynb converted, python.js:161-181);
           download saves the current code. No server round trip; unlike
